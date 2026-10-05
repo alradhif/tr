@@ -1,7 +1,17 @@
 const crypto = require('crypto')
 const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
 const prisma = require('../lib/prisma')
+const {
+  MIN_PASSWORD_LENGTH,
+  activateInvite,
+  findUsableInvite,
+  isValidNewPassword,
+  issueSession,
+  publicSessionUser,
+  resendLoginChallenge,
+  startLoginChallenge,
+  verifyLoginChallenge,
+} = require('../lib/accountAccess')
 const { listDemoAccounts, loginDemoAccount } = require('../services/demoService')
 const { isDemoEnvironment } = require('../lib/demoSafety')
 
@@ -37,98 +47,137 @@ async function updatePasswordByType(userId, type, hashedPassword) {
     case 'JODAYN':
       return prisma.jodaynUser.update({
         where: { id: userId },
-        data: { password: hashedPassword }
+        data: { password: hashedPassword, pendingActivation: false }
       })
     case 'ORG':
       return prisma.orgUser.update({
         where: { id: userId },
-        data: { password: hashedPassword }
+        data: { password: hashedPassword, pendingActivation: false }
       })
     case 'CLIENT':
       return prisma.clientUser.update({
         where: { id: userId },
-        data: { password: hashedPassword }
+        data: { password: hashedPassword, pendingActivation: false }
       })
     default:
       throw new Error('Invalid actor type')
   }
 }
 
-// Jodayn login
-exports.loginJodayn = async (req, res) => {
+const INVALID_LOGIN = 'بيانات الدخول غير صحيحة'
+const INACTIVE_ACCOUNT = 'هذا الحساب غير نشط'
+const PENDING_ACTIVATION = 'الحساب بانتظار التفعيل. استخدم رابط الدعوة لتعيين كلمة المرور'
+
+/**
+ * Checks email + password and, when they match, opens a one-time-code challenge.
+ * No session token is issued until the code is verified.
+ */
+async function startPasswordLogin(req, res, types) {
   try {
-    const { email, password } = req.body
-    const user = await prisma.jodaynUser.findUnique({ where: { email } })
-    if (!user) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-    if (!user.isActive) return res.status(400).json({ message: 'هذا الحساب غير نشط' })
-    const valid = await bcrypt.compare(password, user.password)
-    if (!valid) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-    const token = jwt.sign(
-      { userId: user.id, role: user.role, type: 'JODAYN' },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    )
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } })
+    const { email, password } = req.body || {}
+    if (!email || !password) {
+      return res.status(400).json({ message: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور' })
+    }
+
+    const normalized = String(email).trim().toLowerCase()
+    let match = null
+    for (const type of types) {
+      const user = await findUserByEmailAndType(normalized, type)
+      if (user) {
+        match = { type, user }
+        break
+      }
+    }
+
+    if (!match) return res.status(400).json({ message: INVALID_LOGIN })
+    if (!match.user.isActive) return res.status(400).json({ message: INACTIVE_ACCOUNT })
+
+    const valid = await bcrypt.compare(String(password), match.user.password)
+    if (!valid) return res.status(400).json({ message: INVALID_LOGIN })
+    if (match.user.pendingActivation) return res.status(403).json({ message: PENDING_ACTIVATION, code: 'PENDING_ACTIVATION' })
+
+    res.json(await startLoginChallenge(match.user.id, match.type))
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
 }
 
-// Org login
-exports.loginOrg = async (req, res) => {
+exports.loginJodayn = (req, res) => startPasswordLogin(req, res, ['JODAYN'])
+exports.loginOrg = (req, res) => startPasswordLogin(req, res, ['ORG'])
+exports.loginClient = (req, res) => startPasswordLogin(req, res, ['CLIENT'])
+exports.loginSuperAdmin = (req, res) => startPasswordLogin(req, res, ['SUPER_ADMIN'])
+exports.loginAny = (req, res) => startPasswordLogin(req, res, ['SUPER_ADMIN', 'JODAYN', 'ORG', 'CLIENT'])
+
+const OTP_ERRORS = {
+  INVALID: { status: 400, message: 'انتهت صلاحية طلب الدخول. الرجاء تسجيل الدخول مرة أخرى' },
+  EXPIRED: { status: 400, message: 'انتهت صلاحية الرمز. الرجاء طلب رمز جديد' },
+  LOCKED: { status: 429, message: 'تم تجاوز عدد المحاولات. الرجاء تسجيل الدخول مرة أخرى' },
+  WRONG_CODE: { status: 400, message: 'الرمز غير صحيح، الرجاء المحاولة مرة أخرى' },
+  INACTIVE: { status: 400, message: INACTIVE_ACCOUNT },
+  TOO_SOON: { status: 429, message: 'الرجاء الانتظار قبل طلب رمز جديد' },
+}
+
+function sendOtpError(res, error) {
+  const { status, message } = OTP_ERRORS[error] || OTP_ERRORS.INVALID
+  res.status(status).json({ message, code: error })
+}
+
+// Second login step: exchange the one-time code for a session
+exports.verifyLoginCode = async (req, res) => {
   try {
-    const { email, password } = req.body
-    const user = await prisma.orgUser.findUnique({ where: { email }, include: { org: true } })
-    if (!user) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-    if (!user.isActive) return res.status(400).json({ message: 'هذا الحساب غير نشط' })
-    const valid = await bcrypt.compare(password, user.password)
-    if (!valid) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-    const token = jwt.sign(
-      { userId: user.id, role: user.role, orgId: user.orgId, type: 'ORG' },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    )
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, orgId: user.orgId, orgName: user.org?.name || null } })
+    const { challengeId, code } = req.body || {}
+    if (!challengeId || !code) return res.status(400).json({ message: 'الرجاء إدخال الرمز المكوّن من 6 أرقام' })
+    const result = await verifyLoginChallenge(challengeId, code)
+    if (result.error) return sendOtpError(res, result.error)
+    res.json(issueSession(result.user, result.actorType))
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
 }
 
-// Client login
-exports.loginClient = async (req, res) => {
+exports.resendLoginCode = async (req, res) => {
   try {
-    const { email, password } = req.body
-    const user = await prisma.clientUser.findUnique({ where: { email }, include: { client: true } })
-    if (!user) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-    if (!user.isActive) return res.status(400).json({ message: 'هذا الحساب غير نشط' })
-    const valid = await bcrypt.compare(password, user.password)
-    if (!valid) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-    const token = jwt.sign(
-      { userId: user.id, role: user.role, clientId: user.clientId, type: 'CLIENT' },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    )
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, clientId: user.clientId, clientName: user.client?.name || null } })
+    const result = await resendLoginChallenge(req.body?.challengeId)
+    if (result.error) return sendOtpError(res, result.error)
+    res.json(result.response)
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
 }
 
-// Super Admin login
-exports.loginSuperAdmin = async (req, res) => {
+const INVALID_INVITE = 'رابط الدعوة غير صالح أو منتهي الصلاحية'
+
+// Invite lookup so the activation page can greet the invited user
+exports.getInvite = async (req, res) => {
   try {
-    const { email, password } = req.body
-    const admin = await prisma.superAdmin.findUnique({ where: { email } })
-    if (!admin) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-    if (!admin.isActive) return res.status(400).json({ message: 'هذا الحساب غير نشط' })
-    const valid = await bcrypt.compare(password, admin.password)
-    if (!valid) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-    const token = jwt.sign(
-      { userId: admin.id, role: 'SUPER_ADMIN', type: 'SUPER_ADMIN' },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    )
-    res.json({ token, user: { id: admin.id, name: admin.name, email: admin.email, role: 'SUPER_ADMIN' } })
+    const found = await findUsableInvite(req.params.token)
+    if (!found) return res.status(404).json({ message: INVALID_INVITE })
+    const user = publicSessionUser(found.user, found.invite.actorType)
+    res.json({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      type: user.type,
+      orgName: user.orgName,
+      clientName: user.clientName,
+      expiresAt: found.invite.expiresAt.toISOString(),
+    })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// Invited user sets their first password; afterwards they sign in normally
+exports.activateAccount = async (req, res) => {
+  try {
+    const { token, password } = req.body || {}
+    if (!token) return res.status(400).json({ message: INVALID_INVITE })
+    if (!isValidNewPassword(password)) {
+      return res.status(400).json({ message: `كلمة المرور يجب أن تتكون من ${MIN_PASSWORD_LENGTH} أحرف على الأقل` })
+    }
+    const activated = await activateInvite(token, password)
+    if (!activated) return res.status(400).json({ message: INVALID_INVITE })
+    res.json({ success: true, email: activated.user.email })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
@@ -189,6 +238,9 @@ exports.resetPassword = async (req, res) => {
     if (!token || !newPassword) {
       return res.status(400).json({ message: 'Required fields: token, newPassword' })
     }
+    if (!isValidNewPassword(newPassword)) {
+      return res.status(400).json({ message: `كلمة المرور يجب أن تتكون من ${MIN_PASSWORD_LENGTH} أحرف على الأقل` })
+    }
 
     const resetToken = await prisma.passwordResetToken.findUnique({ where: { token } })
     if (!resetToken) {
@@ -240,53 +292,5 @@ exports.loginDemo = async (req, res) => {
     res.json(session)
   } catch (err) {
     res.status(err.status || 500).json({ message: err.message })
-  }
-}
-
-exports.loginAny = async (req, res) => {
-  try {
-    const { email, password } = req.body
-    if (!email || !password) {
-      return res.status(400).json({ message: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور' })
-    }
-
-    const normalized = String(email).trim().toLowerCase()
-    const candidates = [
-      { type: 'SUPER_ADMIN', user: await prisma.superAdmin.findUnique({ where: { email: normalized } }) },
-      { type: 'JODAYN', user: await prisma.jodaynUser.findUnique({ where: { email: normalized } }) },
-      { type: 'ORG', user: await prisma.orgUser.findUnique({ where: { email: normalized } }) },
-      { type: 'CLIENT', user: await prisma.clientUser.findUnique({ where: { email: normalized } }) },
-    ]
-
-    const match = candidates.find((candidate) => candidate.user)
-    if (!match) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-    if (!match.user.isActive) return res.status(400).json({ message: 'هذا الحساب غير نشط' })
-
-    const valid = await bcrypt.compare(password, match.user.password)
-    if (!valid) return res.status(400).json({ message: 'بيانات الدخول غير صحيحة' })
-
-    const payload = {
-      userId: match.user.id,
-      role: match.type === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : match.user.role,
-      type: match.type,
-    }
-    if (match.type === 'ORG') payload.orgId = match.user.orgId
-    if (match.type === 'CLIENT') payload.clientId = match.user.clientId
-
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' })
-    res.json({
-      token,
-      user: {
-        id: match.user.id,
-        name: match.user.name,
-        email: match.user.email,
-        role: payload.role,
-        type: match.type,
-        orgId: match.user.orgId,
-        clientId: match.user.clientId,
-      },
-    })
-  } catch (err) {
-    res.status(500).json({ message: err.message })
   }
 }

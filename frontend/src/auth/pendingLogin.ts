@@ -1,8 +1,9 @@
-import type { AuthUser } from '../api/auth'
+import type { AuthUser, LoginChallenge } from '../api/auth'
 import { setClientSession } from './clientAuth'
 import {
   destinationForPortal,
   mappedRoleForLogin,
+  portalForUserType,
   type PortalKind,
 } from './resolveLogin'
 import { setJodaynSession } from './jodaynAuth'
@@ -11,10 +12,9 @@ import { setSuperAdminSession } from './superAdminAuth'
 
 const KEY = 'trackplus.pendingLogin'
 
-export type PendingLogin = {
-  portal: PortalKind
-  token: string
-  user: AuthUser
+/** A password check that passed and is waiting for its one-time code. No session exists yet. */
+export type PendingLogin = Omit<LoginChallenge, 'otpRequired'> & {
+  email: string
 }
 
 export function setPendingLogin(pending: PendingLogin) {
@@ -25,7 +25,9 @@ export function getPendingLogin(): PendingLogin | null {
   const raw = sessionStorage.getItem(KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as PendingLogin
+    const parsed = JSON.parse(raw) as PendingLogin
+    if (!parsed?.challengeId) throw new Error('stale pending login')
+    return parsed
   } catch {
     clearPendingLogin()
     return null
@@ -40,31 +42,27 @@ export function hasPendingLogin() {
   return Boolean(getPendingLogin())
 }
 
-/** Commits the pending session after OTP and returns the destination path. */
-export function commitPendingLogin(): string | null {
-  const pending = getPendingLogin()
-  if (!pending) return null
+/** Stores a server-issued session for the user's portal and returns the destination path. */
+export function commitSession(token: string, user: AuthUser, portalHint?: PortalKind): string | null {
+  clearPendingLogin()
+  const portal = portalForUserType(user.type) ?? portalHint
+  if (!portal) return null
 
-  if (pending.portal === 'super-admin') {
-    setSuperAdminSession(pending.token, pending.user)
-    clearPendingLogin()
+  if (portal === 'super-admin') {
+    setSuperAdminSession(token, user)
     return destinationForPortal('super-admin')
   }
 
-  const role = mappedRoleForLogin(pending.portal, pending.user.role)
-  if (!role) {
-    clearPendingLogin()
-    return null
-  }
+  const role = mappedRoleForLogin(portal, user.role)
+  if (!role) return null
 
-  if (pending.portal === 'jodayn') {
-    setJodaynSession(role, pending.token, pending.user)
-  } else if (pending.portal === 'org') {
-    setOrgSession(role, pending.token, pending.user)
+  if (portal === 'jodayn') {
+    setJodaynSession(role, token, user)
+  } else if (portal === 'org') {
+    setOrgSession(role, token, user)
   } else {
-    setClientSession(role, pending.token, pending.user)
+    setClientSession(role, token, user)
   }
 
-  clearPendingLogin()
-  return destinationForPortal(pending.portal)
+  return destinationForPortal(portal)
 }

@@ -165,6 +165,35 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+model AccountInvite {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  actorType ActorType
+  invitedBy String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("account_invites")
+}
+
+model LoginChallenge {
+  id        String    @id @default(uuid())
+  userId    String
+  actorType ActorType
+  codeHash  String
+  attempts  Int       @default(0)
+  sentAt    DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("login_challenges")
+}
+
 model AuditLog {
   id          String      @id @default(uuid())
   action      AuditAction
@@ -192,6 +221,7 @@ model JodaynUser {
   password  String
   role      JodaynRole
   isActive  Boolean    @default(true)
+  pendingActivation Boolean @default(false)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -374,6 +404,7 @@ model OrgUser {
   password  String
   role      OrgRole
   isActive  Boolean    @default(true)
+  pendingActivation Boolean @default(false)
   orgId     String
   org       OrgAccount @relation(fields: [orgId], references: [id])
   createdAt DateTime   @default(now())
@@ -845,6 +876,7 @@ model ClientUser {
   password  String
   role      ClientRole
   isActive  Boolean       @default(true)
+  pendingActivation Boolean @default(false)
   clientId  String
   client    ClientAccount @relation(fields: [clientId], references: [id])
   createdAt DateTime      @default(now())

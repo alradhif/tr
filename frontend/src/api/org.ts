@@ -15,6 +15,7 @@ export type OrgUser = {
   email: string
   role: string
   isActive: boolean
+  pendingActivation?: boolean
   activatedAt?: string | null
   createdAt?: string | null
 }
@@ -22,7 +23,8 @@ export type OrgUser = {
 export type CreatePortalUserResult = {
   success: boolean
   user: OrgUser
-  temporaryPassword: string
+  inviteUrl: string
+  inviteExpiresAt: string
 }
 
 export function createOrgUser(
@@ -231,6 +233,13 @@ export function createCompanyTeamMember(
 export function deleteCompanyTeamMember(token: string, id: string, memberId: string) {
   return apiRequest<{ success: boolean }>(`/org/companies/${id}/team/${memberId}`, {
     method: 'DELETE',
+    token,
+  })
+}
+
+export function reissueOrgInvite(token: string, id: string) {
+  return apiRequest<{ success: boolean; inviteUrl: string; inviteExpiresAt: string }>(`/org/users/${id}/invite`, {
+    method: 'POST',
     token,
   })
 }

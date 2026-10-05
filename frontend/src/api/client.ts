@@ -1,3 +1,5 @@
+import { clearAllSessions } from '../auth/session'
+
 const API_URL = import.meta.env.VITE_API_URL ?? '/api'
 
 export class ApiError extends Error {
@@ -37,6 +39,10 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     }
   }
 
+  if (response.status === 401 && token) {
+    handleExpiredSession()
+  }
+
   if (!response.ok) {
     const message =
       typeof data === 'object' && data !== null && 'message' in data && String((data as { message: unknown }).message).trim()
@@ -46,6 +52,16 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
 
   return data as T
+}
+
+/**
+ * The server rejected a stored session (expired token, deactivated account, or a user
+ * removed by the daily demo reset). Drop local sessions and send the user back to sign in.
+ */
+function handleExpiredSession() {
+  clearAllSessions()
+  if (typeof window === 'undefined' || window.location.pathname === '/login') return
+  window.location.assign('/login?expired=1')
 }
 
 export function getApiUrl() {

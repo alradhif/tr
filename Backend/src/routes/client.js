@@ -6,6 +6,7 @@ const {
   createClientUser,
   getClientUsers,
   toggleClientUser,
+  reissueClientInvite,
   getDashboard
 } = require('../controllers/clientController')
 
@@ -16,6 +17,7 @@ const isClientAny = [auth, roles('CLIENT_UPPER_MGMT', 'CLIENT_DATA_ENTRY', 'SUPE
 router.post('/users', ...isClientUpperMgmt, createClientUser)
 router.get('/users', ...isClientUpperMgmt, getClientUsers)
 router.patch('/users/:id/toggle', ...isClientUpperMgmt, toggleClientUser)
+router.post('/users/:id/invite', ...isClientUpperMgmt, reissueClientInvite)
 
 // Dashboard
 router.get('/dashboard', ...isClientAny, getDashboard)

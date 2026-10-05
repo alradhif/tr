@@ -46,6 +46,7 @@ import { SettingsPage } from './pages/shared/SettingsPage'
 import { LandingPage } from './components/landing/LandingPage'
 import { UnifiedLoginPage } from './pages/shared/UnifiedLoginPage'
 import { ResetPasswordPage } from './pages/shared/ResetPasswordPage'
+import { ActivateAccountPage } from './pages/shared/ActivateAccountPage'
 import { PostAuthLoadingPage } from './pages/shared/PostAuthLoadingPage'
 import { OtpPage } from './pages/shared/OtpPage'
 import { RtlProvider } from './rtl/RtlProvider'
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="/otp" element={<OtpPage />} />
           <Route path="/loading" element={<PostAuthLoadingPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/activate" element={<ActivateAccountPage />} />
 
           {/* Common typo / shortcut */}
           <Route path="/superadmin" element={<Navigate to="/login" replace />} />

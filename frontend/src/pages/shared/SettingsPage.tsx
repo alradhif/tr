@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { UserCheck, UserX, Users } from 'lucide-react'
+import { Link2, UserCheck, UserX, Users } from 'lucide-react'
 import { ApiError } from '../../api/client'
-import { createClientUser, getClientUsers, toggleClientUser, type ClientUser } from '../../api/clientPortal'
-import { createJodaynUser, getJodaynUsers, type JodaynUser } from '../../api/jodayn'
-import { createOrgUser, getOrgUsers, toggleOrgUser, type OrgUser } from '../../api/org'
+import { createClientUser, getClientUsers, reissueClientInvite, toggleClientUser, type ClientUser } from '../../api/clientPortal'
+import { createJodaynUser, getJodaynUsers, reissueJodaynInvite, type JodaynUser } from '../../api/jodayn'
+import { createOrgUser, getOrgUsers, reissueOrgInvite, toggleOrgUser, type OrgUser } from '../../api/org'
 import { getClientToken, getClientUser } from '../../auth/clientAuth'
 import { getJodaynToken, getJodaynUser } from '../../auth/jodaynAuth'
 import { getOrgToken, getOrgUser } from '../../auth/orgAuth'
@@ -19,7 +19,7 @@ import '../../design/settings-users.css'
 
 type SettingsTab = 'profile' | 'users'
 type PortalUser = OrgUser | ClientUser | JodaynUser
-type CreatedCredentials = { name: string; email: string; temporaryPassword: string }
+type CreatedCredentials = { name: string; email: string; inviteUrl: string; inviteExpiresAt?: string; reissued?: boolean }
 
 const AVATAR_COLORS = ['#dbeafe', '#d1f0e1', '#e9d5ff', '#fde9ce', '#f4f4f5']
 
@@ -76,6 +76,9 @@ function loginStatus(user: PortalUser) {
   if (user.isActive === false) {
     return { label: 'معلق', tone: 'suspended' as const }
   }
+  if (user.pendingActivation) {
+    return { label: 'بانتظار التفعيل', tone: 'pending' as const }
+  }
   return { label: 'نشط', tone: 'active' as const }
 }
 
@@ -95,6 +98,7 @@ export function SettingsPage() {
   const [credentials, setCredentials] = useState<CreatedCredentials | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
+  const showActions = portal !== 'jodayn' || users.some((row) => row.pendingActivation)
   const { user, token, entityLabel } = useMemo(() => sessionForPortal(portal), [portal, location.pathname])
   const initial = user?.name?.trim()?.charAt(0) || '—'
 
@@ -150,13 +154,39 @@ export function SettingsPage() {
       setCredentials({
         name: result.user.name,
         email: result.user.email,
-        temporaryPassword: result.temporaryPassword,
+        inviteUrl: result.inviteUrl,
+        inviteExpiresAt: result.inviteExpiresAt,
       })
       await loadUsers()
     } catch (error) {
       setInviteError(error instanceof ApiError ? error.message : 'تعذر إنشاء المستخدم')
     } finally {
       setInviteSubmitting(false)
+    }
+  }
+
+  async function handleReissueInvite(row: PortalUser) {
+    if (!token || !portal) return
+    setTogglingId(row.id)
+    setUsersError(null)
+    try {
+      const result =
+        portal === 'org'
+          ? await reissueOrgInvite(token, row.id)
+          : portal === 'client'
+            ? await reissueClientInvite(token, row.id)
+            : await reissueJodaynInvite(token, row.id)
+      setCredentials({
+        name: row.name,
+        email: row.email,
+        inviteUrl: result.inviteUrl,
+        inviteExpiresAt: result.inviteExpiresAt,
+        reissued: true,
+      })
+    } catch (error) {
+      setUsersError(error instanceof ApiError ? error.message : 'تعذر إصدار رابط الدعوة')
+    } finally {
+      setTogglingId(null)
     }
   }
 
@@ -245,12 +275,12 @@ export function SettingsPage() {
             <div className="senior-settings__separator" />
             {usersError ? <p className="td-add-user-error">{usersError}</p> : null}
             <div className={`td-users-table senior-settings__users-table`}>
-              <div className={`td-users-row td-users-row--head ${portal === 'jodayn' ? 'td-users-row--no-actions' : ''}`}>
+              <div className={`td-users-row td-users-row--head ${showActions ? '' : 'td-users-row--no-actions'}`}>
                 <span className="td-users-head-cell">المستخدم</span>
                 <span className="td-users-head-cell">الصلاحية / الدور</span>
                 <span className="td-users-head-cell">الحالة</span>
                 <span className="td-users-head-cell">تاريخ الانضمام</span>
-                {portal !== 'jodayn' ? <span className="td-users-head-cell">إجراءات</span> : null}
+                {showActions ? <span className="td-users-head-cell">إجراءات</span> : null}
               </div>
               {usersLoading ? (
                 <div style={{ padding: '24px 0', color: '#a1a1aa', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
@@ -260,9 +290,10 @@ export function SettingsPage() {
               {!usersLoading &&
                 users.map((row) => {
                   const status = loginStatus(row)
+                  const showInviteLink = Boolean(row.pendingActivation) && row.isActive !== false
                   return (
                     <div
-                      className={`td-users-row ${portal === 'jodayn' ? 'td-users-row--no-actions' : ''}`}
+                      className={`td-users-row ${showActions ? '' : 'td-users-row--no-actions'}`}
                       key={row.id}
                     >
                       <div className="td-user-identity">
@@ -286,8 +317,19 @@ export function SettingsPage() {
                         {status.label}
                       </span>
                       <span className="td-user-joined">{formatJoinDate(row.createdAt)}</span>
-                      {portal !== 'jodayn' ? (
+                      {showActions ? (
                         <div className="td-user-actions">
+                          {showInviteLink ? (
+                            <button
+                              type="button"
+                              className="td-user-btn td-user-btn--activate"
+                              disabled={togglingId === row.id}
+                              onClick={() => void handleReissueInvite(row)}
+                            >
+                              <Link2 size={11} strokeWidth={2.5} /> رابط الدعوة
+                            </button>
+                          ) : null}
+                          {portal !== 'jodayn' && !showInviteLink ? (
                           <button
                             type="button"
                             className={`td-user-btn ${row.isActive === false ? 'td-user-btn--activate' : 'td-user-btn--danger'}`}
@@ -304,6 +346,7 @@ export function SettingsPage() {
                               </>
                             )}
                           </button>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -333,7 +376,9 @@ export function SettingsPage() {
         <CredentialsModal
           name={credentials.name}
           email={credentials.email}
-          temporaryPassword={credentials.temporaryPassword}
+          inviteUrl={credentials.inviteUrl}
+          inviteExpiresAt={credentials.inviteExpiresAt}
+          reissued={credentials.reissued}
           onClose={() => setCredentials(null)}
         />
       ) : null}
