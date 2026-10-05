@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import requestLogo from "@/assets/landingpage/requestlogo.png";
 import { WaveLoop } from "./WaveLoop";
+import { apiRequest, ApiError } from "../../api/client";
 import "./demo-request.css";
 
 interface DemoRequestPageProps {
@@ -42,6 +43,8 @@ export function DemoRequestPage({ onSubmitted }: DemoRequestPageProps) {
   const [values, setValues] = useState<FormValues>(EMPTY_VALUES);
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
   function update<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -73,7 +76,7 @@ export function DemoRequestPage({ onSubmitted }: DemoRequestPageProps) {
     return next;
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const nextErrors = validate();
@@ -81,12 +84,17 @@ export function DemoRequestPage({ onSubmitted }: DemoRequestPageProps) {
     if (Object.keys(nextErrors).length > 0) return;
 
     setIsSubmitting(true);
-    window.setTimeout(() => {
-      setIsSubmitting(false);
+    setSubmitError(null);
+    try {
+      await apiRequest("/public/demo-requests", { method: "POST", body: JSON.stringify(values) });
       setValues(EMPTY_VALUES);
       setErrors({});
-      onSubmitted();
-    }, 350);
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : "تعذر إرسال الطلب، حاول مرة أخرى");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -120,7 +128,17 @@ export function DemoRequestPage({ onSubmitted }: DemoRequestPageProps) {
       <div className="demo-request-card">
         <img src={requestLogo} alt="Track+" className="demo-request-card__logo" />
 
-        <form className="demo-request-form" onSubmit={handleSubmit} noValidate>
+        {submitted ? (
+          <div className="demo-request-form">
+            <p className="demo-request-form__label" role="status">
+              تم استلام طلبك، سيتواصل معك فريقنا قريباً.
+            </p>
+            <button type="button" className="demo-request-form__submit" onClick={onSubmitted}>
+              العودة للرئيسية
+            </button>
+          </div>
+        ) : (
+        <form className="demo-request-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
           <label className="demo-request-form__label" htmlFor="fullName">
             الاسم كامل
           </label>
@@ -204,10 +222,12 @@ export function DemoRequestPage({ onSubmitted }: DemoRequestPageProps) {
           />
           {errors.jobTitle && <p className="demo-request-form__error">{errors.jobTitle}</p>}
 
+          {submitError && <p className="demo-request-form__error" role="alert">{submitError}</p>}
           <button type="submit" className="demo-request-form__submit" disabled={isSubmitting}>
             {isSubmitting ? "جاري الإرسال..." : "أرسل"}
           </button>
         </form>
+        )}
       </div>
     </div>
   );

@@ -65,6 +65,7 @@ app.get('/api/test/jodayn', auth, roles('JODAYN_UPPER_MGMT'), (req, res) => {
 })
 
 // ============ API ROUTES ============
+app.post('/api/public/demo-requests', require('./controllers/demoRequestController').create)
 app.use('/api/auth', authRoutes)
 app.use('/api/super-admin', superAdminRoutes)
 

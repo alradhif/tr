@@ -40,7 +40,7 @@ export function JodaynClientAccountsPage() {
             key: c.id,
             name: c.name,
             managerName: c.managerName ?? '—',
-            sector: c.sectorId ?? '—',
+            sector: c.sector?.name ?? '—',
             branch: c.branch ?? '—',
             contractStatus: c.contractStatus ?? '—',
           })),

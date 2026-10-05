@@ -136,15 +136,16 @@ async function notifyProjectDecision(kind, project, decision, reason) {
     })
     recipients = entries.map((user) => user.id)
   }
-  const approved = decision === 'APPROVED'
-  await createForUsers(recipients, kind, {
-    title: approved ? 'تم اعتماد المشروع' : 'أُعيد المشروع للتعديل',
-    message: approved
-      ? `تم اعتماد المشروع «${project.name}»`
-      : `تم رفض المشروع «${project.name}» وإعادته للتعديل: ${reason}`,
-    type: approved ? 'APPROVAL' : 'REJECTION',
-    link: `${cfg.basePath}/${project.id}`,
-  })
+  const messages = {
+    APPROVED: { title: 'تم اعتماد المشروع', message: `تم اعتماد المشروع «${project.name}»`, type: 'APPROVAL' },
+    REJECTED: { title: 'تم رفض المشروع', message: `تم رفض المشروع «${project.name}»: ${reason}`, type: 'REJECTION' },
+    RETURNED: {
+      title: 'أُعيد المشروع للتعديل',
+      message: `طلبت الإدارة تعديلات على المشروع «${project.name}» قبل إعادة إرساله: ${reason}`,
+      type: 'REVIEW',
+    },
+  }
+  await createForUsers(recipients, kind, { ...messages[decision], link: `${cfg.basePath}/${project.id}` })
 }
 
 /**

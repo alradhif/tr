@@ -23,6 +23,7 @@ const isPlatformStaff = [
 ]
 
 router.get('/dashboard', ...isSuperAdmin, platform.getDashboard)
+router.get('/demo-requests', ...isSuperAdmin, require('../controllers/demoRequestController').list)
 router.post('/tenants', ...isSuperAdmin, platform.createTenant)
 router.get('/accounts/:type/:id', ...isSuperAdmin, platform.getAccountDetails)
 router.patch('/accounts/:type/:id', ...isSuperAdmin, platform.updateAccount)

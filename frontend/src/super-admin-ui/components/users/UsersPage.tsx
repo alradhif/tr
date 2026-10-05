@@ -3,10 +3,15 @@ import { Copy, Plus, Check } from 'lucide-react'
 import { PageHeader } from '../layout/PageHeader'
 import { getSuperAdminToken } from '../../../auth/superAdminAuth'
 import { ApiError } from '../../../api/client'
+import { useLocation } from 'react-router-dom'
+import { KeyRound, Pencil, UserCheck, UserX } from 'lucide-react'
+import { CredentialsModal } from '../../../components/settings/CredentialsModal'
 import {
   createPlatformUser,
   getAccounts,
   getPlatformUsers,
+  resetPlatformUserCredentials,
+  updatePlatformUser,
   type ClientAccount,
   type OrgAccount,
   type PlatformUser,
@@ -78,6 +83,37 @@ export function UsersPage() {
     name: string
   } | null>(null)
   const [copied, setCopied] = useState<'email' | 'password' | null>(null)
+  const location = useLocation()
+  const [search, setSearch] = useState(() => new URLSearchParams(location.search).get('q') ?? '')
+  const [rowBusy, setRowBusy] = useState<string | null>(null)
+  const [rowError, setRowError] = useState<string | null>(null)
+  const [reissued, setReissued] = useState<{ name: string; email: string; temporaryPassword: string } | null>(null)
+
+  const portalKey = (user: PlatformUser) => String(user.portalType).toLowerCase() as 'org' | 'client' | 'jodayn'
+
+  const runRow = async (user: PlatformUser, action: (token: string) => Promise<unknown>) => {
+    const token = getSuperAdminToken()
+    if (!token) return
+    setRowBusy(user.id)
+    setRowError(null)
+    try {
+      await action(token)
+      await load()
+    } catch (err) {
+      setRowError(err instanceof ApiError ? err.message : 'تعذر تنفيذ العملية')
+    } finally {
+      setRowBusy(null)
+    }
+  }
+
+  const query = search.trim().toLowerCase()
+  const visibleUsers = users.filter(
+    (user) =>
+      !query ||
+      user.name.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      String(user.accountName ?? '').toLowerCase().includes(query),
+  )
 
   const load = async () => {
     const token = getSuperAdminToken()
@@ -405,15 +441,26 @@ export function UsersPage() {
           <span>Client {counts.client}</span>
           <span>Organization {counts.org}</span>
           <span>Jodayn {counts.jodayn}</span>
+          <input
+            type="search"
+            className="tenant-form-input users-search"
+            placeholder="البحث بالاسم أو البريد أو الجهة"
+            aria-label="بحث"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
         </div>
+        {rowError ? <p className="user-form-error">{rowError}</p> : null}
         <section className="tenant-form-card users-table-card">
           <div className="td-users-row td-users-row--head users-table-head">
             <span>المستخدم</span>
             <span>نوع المستخدم</span>
             <span>مستوى الصلاحية</span>
             <span>الجهة</span>
+            <span>الحالة</span>
+            <span>إجراءات</span>
           </div>
-          {users.map((user) => (
+          {visibleUsers.map((user) => (
             <div className="td-users-row users-table-row" key={`${user.portalType}-${user.id}`}>
               <div>
                 <p className="td-user-name">{user.name}</p>
@@ -424,12 +471,73 @@ export function UsersPage() {
               <span>{PORTAL_LABEL[user.portalType as PortalType] || user.portalType}</span>
               <span>{ACCESS_LABEL[user.accessLevel as AccessLevel] || user.accessLevel}</span>
               <span>{user.accountName || '—'}</span>
+              <span className={`td-user-status td-user-status--${user.status ?? (user.isActive ? 'active' : 'suspended')}`}>
+                <span className="td-status-dot" />
+                {user.statusLabel ?? (user.isActive ? 'نشط' : 'معلق')}
+              </span>
+              <span className="td-user-actions">
+                <button
+                  type="button"
+                  className="td-user-btn"
+                  disabled={rowBusy === user.id}
+                  title="تعديل الدور"
+                  onClick={() => {
+                    const next = user.accessLevel === 'UPPER' ? 'DATA_ENTRY' : 'UPPER'
+                    if (!window.confirm(`تغيير صلاحية ${user.name} إلى ${ACCESS_LABEL[next]}؟`)) return
+                    void runRow(user, (token) => updatePlatformUser(token, portalKey(user), user.id, { accessLevel: next }))
+                  }}
+                >
+                  <Pencil size={11} strokeWidth={2.5} /> الدور
+                </button>
+                <button
+                  type="button"
+                  className={`td-user-btn ${user.isActive ? 'td-user-btn--danger' : 'td-user-btn--activate'}`}
+                  disabled={rowBusy === user.id}
+                  onClick={() =>
+                    void runRow(user, (token) => updatePlatformUser(token, portalKey(user), user.id, { isActive: !user.isActive }))
+                  }
+                >
+                  {user.isActive ? (
+                    <>
+                      <UserX size={11} strokeWidth={2.5} /> تعليق
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck size={11} strokeWidth={2.5} /> تفعيل
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="td-user-btn"
+                  disabled={rowBusy === user.id}
+                  title="إصدار كلمة مرور مؤقتة جديدة"
+                  onClick={() => {
+                    if (!window.confirm('إصدار كلمة مرور مؤقتة جديدة؟ سيعود الحساب «غير نشط» حتى أول دخول.')) return
+                    void runRow(user, async (token) => {
+                      const result = await resetPlatformUserCredentials(token, portalKey(user), user.id)
+                      setReissued({ name: result.user.name, email: result.user.email, temporaryPassword: result.temporaryPassword })
+                    })
+                  }}
+                >
+                  <KeyRound size={11} strokeWidth={2.5} />
+                </button>
+              </span>
             </div>
           ))}
           {loading ? <p className="users-empty">جاري التحميل...</p> : null}
-          {!loading && users.length === 0 ? <p className="users-empty">لا يوجد مستخدمون بعد</p> : null}
+          {!loading && visibleUsers.length === 0 ? <p className="users-empty">لا يوجد مستخدمون بعد</p> : null}
         </section>
       </div>
+      {reissued ? (
+        <CredentialsModal
+          name={reissued.name}
+          email={reissued.email}
+          temporaryPassword={reissued.temporaryPassword}
+          reissued
+          onClose={() => setReissued(null)}
+        />
+      ) : null}
     </div>
   )
 }

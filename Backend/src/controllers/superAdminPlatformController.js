@@ -73,21 +73,27 @@ exports.getDashboard = async (req, res) => {
 
 // ============ SUBSCRIPTIONS ============
 
-async function subscribe({ accountType, accountId, packageId, createdBy }) {
+function positiveInt(value) {
+  const n = Number(value)
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : null
+}
+
+async function subscribe({ accountType, accountId, packageId, createdBy, userLimit, storageLimitGb, startDate }) {
   if (!packageId) return null
   const pkg = await prisma.package.findUnique({ where: { id: packageId } })
   if (!pkg || !pkg.isActive) throw httpError(400, 'الباقة المختارة غير متاحة')
+  const start = startDate && !Number.isNaN(new Date(startDate).getTime()) ? new Date(startDate) : new Date()
   return prisma.accountSubscription.create({
     data: {
       accountType,
       accountId,
       packageId,
-      startDate: new Date(),
-      endDate: new Date(Date.now() + (pkg.duration || 365) * DAY_MS),
+      startDate: start,
+      endDate: new Date(start.getTime() + (pkg.duration || 365) * DAY_MS),
       status: 'ACTIVE',
       paidAmount: pkg.price,
-      userLimit: pkg.maxUsers,
-      storageLimitGb: pkg.storageGb,
+      userLimit: positiveInt(userLimit) ?? pkg.maxUsers,
+      storageLimitGb: positiveInt(storageLimitGb) ?? pkg.storageGb,
       createdBy,
     },
     include: { package: true },
@@ -183,6 +189,9 @@ exports.createTenant = async (req, res) => {
       accountId: account.id,
       packageId: body.packageId,
       createdBy: req.user.userId,
+      userLimit: body.userLimit,
+      storageLimitGb: body.storageLimitGb,
+      startDate: body.subscriptionStart,
     })
     await writeAuditLog({
       action: 'CREATE',
@@ -493,6 +502,7 @@ exports.createPlatformUser = async (req, res) => {
       scopeId,
       invitedBy: req.user.userId,
       invitedByType: 'SUPER_ADMIN',
+      initialPassword: req.body?.password ? String(req.body.password) : undefined,
     })
     res.json({
       success: true,

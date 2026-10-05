@@ -105,16 +105,16 @@ function publicUser(user, type) {
 
 async function listDemoAccounts() {
   assertDemoMode()
-  const [admins, jodayn, orgs, clients, stateRows] = await Promise.all([
-    prisma.superAdmin.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
-    prisma.jodaynUser.findMany({ where: { isActive: true, pendingActivation: false }, orderBy: { createdAt: 'asc' } }),
-    prisma.orgUser.findMany({ where: { isActive: true, pendingActivation: false }, orderBy: { createdAt: 'asc' } }),
-    prisma.clientUser.findMany({ where: { isActive: true, pendingActivation: false }, orderBy: { createdAt: 'asc' } }),
+  // Only the six quick-login accounts are listed; Super Admin and invited users sign in normally.
+  const email = { in: Object.values(DEMO_ROLE_EMAILS) }
+  const [jodayn, orgs, clients, stateRows] = await Promise.all([
+    prisma.jodaynUser.findMany({ where: { email, isActive: true, pendingActivation: false }, orderBy: { createdAt: 'asc' } }),
+    prisma.orgUser.findMany({ where: { email, isActive: true, pendingActivation: false }, orderBy: { createdAt: 'asc' } }),
+    prisma.clientUser.findMany({ where: { email, isActive: true, pendingActivation: false }, orderBy: { createdAt: 'asc' } }),
     prisma.$queryRawUnsafe('SELECT last_reset FROM demo_state WHERE id = 1'),
   ])
 
   const accounts = [
-    ...admins.map((user) => publicUser(user, 'SUPER_ADMIN')),
     ...jodayn.map((user) => publicUser(user, 'JODAYN')),
     ...orgs.map((user) => publicUser(user, 'ORG')),
     ...clients.map((user) => publicUser(user, 'CLIENT')),
@@ -123,8 +123,9 @@ async function listDemoAccounts() {
   return { accounts, resetsAt: new Date(lastReset.getTime() + RESET_INTERVAL_MS).toISOString() }
 }
 
+// The six credential-free quick-login buttons. Super Admin is deliberately not here: it signs in
+// with its password and code, so a public demo link never grants platform administration.
 const DEMO_ROLE_EMAILS = {
-  SUPER_ADMIN: 'admin@trackplus.com',
   JODAYN_UPPER_MGMT: 'fai@jodayn.com',
   JODAYN_DATA_ENTRY: 'fai.entry@jodayn.com',
   ORG_UPPER_MGMT: 'seed.orguser@acme.com',
@@ -134,7 +135,6 @@ const DEMO_ROLE_EMAILS = {
 }
 
 const ROLE_ACCOUNT_TYPE = {
-  SUPER_ADMIN: 'SUPER_ADMIN',
   JODAYN_UPPER_MGMT: 'JODAYN',
   JODAYN_DATA_ENTRY: 'JODAYN',
   ORG_UPPER_MGMT: 'ORG',
@@ -143,47 +143,32 @@ const ROLE_ACCOUNT_TYPE = {
   CLIENT_DATA_ENTRY: 'CLIENT',
 }
 
-async function loginDemoAccount(type, userId, role) {
+async function loginDemoAccount(role) {
   assertDemoMode()
-  let resolvedType = type
-  let resolvedUserId = userId
-
-  if ((!resolvedType || !resolvedUserId) && role) {
-    const email = DEMO_ROLE_EMAILS[role]
-    resolvedType = ROLE_ACCOUNT_TYPE[role]
-    if (!email || !resolvedType) return null
-    const lookup = {
-      SUPER_ADMIN: () => prisma.superAdmin.findUnique({ where: { email } }),
-      JODAYN: () => prisma.jodaynUser.findUnique({ where: { email } }),
-      ORG: () => prisma.orgUser.findUnique({ where: { email } }),
-      CLIENT: () => prisma.clientUser.findUnique({ where: { email } }),
-    }
-    const found = await lookup[resolvedType]()
-    if (!found) return null
-    resolvedUserId = found.id
+  const email = DEMO_ROLE_EMAILS[role]
+  const resolvedType = ROLE_ACCOUNT_TYPE[role]
+  if (!email || !resolvedType) return null
+  const lookup = {
+    JODAYN: () => prisma.jodaynUser.findUnique({ where: { email } }),
+    ORG: () => prisma.orgUser.findUnique({ where: { email } }),
+    CLIENT: () => prisma.clientUser.findUnique({ where: { email } }),
   }
-
-  const models = {
-    SUPER_ADMIN: prisma.superAdmin,
-    JODAYN: prisma.jodaynUser,
-    ORG: prisma.orgUser,
-    CLIENT: prisma.clientUser,
-  }
-  const model = models[resolvedType]
-  if (!model) return null
+  const found = await lookup[resolvedType]()
+  if (!found) return null
+  const resolvedUserId = found.id
 
   const user = resolvedType === 'ORG'
     ? await prisma.orgUser.findUnique({ where: { id: resolvedUserId }, include: { org: true } })
     : resolvedType === 'CLIENT'
       ? await prisma.clientUser.findUnique({ where: { id: resolvedUserId }, include: { client: true } })
-      : await model.findUnique({ where: { id: resolvedUserId } })
+      : await prisma.jodaynUser.findUnique({ where: { id: resolvedUserId } })
   if (!user || !user.isActive || user.pendingActivation) return null
   if (!(await parentAccountActive(resolvedType, user))) return null
   await recordSuccessfulLogin(user, resolvedType)
 
   const payload = {
     userId: user.id,
-    role: resolvedType === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : user.role,
+    role: user.role,
     type: resolvedType,
   }
   if (resolvedType === 'ORG') payload.orgId = user.orgId

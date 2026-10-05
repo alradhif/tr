@@ -226,6 +226,7 @@ async function buildProjectPortalDashboard(kind, accountId, options = {}) {
       select: {
         id: true,
         name: true,
+        projectId: true,
         project: { select: { name: true } },
         createdAt: true,
         status: true,
@@ -356,6 +357,7 @@ async function buildProjectPortalDashboard(kind, accountId, options = {}) {
     todayAlerts,
     deliverables: recentDeliverables.map((d) => ({
       id: d.id,
+      projectId: d.projectId,
       title: d.name,
       project: d.project?.name || '—',
     })),

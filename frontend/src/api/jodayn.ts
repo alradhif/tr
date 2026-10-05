@@ -20,6 +20,7 @@ export type JodaynUser = {
   isActive: boolean
   pendingActivation?: boolean
   activatedAt?: string | null
+  lastLoginAt?: string | null
   createdAt?: string | null
 }
 
@@ -31,7 +32,7 @@ export function createJodaynUser(
   token: string,
   data: { name: string; email: string; accessLevel: 'UPPER' | 'DATA_ENTRY' },
 ) {
-  return apiRequest<{ success: boolean; user: JodaynUser; inviteUrl: string; inviteExpiresAt: string }>('/jodayn/users', {
+  return apiRequest<{ success: boolean; user: JodaynUser; temporaryPassword: string }>('/jodayn/users', {
     method: 'POST',
     token,
     body: JSON.stringify(data),
@@ -115,9 +116,29 @@ export function createReport(token: string, data: Record<string, unknown>) {
   })
 }
 
-export function reissueJodaynInvite(token: string, id: string) {
-  return apiRequest<{ success: boolean; inviteUrl: string; inviteExpiresAt: string }>(`/jodayn/users/${id}/invite`, {
-    method: 'POST',
+/** New one-time initial password for an invited user who has not signed in yet. */
+export function resetJodaynUserCredentials(token: string, id: string) {
+  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string }>(
+    `/jodayn/users/${id}/credentials`,
+    { method: 'POST', token },
+  )
+}
+
+export function toggleJodaynUser(token: string, id: string) {
+  return apiRequest<{ success: boolean; isActive: boolean }>(`/jodayn/users/${id}/toggle`, {
+    method: 'PATCH',
     token,
   })
+}
+
+export function updateInvoice(token: string, id: string, data: Record<string, unknown>) {
+  return apiRequest<{ success: boolean; invoice: Invoice }>(`/jodayn/invoices/${id}`, {
+    method: 'PUT',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
+export function deleteJodaynRecord(token: string, kind: 'invoices' | 'forecasts' | 'reports', id: string) {
+  return apiRequest<{ success: boolean }>(`/jodayn/${kind}/${id}`, { method: 'DELETE', token })
 }

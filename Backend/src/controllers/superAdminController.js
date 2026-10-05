@@ -185,7 +185,7 @@ exports.getAllAccounts = async (req, res) => {
         orderBy: { createdAt: 'desc' }
       }),
       prisma.jodaynUser.findMany({
-        select: { id: true, name: true, email: true, role: true, isActive: true }
+        select: { id: true, name: true, email: true, role: true, isActive: true, pendingActivation: true, createdAt: true }
       }),
       prisma.orgUser.findMany({
         select: { id: true, name: true, email: true, orgId: true, createdAt: true },
@@ -201,16 +201,52 @@ exports.getAllAccounts = async (req, res) => {
     const orgsWithSubs = await attachSubscriptions(rawOrgs, 'ORG')
     const clientsWithSubs = await attachSubscriptions(rawClients, 'CLIENT')
 
+    const [orgCounts, clientCounts, clientAdmins] = await Promise.all([
+      prisma.orgUser.groupBy({ by: ['orgId', 'isActive', 'pendingActivation'], _count: { _all: true } }),
+      prisma.clientUser.groupBy({ by: ['clientId', 'isActive', 'pendingActivation'], _count: { _all: true } }),
+      prisma.clientUser.findMany({
+        where: { role: 'CLIENT_UPPER_MGMT' },
+        select: { name: true, email: true, clientId: true },
+        orderBy: { createdAt: 'asc' }
+      })
+    ])
+    const tally = (rows, key) => {
+      const map = new Map()
+      for (const row of rows) {
+        const entry = map.get(row[key]) || { userCount: 0, activeUsers: 0 }
+        entry.userCount += row._count._all
+        if (row.isActive && !row.pendingActivation) entry.activeUsers += row._count._all
+        map.set(row[key], entry)
+      }
+      return map
+    }
+    const orgTally = tally(orgCounts, 'orgId')
+    const clientTally = tally(clientCounts, 'clientId')
+    const firstClientAdmin = new Map()
+    for (const user of clientAdmins) {
+      if (!firstClientAdmin.has(user.clientId)) firstClientAdmin.set(user.clientId, user)
+    }
+
     const orgs = orgsWithSubs.map((org) => {
       const admin = firstOrgUserByOrg.get(org.id)
       return {
         ...org,
         adminName: admin?.name || null,
-        adminEmail: admin?.email || null
+        adminEmail: admin?.email || null,
+        ...(orgTally.get(org.id) || { userCount: 0, activeUsers: 0 })
+      }
+    })
+    const clients = clientsWithSubs.map((client) => {
+      const admin = firstClientAdmin.get(client.id)
+      return {
+        ...client,
+        adminName: admin?.name || client.managerName || null,
+        adminEmail: admin?.email || null,
+        ...(clientTally.get(client.id) || { userCount: 0, activeUsers: 0 })
       }
     })
 
-    res.json({ orgs, clients: clientsWithSubs, jodaynUsers })
+    res.json({ orgs, clients, jodaynUsers })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }

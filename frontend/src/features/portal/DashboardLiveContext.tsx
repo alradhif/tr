@@ -30,7 +30,7 @@ export type LiveDashboardData = {
   }>
   pendingRequests?: number
   pendingProjectApprovals?: number
-  deliverables?: Array<{ id: string; title: string; project: string }>
+  deliverables?: Array<{ id: string; title: string; project: string; projectId?: string }>
   projects?: Array<{
     id: string
     title: string

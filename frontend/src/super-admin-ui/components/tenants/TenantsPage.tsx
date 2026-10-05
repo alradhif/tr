@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { CredentialsModal } from '../../../components/settings/CredentialsModal';
 import { ChevronLeft, Plus, Search } from 'lucide-react';
 import GridLayout, { WidthProvider, type Layout, type LayoutItem } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
@@ -100,6 +102,9 @@ export function TenantsPage() {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{ name: string; email: string; temporaryPassword: string } | null>(null);
+  const [search, setSearch] = useState('');
+  const location = useLocation();
   const contextTenants = useTenants();
   const { addTenant, refreshTenants } = useTenantMutations();
   const [tenants, setTenants] = useState<TenantRow[]>([]);
@@ -116,10 +121,19 @@ export function TenantsPage() {
     { id: 'CLIENT', label: 'Client' },
     { id: 'JODAYN', label: 'Jodayn' },
   ];
-  const visibleTenants =
-    activeFilter === 'all'
-      ? tenants
-      : tenants.filter((tenant) => tenant.tenantType === activeFilter);
+  const query = search.trim().toLowerCase();
+  const visibleTenants = tenants
+    .filter((tenant) => activeFilter === 'all' || tenant.tenantType === activeFilter)
+    .filter((tenant) => !query || tenant.name.toLowerCase().includes(query));
+
+  // Global search links here with ?id=org-<id>; open that tenant directly.
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get('id');
+    if (id && tenants.some((tenant) => tenant.id === id)) {
+      setSelectedTenantId(id);
+      setView('details');
+    }
+  }, [location.search, tenants]);
 
   
   
@@ -214,7 +228,17 @@ export function TenantsPage() {
         packageId,
         managerName: draft.managerName || undefined,
         managerEmail: draft.managerEmail || undefined,
+        userLimit: draft.userLimit ? Number(draft.userLimit) : undefined,
+        storageLimitGb: draft.storageLimit ? Number(draft.storageLimit) : undefined,
+        subscriptionStart: draft.subscriptionStart || undefined,
       });
+      if (created.temporaryPassword) {
+        setCreatedCredentials({
+          name: created.manager?.name || created.jodaynUser?.name || draft.managerName,
+          email: created.manager?.email || created.jodaynUser?.email || draft.managerEmail,
+          temporaryPassword: created.temporaryPassword,
+        });
+      }
 
       let detail: Tenant | null = null;
       if (created.tenantType === 'ORG' && created.org) {
@@ -359,7 +383,13 @@ export function TenantsPage() {
         <div className="tenants-toolbar-row">
           <div className="tenants-search">
             <Search size={16} strokeWidth={2.5} className="tenants-search__icon" />
-            <input type="search" placeholder="البحث" aria-label="بحث" />
+            <input
+              type="search"
+              placeholder="البحث"
+              aria-label="بحث"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
           </div>
           <div className="tenants-filter-tabs">
             {typeFilterTabs.map((tab) => {
@@ -453,6 +483,14 @@ export function TenantsPage() {
           </ResponsiveGrid>
         </div>
       </div>
+      {createdCredentials ? (
+        <CredentialsModal
+          name={createdCredentials.name}
+          email={createdCredentials.email}
+          temporaryPassword={createdCredentials.temporaryPassword}
+          onClose={() => setCreatedCredentials(null)}
+        />
+      ) : null}
     </div>
   );
 }

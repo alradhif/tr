@@ -12,6 +12,7 @@
     "demo:reset": "node Backend/src/utils/resetDemo.js",
     "demo:check": "node Backend/src/utils/runDemoApiChecks.js",
     "check:attachments": "node Backend/src/utils/runAttachmentChecks.js",
+    "check:features": "node Backend/src/utils/runFeatureChecks.js",
     "studio": "prisma studio",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev"

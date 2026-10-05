@@ -1,6 +1,7 @@
 import { type ReactElement, useEffect, useRef, useState } from 'react';
 import { LogOut, MoreVertical, Search } from 'lucide-react';
 import type { UserRole } from '../../types/auth';
+import { PortalSearch } from '../../../components/search/PortalSearch';
 import { brandAssets } from '@/assets';
 import { getSuperAdminUser } from '../../../auth/superAdminAuth';
 import {
@@ -15,7 +16,7 @@ import {
 import './layout.css';
 import './sidebar-dropdown.css';
 
-export type PageId = 'dashboard' | 'companies' | 'tenants' | 'users' | 'subscriptions' | 'audit-log';
+export type PageId = 'dashboard' | 'companies' | 'tenants' | 'users' | 'subscriptions' | 'audit-log' | 'settings';
 
 const ADMIN_ROUTABLE_PAGES: PageId[] = ['dashboard', 'companies'];
 
@@ -165,7 +166,10 @@ export function Sidebar({ role, activePage, onNavigate, onSignOut }: SidebarProp
 
         <div className="sidebar__search">
           <Search size={18} strokeWidth={2.5} className="sidebar__search-icon" />
-          <input type="search" placeholder="البحث" aria-label="بحث" />
+          <PortalSearch
+            className="sidebar__search-box"
+            renderInput={(props) => <input type="search" placeholder="البحث" aria-label="بحث" {...props} />}
+          />
         </div>
 
         <nav className="sidebar__nav">
@@ -175,7 +179,7 @@ export function Sidebar({ role, activePage, onNavigate, onSignOut }: SidebarProp
             return (
               <a
                 key={item.id}
-                href="#"
+                href={`/super-admin/${item.id === 'dashboard' ? '' : item.id}`}
                 className={`sidebar__nav-item ${
                   item.id === activePage ? 'sidebar__nav-item--active' : ''
                 }`}
@@ -194,7 +198,14 @@ export function Sidebar({ role, activePage, onNavigate, onSignOut }: SidebarProp
         </nav>
 
         <div className="sidebar__footer">
-          <a href="#" className="sidebar__nav-item">
+          <a
+            href="/super-admin/settings"
+            className={`sidebar__nav-item ${activePage === 'settings' ? 'sidebar__nav-item--active' : ''}`}
+            onClick={(event) => {
+              event.preventDefault();
+              onNavigate('settings');
+            }}
+          >
             <SidebarSettingsIcon />
             <span>الإعدادات</span>
           </a>

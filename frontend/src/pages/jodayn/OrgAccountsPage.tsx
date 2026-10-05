@@ -39,7 +39,7 @@ export function JodaynOrgAccountsPage() {
           (data.orgs ?? []).map((o) => ({
             key: o.id,
             name: o.name,
-            sector: o.sectorId ?? '—',
+            sector: o.sector?.name ?? '—',
             branch: o.branch ?? '—',
             contractDuration: o.contractDuration != null ? String(o.contractDuration) : '—',
             contractStatus: o.contractStatus ?? '—',

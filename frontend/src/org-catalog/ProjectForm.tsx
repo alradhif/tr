@@ -6,10 +6,11 @@ import { commonAssets, projectsAssets } from '@/assets'
 import { AssetIcon } from '../components/ui/AssetIcon'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
+import { extractFromDocument } from '../api/me'
 import {
   getCompanies,
   getDepartments,
-  getOrgUsers,
+  getAssignableOrgUsers,
   type Department,
   type ExecutingCompany,
 } from '../api/org'
@@ -18,7 +19,7 @@ import {
   createClientProject,
   deleteClientProjectAttachment,
   getClientProjectById,
-  getClientUsers,
+  getAssignableClientUsers,
   submitClientProject,
   updateClientNested,
   updateClientProject,
@@ -404,12 +405,12 @@ export function ProjectForm({
     ;(async () => {
       try {
         if (isClient) {
-          const usersRes = await getClientUsers(token)
+          const usersRes = await getAssignableClientUsers(token)
           if (cancelled) return
           setUsers(usersRes.users ?? [])
         } else {
           const [usersRes, deptsRes, companiesRes] = await Promise.all([
-            getOrgUsers(token),
+            getAssignableOrgUsers(token),
             getDepartments(token),
             getCompanies(token),
           ])
@@ -454,6 +455,45 @@ export function ProjectForm({
       'stages',
       form.stages.map((stage) => (stage.id === stageId ? { ...stage, [key]: value } : stage)),
     )
+  }
+
+  const [extracting, setExtracting] = useState(false)
+
+  /** Reads the contract with the AI extractor and fills only the fields that are still empty. */
+  async function prefillFromContract(file: File) {
+    const token = isClient ? getClientToken() : getOrgToken()
+    if (!token) return
+    if (!/\.(pdf|txt|md)$/i.test(file.name)) {
+      message.info('سيُرفق الملف مع المشروع، والتعبئة التلقائية تدعم ملفات PDF والنصوص فقط')
+      return
+    }
+    setExtracting(true)
+    try {
+      const { fields } = await extractFromDocument(token, 'project', file)
+      const text = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '')
+      const date = (value: unknown) => (/^\d{4}-\d{2}-\d{2}/.test(text(value)) ? text(value).slice(0, 10) : '')
+      const found: Partial<ProjectFormState> = {
+        name: text(fields.name),
+        description: text(fields.description),
+        startDate: date(fields.startDate),
+        endDate: date(fields.endDate),
+        budget: Number.isFinite(Number(fields.budget)) && text(fields.budget) ? String(Number(fields.budget)) : '',
+        orgProjectManagerName: text(fields.orgProjectManagerName),
+        clientProjectManagerName: text(fields.clientProjectManagerName),
+      }
+      const updates = (Object.entries(found) as Array<[keyof ProjectFormState, string]>).filter(
+        ([key, value]) => value && !String(form[key] ?? '').trim(),
+      )
+      const filled = updates.length
+      if (filled) setForm((current) => ({ ...current, ...Object.fromEntries(updates) }))
+      message.success(filled ? `تمت تعبئة ${filled} من الحقول من الملف، راجعها قبل الحفظ` : 'لم تُعبأ حقول جديدة من الملف')
+    } catch (err) {
+      const text = err instanceof ApiError ? err.message : t('loadError')
+      if (err instanceof ApiError && err.status === 503) message.warning(`${text} سيُرفق الملف مع المشروع.`)
+      else message.error(text)
+    } finally {
+      setExtracting(false)
+    }
   }
 
   const payload = useMemo<CreateProjectPayload | CreateClientProjectPayload>(
@@ -751,11 +791,12 @@ export function ProjectForm({
               if (!file) return
               setContractFile(file)
               event.target.value = ''
+              void prefillFromContract(file)
             }}
           />
           <div className="create-project__upload-copy">
             <strong>{t('aiUploadProjectTitle')}</strong>
-            <span>{t('aiUploadProjectSubtitle')}</span>
+            <span>{extracting ? 'جاري قراءة الملف...' : t('aiUploadProjectSubtitle')}</span>
             {contractFile ? (
               <small>
                 <AssetIcon src={projectsAssets.contract} size={14} /> {contractFile.name}

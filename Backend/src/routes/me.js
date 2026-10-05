@@ -13,7 +13,7 @@ router.delete('/me/dashboard-layout/:portal', auth, me.resetDashboardLayout)
 router.get('/search', auth, me.search)
 
 router.get('/ai/status', auth, ai.status)
-router.post('/ai/assistant', auth, ai.assistant)
+router.post('/ai/assistant', auth, ai.receiveFile, ai.assistant)
 router.post('/ai/extract', auth, ai.receiveFile, ai.extract)
 
 module.exports = router

@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Copy } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Copy, X } from 'lucide-react';
+import { ApiError } from '../../../api/client';
+import { askAssistant, tokenForPath } from '../../../api/me';
 import { commonAssets, dashboardAssets } from '@/assets';
 import { getClientUser } from '../../../auth/clientAuth';
 import { getJodaynUser } from '../../../auth/jodaynAuth';
@@ -28,20 +31,8 @@ const suggestions: Suggestion[] = [
   { id: 's3', label: 'لخص حالة المشاريع النشطة', prompt: 'لخص حالة المشاريع النشطة' },
 ];
 
-const liveUnavailable = (
-  <p>
-    المساعد غير متصل ببيانات حية حالياً. راجع لوحة التحكم للاطلاع على الأرقام الفعلية من النظام.
-  </p>
-);
-
-function answerFor(prompt: string): ReactNode {
-  void prompt
-  return liveUnavailable
-}
-
-function plainTextFor(node: ReactNode): string {
-  void node
-  return 'المساعد غير متصل ببيانات حية حالياً. راجع لوحة التحكم للاطلاع على الأرقام الفعلية من النظام.'
+function answerNode(text: string): ReactNode {
+  return <p style={{ whiteSpace: 'pre-wrap' }}>{text}</p>;
 }
 
 function sessionDisplayName() {
@@ -61,6 +52,8 @@ export function AIAssistantPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const location = useLocation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstName = sessionDisplayName().split(' ')[0];
 
@@ -81,27 +74,36 @@ export function AIAssistantPanel() {
     setHasStartedChat(false);
     setMessages([]);
     setDraft('');
+    setAttachment(null);
   }
 
   function sendPrompt(prompt: string) {
     const text = prompt.trim();
-    if (!text) return;
+    const file = attachment;
+    if (!text && !file) return;
+    if (isTyping) return;
 
     setHasStartedChat(true);
     setDraft('');
+    setAttachment(null);
 
-    const userMessage: ChatMessage = { id: nextId(), role: 'user', content: text };
-    setMessages((prev) => [...prev, userMessage]);
+    const label = file ? `${text || 'لخص هذا الملف'}\n📎 ${file.name}` : text;
+    setMessages((prev) => [...prev, { id: nextId(), role: 'user', content: <span style={{ whiteSpace: 'pre-wrap' }}>{label}</span> }]);
     setIsTyping(true);
 
-    window.setTimeout(() => {
-      const answer = answerFor(text);
+    const reply = (answer: string) => {
       setIsTyping(false);
-      setMessages((prev) => [
-        ...prev,
-        { id: nextId(), role: 'assistant', content: answer, copyText: plainTextFor(answer) },
-      ]);
-    }, 700);
+      setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', content: answerNode(answer), copyText: answer }]);
+    };
+
+    const token = tokenForPath(location.pathname);
+    if (!token) {
+      reply('انتهت الجلسة، سجّل الدخول مرة أخرى لاستخدام المساعد.');
+      return;
+    }
+    askAssistant(token, text, file)
+      .then((result) => reply(result.reply))
+      .catch((err) => reply(err instanceof ApiError ? err.message : 'تعذر الوصول إلى المساعد حالياً.'));
   }
 
   async function handleCopy(text: string) {
@@ -166,7 +168,7 @@ export function AIAssistantPanel() {
             </div>
 
             <div className="assistant-conversation__composer">
-              <Composer draft={draft} setDraft={setDraft} onSend={() => sendPrompt(draft)} />
+              <Composer draft={draft} setDraft={setDraft} onSend={() => sendPrompt(draft)} attachment={attachment} setAttachment={setAttachment} disabled={isTyping} />
             </div>
           </div>
         </>
@@ -184,7 +186,7 @@ export function AIAssistantPanel() {
               </div>
 
               <div className="assistant-welcome__bottom">
-                <Composer draft={draft} setDraft={setDraft} onSend={() => sendPrompt(draft)} />
+                <Composer draft={draft} setDraft={setDraft} onSend={() => sendPrompt(draft)} attachment={attachment} setAttachment={setAttachment} disabled={isTyping} />
 
                 <div className="assistant-suggestions">
                   {suggestions.map((suggestion) => (
@@ -215,9 +217,14 @@ interface ComposerProps {
   draft: string;
   setDraft: (value: string) => void;
   onSend: () => void;
+  attachment: File | null;
+  setAttachment: (file: File | null) => void;
+  disabled?: boolean;
 }
 
-function Composer({ draft, setDraft, onSend }: ComposerProps) {
+function Composer({ draft, setDraft, onSend, attachment, setAttachment, disabled }: ComposerProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -227,16 +234,44 @@ function Composer({ draft, setDraft, onSend }: ComposerProps) {
 
   return (
     <div className="assistant-composer">
-      <button type="button" className="assistant-composer__icon-btn" aria-label="إرفاق ملف">
+      <button
+        type="button"
+        className="assistant-composer__icon-btn"
+        aria-label="إرفاق ملف"
+        title="إرفاق ملف PDF أو نص"
+        onClick={() => fileInputRef.current?.click()}
+      >
         <img src={commonAssets.upload} alt="" width={16} height={16} className="asset-icon" />
       </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.txt,.md,.csv,application/pdf,text/plain"
+        hidden
+        onChange={(e) => {
+          setAttachment(e.target.files?.[0] ?? null);
+          e.target.value = '';
+        }}
+      />
+      {attachment ? (
+        <button
+          type="button"
+          className="assistant-composer__icon-btn"
+          title={`إزالة ${attachment.name}`}
+          aria-label={`إزالة المرفق ${attachment.name}`}
+          onClick={() => setAttachment(null)}
+        >
+          <X size={14} />
+        </button>
+      ) : null}
       <input
         type="text"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="أكتب رسالة"
+        placeholder={attachment ? `${attachment.name} · اكتب سؤالك عن الملف` : 'أكتب رسالة'}
         aria-label="أكتب رسالة"
+        disabled={disabled}
       />
     </div>
   );

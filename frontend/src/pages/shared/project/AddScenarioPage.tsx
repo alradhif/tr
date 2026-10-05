@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import dayjs from 'dayjs'
 import { DatePicker, Form, Input, InputNumber, Select, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -35,6 +36,29 @@ function toDateString(value?: { toISOString?: () => string } | string) {
   if (!value) return undefined
   if (typeof value === 'string') return value
   return value.toISOString?.()
+}
+
+function dateValue(value: unknown) {
+  const parsed = typeof value === 'string' ? dayjs(value) : null
+  return parsed?.isValid() ? parsed : undefined
+}
+
+function numberValue(value: unknown) {
+  const parsed = Number(value)
+  return value !== undefined && value !== '' && Number.isFinite(parsed) ? parsed : undefined
+}
+
+function scenarioFormValues(fields: Record<string, unknown>) {
+  return {
+    originalDate: dateValue(fields.originalDate),
+    originalCost: numberValue(fields.originalCost),
+    newDate: dateValue(fields.newDate),
+    newCost: numberValue(fields.newCost),
+    impactOnSchedule: fields.impactOnSchedule,
+    impactOnCost: fields.impactOnCost,
+    impactOnCriticalPath: fields.impactOnCriticalPath,
+    recommendations: fields.recommendations,
+  }
 }
 
 export function AddScenarioPage() {
@@ -88,6 +112,8 @@ export function AddScenarioPage() {
         <AiUploadBanner
           title={t('aiUploadScenarioTitle')}
           subtitle={t('aiUploadScenarioSubtitle')}
+          kind="scenario"
+          mapFields={scenarioFormValues}
         />
 
         <FormSection title={t('scenarioCurrent')}>

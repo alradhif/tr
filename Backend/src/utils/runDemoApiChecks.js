@@ -200,7 +200,7 @@ async function main() {
   expect(deInvite.status === 403, 'data entry cannot invite')
 
   const pendingDemo = await request('/auth/demo/login', { method: 'POST', body: JSON.stringify({ type: 'ORG', userId: invited.data.user?.id }) })
-  expect(pendingDemo.status === 404 && !pendingDemo.data.token, 'pending invitee cannot use demo login')
+  expect((pendingDemo.status === 400 || pendingDemo.status === 404) && !pendingDemo.data.token, 'demo login cannot target an arbitrary or pending user')
   const demoList = await request('/auth/demo/accounts')
   expect(demoList.status === 200 && !demoList.data.accounts.some((account) => account.email === inviteEmail), 'pending invitee not listed as a demo account')
 

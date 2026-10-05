@@ -94,7 +94,7 @@ export function PackageDetailsPage({ pkg, onBack, onEdit, onDelete }: PackageDet
               <span className="package-details-icon-badge">
                 <FileText size={16} />
               </span>
-              <h2>الباقة الاساسية</h2>
+              <h2>{pkg.packageType && pkg.packageType !== "—" ? `باقة ${pkg.packageType}` : "تفاصيل الباقة"}</h2>
               {}
               <span
                 className={`package-status-pill${

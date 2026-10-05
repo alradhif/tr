@@ -77,6 +77,7 @@ export type ClientUser = {
   isActive: boolean
   pendingActivation?: boolean
   activatedAt?: string | null
+  lastLoginAt?: string | null
   createdAt?: string | null
 }
 
@@ -84,7 +85,7 @@ export function createClientUser(
   token: string,
   data: { name: string; email: string; accessLevel: 'UPPER' | 'DATA_ENTRY' },
 ) {
-  return apiRequest<{ success: boolean; user: ClientUser; inviteUrl: string; inviteExpiresAt: string }>('/client/users', {
+  return apiRequest<{ success: boolean; user: ClientUser; temporaryPassword: string }>('/client/users', {
     method: 'POST',
     token,
     body: JSON.stringify(data),
@@ -230,9 +231,18 @@ export function deleteClientProjectAttachment(token: string, projectId: string, 
   })
 }
 
-export function reissueClientInvite(token: string, id: string) {
-  return apiRequest<{ success: boolean; inviteUrl: string; inviteExpiresAt: string }>(`/client/users/${id}/invite`, {
-    method: 'POST',
-    token,
-  })
+/** New one-time initial password for an invited user who has not signed in yet. */
+export function resetClientUserCredentials(token: string, id: string) {
+  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string }>(
+    `/client/users/${id}/credentials`,
+    { method: 'POST', token },
+  )
+}
+
+/** Active members of the account, readable by any role (e.g. to choose a project manager). */
+export function getAssignableClientUsers(token: string) {
+  return apiRequest<{ users: ClientUser[] }>(
+    '/client/users/assignable',
+    { method: 'GET', token },
+  )
 }

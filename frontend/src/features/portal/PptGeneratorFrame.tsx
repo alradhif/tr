@@ -14,6 +14,7 @@ export type PptBridgePayload = {
     endDate?: string
     budget?: number
     budgetCurrency?: string
+    spent?: number
     statusLabel?: string
     progress?: number
     description?: string

@@ -5,7 +5,7 @@ import { ApiError } from '../../api/client'
 import {
   createDepartment,
   createDepartmentEmployee,
-  getOrgUsers,
+  getAssignableOrgUsers,
   type OrgUser,
 } from '../../api/org'
 import { getOrgToken } from '../../auth/orgAuth'
@@ -37,7 +37,7 @@ export function OrgAddDepartmentPage() {
   useEffect(() => {
     const token = getOrgToken()
     if (!token) return
-    getOrgUsers(token)
+    getAssignableOrgUsers(token)
       .then((data) => setUsers(data.users))
       .catch(() => setUsers([]))
   }, [])

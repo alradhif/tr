@@ -127,3 +127,17 @@ const AVAILABLE_CHARTS = [
     ]
   }
 ];
+
+
+// Sample rows shown when the generator is opened on its own. Inside TrackPlus, js/bridge.js
+// replaces every value in this file with the selected project's data.
+let CHANGE_REQUEST_VALUES = {
+  approved: { crId: 'CR-01', status: 'معتمد' },
+  inReview: { crId: 'CR-02', status: 'قيد المراجعة' },
+  rejected: { crId: 'CR-03', status: 'مرفوض' }
+};
+let WHATIF_VALUES = {
+  supplyDelay: 'ماذا لو تأخر التوريد؟',
+  budgetIncrease: 'ماذا لو زادت الميزانية المطلوبة؟',
+  scopeChange: 'ماذا لو تغيّر نطاق المشروع؟'
+};

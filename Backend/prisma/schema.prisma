@@ -1416,3 +1416,17 @@ model DashboardLayout {
   @@unique([userId, actorType, portal])
   @@map("dashboard_layouts")
 }
+
+/// Requests submitted from the public landing page's demo form.
+model DemoRequest {
+  id            String   @id @default(uuid())
+  fullName      String
+  phone         String
+  companyName   String
+  businessEmail String
+  jobTitle      String
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("demo_requests")
+}

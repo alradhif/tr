@@ -7,7 +7,8 @@ import { dashboardDataAssets } from '@/assets'
 import { AssetIcon } from '../../components/ui/AssetIcon'
 import { ApiError } from '../../api/client'
 import { getForecasts } from '../../api/jodayn'
-import { getJodaynToken } from '../../auth/jodaynAuth'
+import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
+import { deleteJodaynRecord } from '../../api/jodayn'
 import { CatalogButton, ListCard, ListCardStack, StatCard, StatGrid } from '../../components/ui'
 import { EmptyState } from '../../components/EmptyState'
 import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
@@ -27,6 +28,7 @@ export function JodaynForecastsPage() {
   const navigate = useNavigate()
   const [rows, setRows] = useState<ForecastRow[]>([])
   const [loading, setLoading] = useState(true)
+  const isUpper = getJodaynRole() === 'upper'
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -87,6 +89,27 @@ export function JodaynForecastsPage() {
                 <span className="list-card__tag list-card__tag--muted">
                   {`${t('pessimisticValue')}: ${row.pessimisticValue}`}
                 </span>
+                {isUpper ? (
+                  <span className="row-actions">
+                    <button
+                      type="button"
+                      className="is-danger"
+                      onClick={async () => {
+                        const token = getJodaynToken()
+                        if (!token || !window.confirm(t('delete') + '؟')) return
+                        try {
+                          await deleteJodaynRecord(token, 'forecasts', row.key)
+                          setRows((current) => current.filter((item) => item.key !== row.key))
+                          message.success(t('deletedSuccessfully'))
+                        } catch (err) {
+                          message.error(err instanceof ApiError ? err.message : t('loadError'))
+                        }
+                      }}
+                    >
+                      {t('delete')}
+                    </button>
+                  </span>
+                ) : null}
               </>
             }
           />

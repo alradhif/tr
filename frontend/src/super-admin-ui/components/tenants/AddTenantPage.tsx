@@ -235,7 +235,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
       managerTitle: '',
       planId: defaultPkg?.id ?? '',
       userLimit: defaultPkg ? String(defaultPkg.userLimit) : '',
-      storageLimit: defaultPkg ? String(defaultPkg.users) : '',
+      storageLimit: defaultPkg ? defaultPkg.storage.replace(/[^0-9.]/g, '') : '',
       subscriptionStart: '',
       subscriptionRenewal: '',
     },
@@ -274,6 +274,18 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
   
   }, [formData.subscriptionStart, formData.planId]);
 
+  // Packages load from the server after the form mounts; preselect the first one once they arrive.
+  useEffect(() => {
+    if (formData.planId || availablePackages.length === 0) return;
+    const first = availablePackages.find((p) => p.status === 'active') ?? availablePackages[0];
+    setFormData((prev) => ({
+      ...prev,
+      planId: first.id,
+      userLimit: String(first.userLimit),
+      storageLimit: first.storage.replace(/[^0-9.]/g, ''),
+    }));
+  }, [availablePackages, formData.planId]);
+
   const updateField =
     (field: keyof TenantFormData) => (value: string) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
@@ -291,7 +303,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
       ...prev,
       planId: selectedId,
       userLimit: pkg ? String(pkg.userLimit) : '',
-      storageLimit: pkg ? String(pkg.users) : '',
+      storageLimit: pkg ? pkg.storage.replace(/[^0-9.]/g, '') : '',
     }));
   };
 

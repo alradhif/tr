@@ -89,7 +89,7 @@
 .users-table-head,
 .users-table-row {
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr 0.9fr 1fr;
+  grid-template-columns: 1.4fr 0.7fr 0.9fr 0.9fr 0.7fr 1.3fr;
   gap: 12px;
   padding: 14px 20px;
 }
@@ -99,4 +99,16 @@
   text-align: center;
   color: #a1a1aa;
   font-weight: 600;
+}
+
+.users-search {
+  margin-inline-start: auto;
+  max-width: 260px;
+  height: 36px;
+}
+
+.users-table-row .td-user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }

@@ -119,7 +119,7 @@ async function portalSnapshot(user) {
  */
 exports.assistant = async (req, res) => {
   try {
-    const question = String(req.body?.message || '').trim()
+    const question = String(req.body?.message || '').trim() || (req.file ? 'لخص هذا الملف' : '')
     if (!question) return res.status(400).json({ message: 'اكتب سؤالك' })
     if (question.length > 2000) return res.status(400).json({ message: 'السؤال طويل جداً' })
     const snapshot = await portalSnapshot(req.user)
@@ -131,12 +131,18 @@ exports.assistant = async (req, res) => {
     }
     const system = [
       'You are the TrackPlus project-management assistant. Answer in Arabic unless the user writes in another language.',
-      'Use only the account data below. If the data does not contain the answer, say so. Keep answers short.',
+      'Use only the account data below and any attached document. If they do not contain the answer, say so. Keep answers short.',
       '',
       ...snapshot.summary,
       ...snapshot.details,
     ].join('\n')
-    const reply = await callClaude({ system, content: question })
+    let content = question
+    if (req.file) {
+      const documentBlock = documentBlockFor(req.file)
+      if (!documentBlock) return res.status(415).json({ message: UNSUPPORTED_FILE })
+      content = [documentBlock, { type: 'text', text: question }]
+    }
+    const reply = await callClaude({ system, content })
     res.json({ configured: true, reply })
   } catch (err) {
     res.status(err.status || 500).json({ message: err.message })
@@ -151,10 +157,21 @@ exports.receiveFile = (req, res, next) => {
   })
 }
 
+const UNSUPPORTED_FILE = 'المساعد يقرأ ملفات PDF والنصوص فقط حالياً'
+
+/** PDF and plain-text uploads become a content block Claude can read; other types return null. */
+function documentBlockFor(file) {
+  const isPdf = file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname)
+  const isText = /^text\//.test(file.mimetype) || /\.(txt|md|csv)$/i.test(file.originalname)
+  if (isPdf) return { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: file.buffer.toString('base64') } }
+  if (isText) return { type: 'text', text: file.buffer.toString('utf8').slice(0, 100000) }
+  return null
+}
+
 const EXTRACT_FIELDS = {
   project: ['name', 'description', 'startDate', 'endDate', 'budget', 'orgProjectManagerName', 'clientProjectManagerName'],
-  goal: ['title', 'description', 'startDate', 'endDate', 'requiredOutputsCount'],
-  scenario: ['newDate', 'newCost', 'impactOnSchedule', 'impactOnCost', 'impactOnRiskLevel', 'recommendations'],
+  goal: ['title', 'description', 'startDate', 'endDate', 'kpiDescription', 'targetValue', 'currentValue'],
+  scenario: ['originalDate', 'originalCost', 'newDate', 'newCost', 'impactOnSchedule', 'impactOnCost', 'impactOnCriticalPath', 'recommendations'],
   contract: ['name', 'startDate', 'endDate', 'value', 'parties'],
 }
 
@@ -166,14 +183,8 @@ exports.extract = async (req, res) => {
     if (!fields) return res.status(400).json({ message: 'Invalid extraction type' })
     if (!req.file) return res.status(400).json({ message: 'ارفع ملفاً' })
     if (!aiConfigured()) return res.status(503).json({ configured: false, message: NOT_CONFIGURED })
-    const isPdf = req.file.mimetype === 'application/pdf' || /\.pdf$/i.test(req.file.originalname)
-    const isText = /^text\//.test(req.file.mimetype) || /\.(txt|md|csv)$/i.test(req.file.originalname)
-    if (!isPdf && !isText) {
-      return res.status(415).json({ message: 'الاستخلاص الآلي يدعم ملفات PDF والنصوص فقط حالياً' })
-    }
-    const documentBlock = isPdf
-      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: req.file.buffer.toString('base64') } }
-      : { type: 'text', text: req.file.buffer.toString('utf8').slice(0, 100000) }
+    const documentBlock = documentBlockFor(req.file)
+    if (!documentBlock) return res.status(415).json({ message: UNSUPPORTED_FILE })
     const text = await callClaude({
       system:
         'Extract form fields from the document. Reply with one JSON object only, no prose. ' +

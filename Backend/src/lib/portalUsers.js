@@ -50,7 +50,7 @@ function emailTaken(email) {
  * inactive ("غير نشط", pendingActivation) and becomes active on its first successful login.
  * The plain password is returned to the caller once and only its bcrypt hash is stored.
  */
-async function createInvitedUser({ type, name, email, role, scopeId, invitedBy, invitedByType }) {
+async function createInvitedUser({ type, name, email, role, scopeId, invitedBy, invitedByType, initialPassword }) {
   const portal = PORTALS[type]
   const normalized = String(email || '').trim().toLowerCase()
   const cleanName = String(name || '').trim()
@@ -63,7 +63,12 @@ async function createInvitedUser({ type, name, email, role, scopeId, invitedBy, 
   if (await emailTaken(normalized)) {
     throw Object.assign(new Error('البريد الإلكتروني مستخدم مسبقاً'), { status: 400 })
   }
-  const temporaryPassword = generateTemporaryPassword()
+  if (initialPassword !== undefined && initialPassword !== null && initialPassword !== '') {
+    if (typeof initialPassword !== 'string' || initialPassword.length < 8) {
+      throw Object.assign(new Error('كلمة المرور المؤقتة يجب أن تكون 8 أحرف على الأقل'), { status: 400 })
+    }
+  }
+  const temporaryPassword = initialPassword || generateTemporaryPassword()
   const data = {
     name: cleanName,
     email: normalized,
@@ -145,7 +150,7 @@ function portalUserHandlers(type) {
         const where = { isActive: true, ...(portal.scopeKey ? { [portal.scopeKey]: scopeOf(req, type) } : {}) }
         const users = await portal.model().findMany({
           where,
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, isActive: true },
           orderBy: { name: 'asc' },
         })
         res.json({ users })

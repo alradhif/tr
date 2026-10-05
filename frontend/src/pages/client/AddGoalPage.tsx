@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import dayjs from 'dayjs'
 import { DatePicker, Form, Input, Select, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -30,6 +31,19 @@ function toDateString(value?: { toISOString?: () => string } | string) {
   if (!value) return undefined
   if (typeof value === 'string') return value
   return value.toISOString?.()
+}
+
+function goalFormValues(fields: Record<string, unknown>) {
+  const start = typeof fields.startDate === 'string' ? dayjs(fields.startDate) : null
+  const end = typeof fields.endDate === 'string' ? dayjs(fields.endDate) : null
+  return {
+    title: fields.title,
+    description: fields.description,
+    period: start?.isValid() && end?.isValid() ? [start, end] : undefined,
+    kpiDescription: fields.kpiDescription,
+    targetValue: fields.targetValue === undefined ? undefined : String(fields.targetValue),
+    currentValue: fields.currentValue === undefined ? undefined : String(fields.currentValue),
+  }
 }
 
 export function ClientAddGoalPage() {
@@ -127,7 +141,7 @@ export function ClientAddGoalPage() {
         className="form-page__form"
         onFinish={onFinish}
       >
-        <AiUploadBanner />
+        <AiUploadBanner kind="goal" mapFields={goalFormValues} />
 
         <FormSection title={t('goalBasicInfo')}>
           <Form.Item label={t('goalName')} name="title" rules={[{ required: true }]}>

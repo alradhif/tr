@@ -376,6 +376,40 @@ exports.rejectProject = async (req, res) => {
   }
 }
 
+/** Return for changes: back to DRAFT with the manager's notes, so Data Entry edits and resubmits. */
+exports.returnProject = async (req, res) => {
+  try {
+    const { id } = req.params
+    const reason = String(req.body?.reason || '').trim()
+    if (!reason) return res.status(400).json({ message: 'اكتب التعديلات المطلوبة' })
+    const existing = await prisma.orgProject.findUnique({ where: { id } })
+    if (!existing) return res.status(404).json({ message: 'Project not found' })
+    if (!sameOrgOrSuperAdmin(req, existing.orgId)) {
+      return res.status(403).json({ message: 'Access denied' })
+    }
+    if (existing.approvalStatus !== 'PENDING') {
+      return res.status(400).json({ message: 'Only pending projects can be returned for changes' })
+    }
+
+    const updated = await prisma.orgProject.update({
+      where: { id },
+      data: { approvalStatus: 'DRAFT', rejectionReason: reason, approvedBy: req.user.userId, approvedAt: null },
+    })
+    await auditProject(req, 'UPDATE', id, { approvalStatus: existing.approvalStatus }, {
+      approvalStatus: 'DRAFT',
+      returnedForChanges: reason,
+    })
+    try {
+      await notifyProjectDecision('ORG', existing, 'RETURNED', reason)
+    } catch {
+      // The return is already persisted.
+    }
+    res.json({ success: true, project: updated, message: 'Project returned for changes' })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
 exports.deleteProject = async (req, res) => {
   try {
     const { id } = req.params

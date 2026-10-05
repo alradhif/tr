@@ -292,11 +292,9 @@ exports.getDemoAccounts = async (_req, res) => {
 
 exports.loginDemo = async (req, res) => {
   try {
-    const { type, userId, role } = req.body
-    if ((!type || !userId) && !role) {
-      return res.status(400).json({ message: 'role or type and userId are required' })
-    }
-    const session = await loginDemoAccount(type, userId, role)
+    const role = req.body?.role
+    if (!role) return res.status(400).json({ message: 'role is required' })
+    const session = await loginDemoAccount(role)
     if (!session) return res.status(404).json({ message: 'تعذر الدخول إلى الحساب التجريبي' })
     res.json(session)
   } catch (err) {
