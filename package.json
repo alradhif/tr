@@ -10,6 +10,7 @@
     "start": "node Backend/src/index.js",
     "seed": "node Backend/src/utils/seed.js",
     "demo:reset": "node Backend/src/utils/resetDemo.js",
+    "demo:check": "node Backend/src/utils/runDemoApiChecks.js",
     "studio": "prisma studio",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev"

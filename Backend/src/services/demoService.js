@@ -103,9 +103,9 @@ async function listDemoAccounts() {
   assertDemoMode()
   const [admins, jodayn, orgs, clients, stateRows] = await Promise.all([
     prisma.superAdmin.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
-    prisma.jodaynUser.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
-    prisma.orgUser.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
-    prisma.clientUser.findMany({ where: { isActive: true }, orderBy: { createdAt: 'asc' } }),
+    prisma.jodaynUser.findMany({ where: { isActive: true, pendingActivation: false }, orderBy: { createdAt: 'asc' } }),
+    prisma.orgUser.findMany({ where: { isActive: true, pendingActivation: false }, orderBy: { createdAt: 'asc' } }),
+    prisma.clientUser.findMany({ where: { isActive: true, pendingActivation: false }, orderBy: { createdAt: 'asc' } }),
     prisma.$queryRawUnsafe('SELECT last_reset FROM demo_state WHERE id = 1'),
   ])
 
@@ -173,7 +173,7 @@ async function loginDemoAccount(type, userId, role) {
     : resolvedType === 'CLIENT'
       ? await prisma.clientUser.findUnique({ where: { id: resolvedUserId }, include: { client: true } })
       : await model.findUnique({ where: { id: resolvedUserId } })
-  if (!user || !user.isActive) return null
+  if (!user || !user.isActive || user.pendingActivation) return null
 
   const payload = {
     userId: user.id,

@@ -18,6 +18,7 @@ export type JodaynUser = {
   email: string
   role: string
   isActive: boolean
+  pendingActivation?: boolean
   activatedAt?: string | null
   createdAt?: string | null
 }
@@ -30,7 +31,7 @@ export function createJodaynUser(
   token: string,
   data: { name: string; email: string; accessLevel: 'UPPER' | 'DATA_ENTRY' },
 ) {
-  return apiRequest<{ success: boolean; user: JodaynUser; temporaryPassword: string }>('/jodayn/users', {
+  return apiRequest<{ success: boolean; user: JodaynUser; inviteUrl: string; inviteExpiresAt: string }>('/jodayn/users', {
     method: 'POST',
     token,
     body: JSON.stringify(data),
@@ -111,5 +112,12 @@ export function createReport(token: string, data: Record<string, unknown>) {
     method: 'POST',
     token,
     body: JSON.stringify(data),
+  })
+}
+
+export function reissueJodaynInvite(token: string, id: string) {
+  return apiRequest<{ success: boolean; inviteUrl: string; inviteExpiresAt: string }>(`/jodayn/users/${id}/invite`, {
+    method: 'POST',
+    token,
   })
 }
