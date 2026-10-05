@@ -3,6 +3,7 @@ const router = express.Router({ mergeParams: true })
 const auth = require('../middleware/auth')
 const roles = require('../middleware/roles')
 const ctrl = require('../controllers/clientProjectNestedController')
+const attachments = require('../controllers/projectAttachmentsController')
 
 const isClientAny = [auth, roles('CLIENT_UPPER_MGMT', 'CLIENT_DATA_ENTRY', 'SUPER_ADMIN')]
 const isClientUpperMgmt = [auth, roles('CLIENT_UPPER_MGMT', 'SUPER_ADMIN')]
@@ -74,6 +75,16 @@ router.delete('/:projectId/change-requests/:requestId/attachments/:id', ...isCli
 // ── Request logs ─────────────────────────────────────────
 router.post('/:projectId/change-requests/:requestId/logs', ...isClientAny, ctrl.createRequestLog)
 router.get('/:projectId/change-requests/:requestId/logs', ...isClientAny, ctrl.getRequestLogs)
+
+// ── Project attachments ──────────────────────────────────
+router.get('/:projectId/attachments', ...isClientAny, attachments.list('client'))
+router.post('/:projectId/attachments', ...isClientAny, attachments.receiveFiles, attachments.create('client'))
+router.get(
+  '/:projectId/attachments/:id/download',
+  attachments.downloadAuth('client', ['CLIENT_UPPER_MGMT', 'CLIENT_DATA_ENTRY', 'SUPER_ADMIN']),
+  attachments.download('client')
+)
+router.delete('/:projectId/attachments/:id', ...isClientAny, attachments.remove('client'))
 
 // ── Scenario analyses ────────────────────────────────────
 router.post('/:projectId/scenarios', ...isClientAny, ctrl.createScenario)

@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { commonAssets } from '@/assets'
 import { AssetIcon } from '../../../components/ui/AssetIcon'
 import { ApiError } from '../../../api/client'
-import { createClientNested } from '../../../api/clientPortal'
-import { createProjectContract } from '../../../api/orgProjects'
+import { createClientNested, uploadClientProjectAttachments } from '../../../api/clientPortal'
+import { createProjectContract, uploadProjectAttachments } from '../../../api/orgProjects'
 import { getClientToken } from '../../../auth/clientAuth'
 import { getOrgToken } from '../../../auth/orgAuth'
 import { FormActions, FormSection } from '../../../components/forms'
@@ -17,7 +17,7 @@ type FormValues = {
   name: string
   startDate: { toISOString?: () => string } | string
   endDate: { toISOString?: () => string } | string
-  file?: { fileList?: Array<{ name?: string }> }
+  file?: { fileList?: Array<{ name?: string; originFileObj?: File }> }
 }
 
 function toDateString(value: FormValues['startDate']) {
@@ -35,20 +35,26 @@ export function AddContractPage() {
   const onFinish = async (values: FormValues) => {
     setSubmitting(true)
     try {
-      const fileName = values.file?.fileList?.[0]?.name
+      const token = portal === 'client' ? getClientToken() : getOrgToken()
+      if (!token) throw new Error(t('loadError'))
+      const file = values.file?.fileList?.[0]?.originFileObj
+      let fileUrl = ''
+      if (file) {
+        const uploaded =
+          portal === 'client'
+            ? await uploadClientProjectAttachments(token, projectId, [file])
+            : await uploadProjectAttachments(token, projectId, [file])
+        fileUrl = uploaded.attachments?.[0]?.downloadPath ?? ''
+      }
       const payload = {
         name: values.name,
-        fileUrl: fileName ? `uploads/${fileName}` : `uploads/${values.name}.pdf`,
+        fileUrl,
         startDate: toDateString(values.startDate),
         endDate: toDateString(values.endDate),
       }
       if (portal === 'client') {
-        const token = getClientToken()
-        if (!token) throw new Error(t('loadError'))
         await createClientNested(token, projectId, 'contracts', payload)
       } else {
-        const token = getOrgToken()
-        if (!token) throw new Error(t('loadError'))
         await createProjectContract(token, projectId, payload)
       }
       message.success(t('saveContract'))

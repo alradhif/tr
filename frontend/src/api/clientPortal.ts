@@ -213,6 +213,7 @@ export function uploadClientProjectAttachments(token: string, projectId: string,
       fileName: string
       fileType?: string | null
       fileSize?: number | null
+      downloadPath?: string
     }>
   }>(`/client/projects/${projectId}/attachments`, {
     method: 'POST',

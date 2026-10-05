@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { companiesAssets, matchCompanyLogo, projectsAssets } from '@/assets'
 import { AssetIcon } from '../ui/AssetIcon'
 import { useNavigate } from 'react-router-dom'
-import { ApiError } from '../../api/client'
+import { ApiError, resolveApiFileUrl } from '../../api/client'
 import {
   approveClientProject,
   deleteClientProject,
@@ -554,7 +554,7 @@ export function ProjectDetailView({
           <ul className="project-detail__attachment-list">
             {attachments.map((file) => (
               <li key={file.id}>
-                <a href={file.fileUrl} target="_blank" rel="noreferrer">
+                <a href={resolveApiFileUrl(file.fileUrl)} target="_blank" rel="noreferrer">
                   {file.fileName}
                 </a>
               </li>
