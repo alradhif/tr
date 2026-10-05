@@ -161,6 +161,7 @@ async function verifyLoginChallenge(challengeId, code) {
   const actual = Buffer.from(challengeCodeHash(challenge.id, String(code || '')), 'hex')
   if (!crypto.timingSafeEqual(expected, actual)) {
     await prisma.loginChallenge.update({ where: { id: challenge.id }, data: { attempts: { increment: 1 } } })
+    await recordFailedLogin({ id: challenge.userId }, challenge.actorType, 'WRONG_CODE')
     return { error: challenge.attempts + 1 >= OTP_MAX_ATTEMPTS ? 'LOCKED' : 'WRONG_CODE' }
   }
 
@@ -171,8 +172,53 @@ async function verifyLoginChallenge(challengeId, code) {
   if (claimed.count !== 1) return { error: 'INVALID' }
 
   const user = await findAccountById(challenge.actorType, challenge.userId)
-  if (!user || !user.isActive || user.pendingActivation) return { error: 'INACTIVE' }
-  return { user, actorType: challenge.actorType }
+  if (!user || !user.isActive) return { error: 'INACTIVE' }
+  if (!(await parentAccountActive(challenge.actorType, user))) return { error: 'SUSPENDED' }
+  return { user: await recordSuccessfulLogin(user, challenge.actorType), actorType: challenge.actorType }
+}
+
+/**
+ * A user can only work while their organization or client account is active:
+ * suspending the account from Super Admin blocks every user in it.
+ */
+async function parentAccountActive(actorType, user) {
+  if (actorType === 'ORG' && user.orgId) {
+    const org = await prisma.orgAccount.findUnique({ where: { id: user.orgId }, select: { isActive: true } })
+    return Boolean(org?.isActive)
+  }
+  if (actorType === 'CLIENT' && user.clientId) {
+    const client = await prisma.clientAccount.findUnique({ where: { id: user.clientId }, select: { isActive: true } })
+    return Boolean(client?.isActive)
+  }
+  return true
+}
+
+/**
+ * Marks a completed sign-in. An invited account ("غير نشط") becomes active ("نشط")
+ * on its first successful login with its initial credentials.
+ */
+async function recordSuccessfulLogin(user, actorType) {
+  const now = new Date()
+  const data = actorType === 'SUPER_ADMIN' ? {} : { lastLoginAt: now }
+  if (user.pendingActivation) {
+    data.pendingActivation = false
+    data.activatedAt = now
+  }
+  let updated = user
+  if (Object.keys(data).length) {
+    await modelFor(actorType).update({ where: { id: user.id }, data })
+    updated = { ...user, ...data }
+  }
+  await prisma.activityLog
+    .create({ data: { userId: user.id, actorType, action: user.pendingActivation ? 'FIRST_LOGIN' : 'LOGIN' } })
+    .catch(() => {})
+  return updated
+}
+
+async function recordFailedLogin(user, actorType, reason) {
+  await prisma.activityLog
+    .create({ data: { userId: user.id, actorType, action: 'LOGIN_FAILED', details: reason } })
+    .catch(() => {})
 }
 
 function sessionPayload(user, type) {
@@ -208,6 +254,7 @@ function issueSession(user, type, extraClaims = {}) {
 }
 
 module.exports = {
+  parentAccountActive,
   MIN_PASSWORD_LENGTH,
   activateInvite,
   createAccountInvite,
@@ -216,6 +263,8 @@ module.exports = {
   isValidNewPassword,
   issueSession,
   publicSessionUser,
+  recordFailedLogin,
+  recordSuccessfulLogin,
   resendLoginChallenge,
   startLoginChallenge,
   unusablePasswordHash,

@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken')
 const prisma = require('../lib/prisma')
 const { seedDatabase } = require('../utils/seed')
-const { assertDemoResetAllowed, isDemoEnvironment } = require('../lib/demoSafety')
+const { assertConnectedToDemoDatabase, isDemoEnvironment } = require('../lib/demoSafety')
+const { parentAccountActive, recordSuccessfulLogin } = require('../lib/accountAccess')
 const { purgeAllAttachmentFiles } = require('../controllers/projectAttachmentsController')
 
 const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000
@@ -41,7 +42,7 @@ async function ensureDemoStateTable() {
 
 async function resetDemoDatabase() {
   assertDemoMode()
-  assertDemoResetAllowed()
+  await assertConnectedToDemoDatabase(prisma)
   await ensureDemoStateTable()
   const tables = await prisma.$queryRawUnsafe(`
     SELECT tablename
@@ -75,7 +76,7 @@ async function ensureFreshDemo() {
     }
     const orgProjectCount = await prisma.orgProject.count()
     if (orgProjectCount === 0) {
-      assertDemoResetAllowed()
+      await assertConnectedToDemoDatabase(prisma)
       await seedDatabase()
     }
   })()
@@ -177,6 +178,8 @@ async function loginDemoAccount(type, userId, role) {
       ? await prisma.clientUser.findUnique({ where: { id: resolvedUserId }, include: { client: true } })
       : await model.findUnique({ where: { id: resolvedUserId } })
   if (!user || !user.isActive || user.pendingActivation) return null
+  if (!(await parentAccountActive(resolvedType, user))) return null
+  await recordSuccessfulLogin(user, resolvedType)
 
   const payload = {
     userId: user.id,

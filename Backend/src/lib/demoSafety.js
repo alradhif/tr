@@ -30,7 +30,24 @@ function assertDemoResetAllowed() {
   }
 }
 
+/**
+ * Asks PostgreSQL which database the open connection is really using, so a proxy,
+ * socket path or unusual URL cannot point a reset at anything but trackplus_demo.
+ */
+async function assertConnectedToDemoDatabase(prisma) {
+  assertDemoResetAllowed()
+  const rows = await prisma.$queryRawUnsafe('SELECT current_database() AS name')
+  const connected = rows?.[0]?.name
+  if (connected !== 'trackplus_demo') {
+    const error = new Error(`Demo reset refused: connected database is ${connected || 'unknown'}, not trackplus_demo`)
+    error.status = 403
+    throw error
+  }
+  return connected
+}
+
 module.exports = {
+  assertConnectedToDemoDatabase,
   DEMO_DATABASE_NAME: 'trackplus_demo',
   getDatabaseName,
   isDemoEnvironment,

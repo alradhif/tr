@@ -7,6 +7,8 @@ const {
   getClientUsers,
   toggleClientUser,
   reissueClientInvite,
+  getAssignableClientUsers,
+  resetClientUserCredentials,
   getDashboard
 } = require('../controllers/clientController')
 
@@ -18,6 +20,9 @@ router.post('/users', ...isClientUpperMgmt, createClientUser)
 router.get('/users', ...isClientUpperMgmt, getClientUsers)
 router.patch('/users/:id/toggle', ...isClientUpperMgmt, toggleClientUser)
 router.post('/users/:id/invite', ...isClientUpperMgmt, reissueClientInvite)
+router.post('/users/:id/credentials', ...isClientUpperMgmt, resetClientUserCredentials)
+// Active members of the same account, e.g. to choose a project manager
+router.get('/users/assignable', ...isClientAny, getAssignableClientUsers)
 
 // Dashboard
 router.get('/dashboard', ...isClientAny, getDashboard)

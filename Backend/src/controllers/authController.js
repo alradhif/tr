@@ -8,6 +8,8 @@ const {
   isValidNewPassword,
   issueSession,
   publicSessionUser,
+  parentAccountActive,
+  recordFailedLogin,
   resendLoginChallenge,
   startLoginChallenge,
   verifyLoginChallenge,
@@ -66,7 +68,7 @@ async function updatePasswordByType(userId, type, hashedPassword) {
 
 const INVALID_LOGIN = 'بيانات الدخول غير صحيحة'
 const INACTIVE_ACCOUNT = 'هذا الحساب غير نشط'
-const PENDING_ACTIVATION = 'الحساب بانتظار التفعيل. استخدم رابط الدعوة لتعيين كلمة المرور'
+const ACCOUNT_SUSPENDED = 'تم تعليق حساب الجهة. تواصل مع إدارة المنصة'
 
 /**
  * Checks email + password and, when they match, opens a one-time-code challenge.
@@ -93,8 +95,14 @@ async function startPasswordLogin(req, res, types) {
     if (!match.user.isActive) return res.status(400).json({ message: INACTIVE_ACCOUNT })
 
     const valid = await bcrypt.compare(String(password), match.user.password)
-    if (!valid) return res.status(400).json({ message: INVALID_LOGIN })
-    if (match.user.pendingActivation) return res.status(403).json({ message: PENDING_ACTIVATION, code: 'PENDING_ACTIVATION' })
+    if (!valid) {
+      await recordFailedLogin(match.user, match.type, 'WRONG_PASSWORD')
+      return res.status(400).json({ message: INVALID_LOGIN })
+    }
+    if (!(await parentAccountActive(match.type, match.user))) {
+      return res.status(403).json({ message: ACCOUNT_SUSPENDED, code: 'SUSPENDED' })
+    }
+    // Invited accounts sign in with their initial credentials; the first verified login activates them.
 
     res.json(await startLoginChallenge(match.user.id, match.type))
   } catch (err) {
@@ -114,6 +122,7 @@ const OTP_ERRORS = {
   LOCKED: { status: 429, message: 'تم تجاوز عدد المحاولات. الرجاء تسجيل الدخول مرة أخرى' },
   WRONG_CODE: { status: 400, message: 'الرمز غير صحيح، الرجاء المحاولة مرة أخرى' },
   INACTIVE: { status: 400, message: INACTIVE_ACCOUNT },
+  SUSPENDED: { status: 403, message: ACCOUNT_SUSPENDED },
   TOO_SOON: { status: 429, message: 'الرجاء الانتظار قبل طلب رمز جديد' },
 }
 

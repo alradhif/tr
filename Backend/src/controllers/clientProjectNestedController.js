@@ -1,4 +1,6 @@
 const prisma = require('../lib/prisma')
+const { normalizeDeliverableInput, recomputeProjectProgress } = require('../lib/projectWorkflow')
+const { notifyChangeRequestCreated } = require('../lib/changeRequests')
 
 // ── helpers ──────────────────────────────────────────────
 async function getOwnedProject(projectId, clientId) {
@@ -73,7 +75,7 @@ exports.createPhase = async (req, res) => {
 
     res.json({ success: true, phase })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -92,7 +94,7 @@ exports.getPhases = async (req, res) => {
 
     res.json({ count: phases.length, phases })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -111,7 +113,7 @@ exports.getPhaseById = async (req, res) => {
 
     res.json({ phase })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -136,7 +138,7 @@ exports.updatePhase = async (req, res) => {
     const phase = await prisma.clientProjectPhase.update({ where: { id }, data })
     res.json({ success: true, phase })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -156,7 +158,7 @@ exports.deletePhase = async (req, res) => {
     await prisma.clientProjectPhase.delete({ where: { id } })
     res.json({ success: true, message: 'Phase deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -183,7 +185,7 @@ exports.createTeamMember = async (req, res) => {
 
     res.json({ success: true, member })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -202,7 +204,7 @@ exports.getTeamMembers = async (req, res) => {
 
     res.json({ count: members.length, members })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -221,7 +223,7 @@ exports.getTeamMemberById = async (req, res) => {
 
     res.json({ member })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -244,7 +246,7 @@ exports.updateTeamMember = async (req, res) => {
     const member = await prisma.clientProjectTeamMember.update({ where: { id }, data })
     res.json({ success: true, member })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -264,7 +266,7 @@ exports.deleteTeamMember = async (req, res) => {
     await prisma.clientProjectTeamMember.delete({ where: { id } })
     res.json({ success: true, message: 'Team member deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -300,7 +302,7 @@ exports.createContract = async (req, res) => {
 
     res.json({ success: true, contract })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -320,7 +322,7 @@ exports.getContracts = async (req, res) => {
 
     res.json({ count: contracts.length, contracts })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -342,7 +344,7 @@ exports.getContractById = async (req, res) => {
 
     res.json({ contract })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -368,7 +370,7 @@ exports.updateContract = async (req, res) => {
     const contract = await prisma.clientContract.update({ where: { id }, data })
     res.json({ success: true, contract })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -388,7 +390,7 @@ exports.deleteContract = async (req, res) => {
     await prisma.clientContract.delete({ where: { id } })
     res.json({ success: true, message: 'Contract deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -423,7 +425,7 @@ exports.createRisk = async (req, res) => {
 
     res.json({ success: true, risk })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -443,7 +445,7 @@ exports.getRisks = async (req, res) => {
 
     res.json({ count: risks.length, risks })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -465,7 +467,7 @@ exports.getRiskById = async (req, res) => {
 
     res.json({ risk })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -488,7 +490,7 @@ exports.updateRisk = async (req, res) => {
     const risk = await prisma.clientRisk.update({ where: { id }, data })
     res.json({ success: true, risk })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -508,7 +510,7 @@ exports.deleteRisk = async (req, res) => {
     await prisma.clientRisk.delete({ where: { id } })
     res.json({ success: true, message: 'Risk deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -534,6 +536,10 @@ exports.createRiskAction = async (req, res) => {
     if (!action) {
       return res.status(400).json({ message: 'Required fields: action' })
     }
+    const isDecision = ['APPROVED', 'REJECTED', 'SENT_FOR_REVIEW'].includes(action)
+    if (isDecision && !['CLIENT_UPPER_MGMT', 'SUPER_ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Only upper management can decide on change requests' })
+    }
 
     const riskAction = await prisma.clientRiskAction.create({
       data: {
@@ -548,7 +554,7 @@ exports.createRiskAction = async (req, res) => {
 
     res.json({ success: true, action: riskAction })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -573,7 +579,7 @@ exports.getRiskActions = async (req, res) => {
 
     res.json({ count: actions.length, actions })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -598,7 +604,7 @@ exports.getRiskActionById = async (req, res) => {
 
     res.json({ action })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -627,7 +633,7 @@ exports.updateRiskAction = async (req, res) => {
     const action = await prisma.clientRiskAction.update({ where: { id }, data })
     res.json({ success: true, action })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -653,7 +659,7 @@ exports.deleteRiskAction = async (req, res) => {
     await prisma.clientRiskAction.delete({ where: { id } })
     res.json({ success: true, message: 'Risk action deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -665,7 +671,7 @@ exports.createDeliverable = async (req, res) => {
   try {
     const clientId = req.user.clientId
     const { projectId } = req.params
-    const { name, description, email, price, status, progressPct, responsibleId } = req.body
+    const { name, description, email, price, status, progressPct, responsibleId } = normalizeDeliverableInput(req.body)
 
     const owned = await getOwnedProject(projectId, clientId)
     if (owned.error) return res.status(owned.error.status).json({ message: owned.error.message })
@@ -694,9 +700,10 @@ exports.createDeliverable = async (req, res) => {
       }
     })
 
+    await recomputeProjectProgress('CLIENT', projectId)
     res.json({ success: true, deliverable })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -720,7 +727,7 @@ exports.getDeliverables = async (req, res) => {
 
     res.json({ count: deliverables.length, deliverables })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -748,7 +755,7 @@ exports.getDeliverableById = async (req, res) => {
 
     res.json({ deliverable })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -765,7 +772,7 @@ exports.updateDeliverable = async (req, res) => {
       return res.status(404).json({ message: 'Deliverable not found' })
     }
 
-    const data = { ...req.body }
+    const data = normalizeDeliverableInput({ ...req.body })
     delete data.projectId
 
     if (data.responsibleId) {
@@ -776,9 +783,10 @@ exports.updateDeliverable = async (req, res) => {
     }
 
     const deliverable = await prisma.clientDeliverable.update({ where: { id }, data })
+    await recomputeProjectProgress('CLIENT', projectId)
     res.json({ success: true, deliverable })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -796,9 +804,10 @@ exports.deleteDeliverable = async (req, res) => {
     }
 
     await prisma.clientDeliverable.delete({ where: { id } })
+    await recomputeProjectProgress('CLIENT', projectId)
     res.json({ success: true, message: 'Deliverable deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -838,7 +847,7 @@ exports.createDeliverableAttachment = async (req, res) => {
 
     res.json({ success: true, attachment })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -864,7 +873,7 @@ exports.getDeliverableAttachments = async (req, res) => {
 
     res.json({ count: attachments.length, attachments })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -890,7 +899,7 @@ exports.deleteDeliverableAttachment = async (req, res) => {
     await prisma.clientDeliverableAttachment.delete({ where: { id } })
     res.json({ success: true, message: 'Attachment deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -927,7 +936,7 @@ exports.createDeliverableComment = async (req, res) => {
 
     res.json({ success: true, comment })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -953,7 +962,7 @@ exports.getDeliverableComments = async (req, res) => {
 
     res.json({ count: comments.length, comments })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -979,7 +988,7 @@ exports.deleteDeliverableComment = async (req, res) => {
     await prisma.clientDeliverableComment.delete({ where: { id } })
     res.json({ success: true, message: 'Comment deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1014,7 +1023,7 @@ exports.createChangeRequest = async (req, res) => {
         title,
         description,
         priority: priority || 'MEDIUM',
-        status: status || 'PENDING',
+        status: 'PENDING',
         impactOnCost,
         impactOnSchedule,
         submittedBy,
@@ -1023,10 +1032,11 @@ exports.createChangeRequest = async (req, res) => {
         requestedBy: req.user.userId
       }
     })
+    await notifyChangeRequestCreated('CLIENT', owned.project, changeRequest).catch(() => {})
 
     res.json({ success: true, changeRequest })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1054,7 +1064,7 @@ exports.getChangeRequests = async (req, res) => {
 
     res.json({ count: changeRequests.length, changeRequests })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1083,7 +1093,7 @@ exports.getChangeRequestById = async (req, res) => {
 
     res.json({ changeRequest })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1104,11 +1114,14 @@ exports.updateChangeRequest = async (req, res) => {
     if (data.submittedDate) data.submittedDate = new Date(data.submittedDate)
     delete data.projectId
     delete data.requestedBy
+    delete data.id
+    // Decisions go through the approve/reject endpoints (upper management only)
+    delete data.status
 
     const changeRequest = await prisma.clientChangeRequest.update({ where: { id }, data })
     res.json({ success: true, changeRequest })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1128,7 +1141,7 @@ exports.deleteChangeRequest = async (req, res) => {
     await prisma.clientChangeRequest.delete({ where: { id } })
     res.json({ success: true, message: 'Change request deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1168,7 +1181,7 @@ exports.createChangeRequestAttachment = async (req, res) => {
 
     res.json({ success: true, attachment })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1194,7 +1207,7 @@ exports.getChangeRequestAttachments = async (req, res) => {
 
     res.json({ count: attachments.length, attachments })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1220,7 +1233,7 @@ exports.deleteChangeRequestAttachment = async (req, res) => {
     await prisma.clientChangeRequestAttachment.delete({ where: { id } })
     res.json({ success: true, message: 'Attachment deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1245,6 +1258,10 @@ exports.createRequestLog = async (req, res) => {
 
     if (!action) {
       return res.status(400).json({ message: 'Required fields: action' })
+    }
+    const isDecision = ['APPROVED', 'REJECTED', 'SENT_FOR_REVIEW'].includes(action)
+    if (isDecision && !['CLIENT_UPPER_MGMT', 'SUPER_ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Only upper management can decide on change requests' })
     }
 
     const log = await prisma.clientRequestLog.create({
@@ -1271,7 +1288,7 @@ exports.createRequestLog = async (req, res) => {
 
     res.json({ success: true, log })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1297,7 +1314,7 @@ exports.getRequestLogs = async (req, res) => {
 
     res.json({ count: logs.length, logs })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1352,7 +1369,7 @@ exports.createScenario = async (req, res) => {
 
     res.json({ success: true, scenario })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1372,7 +1389,7 @@ exports.getScenarios = async (req, res) => {
 
     res.json({ count: scenarios.length, scenarios })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1394,7 +1411,7 @@ exports.getScenarioById = async (req, res) => {
 
     res.json({ scenario })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1420,7 +1437,7 @@ exports.updateScenario = async (req, res) => {
     const scenario = await prisma.clientScenarioAnalysis.update({ where: { id }, data })
     res.json({ success: true, scenario })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -1440,6 +1457,6 @@ exports.deleteScenario = async (req, res) => {
     await prisma.clientScenarioAnalysis.delete({ where: { id } })
     res.json({ success: true, message: 'Scenario analysis deleted' })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }

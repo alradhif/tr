@@ -85,6 +85,8 @@ app.use('/api/jodayn', jodaynRoutes)
 
 // Shared: notifications, audit-logs, activity-logs
 app.use('/api', sharedLogsRoutes)
+// Signed-in user: profile, password, dashboard layout, search, AI
+app.use('/api', require('./routes/me'))
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ message: 'Not found' })

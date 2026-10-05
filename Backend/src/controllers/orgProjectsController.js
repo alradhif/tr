@@ -1,8 +1,13 @@
 const prisma = require('../lib/prisma')
 const { attachmentsForProject, deleteProjectFiles } = require('./projectAttachmentsController')
 const { writeAuditLog } = require('../lib/audit')
-const { notifyOrgUsers } = require('../lib/notify')
-const { stripUiFields, saveOrgProjectDetails } = require('../lib/projectExtras')
+const {
+  buildProjectUpdate,
+  notifyProjectDecision,
+  notifyProjectSubmitted,
+  projectFinancials,
+} = require('../lib/projectWorkflow')
+const { saveOrgProjectDetails } = require('../lib/projectExtras')
 
 function isSystemManager(role) {
   return role === 'ORG_UPPER_MGMT' || role === 'SUPER_ADMIN'
@@ -88,6 +93,12 @@ exports.createProject = async (req, res) => {
         message: 'Required fields: name, startDate, endDate, managerId',
       })
     }
+    if (Number.isNaN(new Date(startDate).getTime()) || Number.isNaN(new Date(endDate).getTime())) {
+      return res.status(400).json({ message: 'Invalid startDate or endDate' })
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+      return res.status(400).json({ message: 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية' })
+    }
 
     if (!orgId && userRole !== 'SUPER_ADMIN') {
       return res.status(403).json({ message: 'Org scope required' })
@@ -96,6 +107,16 @@ exports.createProject = async (req, res) => {
     const manager = await prisma.orgUser.findUnique({ where: { id: resolvedManagerId } })
     if (!manager || (orgId && manager.orgId !== orgId)) {
       return res.status(400).json({ message: 'Invalid manager: must belong to same org' })
+    }
+
+    const scopeOrgId = orgId || manager.orgId
+    if (departmentId) {
+      const dept = await prisma.department.findUnique({ where: { id: departmentId } })
+      if (!dept || dept.orgId !== scopeOrgId) return res.status(400).json({ message: 'Invalid department' })
+    }
+    if (executingCompanyId) {
+      const company = await prisma.executingCompany.findUnique({ where: { id: executingCompanyId } })
+      if (!company || company.orgId !== scopeOrgId) return res.status(400).json({ message: 'Invalid executing company' })
     }
 
     const managerCreatesOfficial = isSystemManager(userRole)
@@ -197,8 +218,12 @@ exports.getProjectById = async (req, res) => {
     if (!sameOrgOrSuperAdmin(req, project.orgId)) {
       return res.status(403).json({ message: 'Access denied' })
     }
-    const attachments = await attachmentsForProject('org', id)
-    res.json({ project: { ...(await withApproverName(project)), attachments } })
+    const [attachments, financials, contracts] = await Promise.all([
+      attachmentsForProject('org', id),
+      projectFinancials('ORG', id, project.budget),
+      prisma.orgContract.findMany({ where: { projectId: id }, orderBy: { createdAt: 'desc' } }),
+    ])
+    res.json({ project: { ...(await withApproverName(project)), attachments, financials, contracts } })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
@@ -225,22 +250,14 @@ exports.updateProject = async (req, res) => {
       }
     }
 
-    const data = stripUiFields(req.body)
-    if (data.startDate) data.startDate = new Date(data.startDate)
-    if (data.endDate) data.endDate = new Date(data.endDate)
-    delete data.orgId
-    delete data.approvalStatus
-    delete data.approvedBy
-    delete data.approvedAt
-    delete data.rejectionReason
-    delete data.id
+    const data = await buildProjectUpdate('ORG', req.body, existing, userRole)
 
     const updated = await prisma.orgProject.update({ where: { id }, data })
     await saveOrgProjectDetails(id, req.body)
     await auditProject(req, 'UPDATE', id, { approvalStatus: existing.approvalStatus }, data)
     res.json({ success: true, project: updated })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -268,17 +285,14 @@ exports.submitProject = async (req, res) => {
         rejectionReason: null,
         approvedBy: null,
         approvedAt: null,
+        submittedById: req.user.userId,
+        submittedAt: new Date(),
       },
     })
     await auditProject(req, 'UPDATE', id, { approvalStatus: existing.approvalStatus }, { approvalStatus: 'PENDING' })
     try {
-      await notifyOrgUsers({
-        orgId: existing.orgId,
-        roles: ['ORG_UPPER_MGMT'],
-        title: 'مشروع بانتظار الموافقة',
-        message: `تم إرسال المشروع «${existing.name}» للموافقة`,
-        type: 'APPROVAL',
-      })
+      const submitter = await prisma.orgUser.findUnique({ where: { id: req.user.userId }, select: { name: true } })
+      await notifyProjectSubmitted('ORG', existing, submitter?.name)
     } catch {
       // Status is already persisted.
     }
@@ -311,13 +325,7 @@ exports.approveProject = async (req, res) => {
     })
     await auditProject(req, 'UPDATE', id, { approvalStatus: existing.approvalStatus }, { approvalStatus: 'APPROVED' })
     try {
-      await notifyOrgUsers({
-        orgId: existing.orgId,
-        roles: ['ORG_DATA_ENTRY'],
-        title: 'تم اعتماد المشروع',
-        message: `تم اعتماد المشروع «${existing.name}»`,
-        type: 'APPROVAL',
-      })
+      await notifyProjectDecision('ORG', existing, 'APPROVED')
     } catch {
       // Approval is already persisted.
     }
@@ -358,13 +366,7 @@ exports.rejectProject = async (req, res) => {
       rejectionReason: updated.rejectionReason,
     })
     try {
-      await notifyOrgUsers({
-        orgId: existing.orgId,
-        roles: ['ORG_DATA_ENTRY'],
-        title: 'تم رفض المشروع',
-        message: `تم رفض المشروع «${existing.name}»: ${updated.rejectionReason}`,
-        type: 'REJECTION',
-      })
+      await notifyProjectDecision('ORG', existing, 'REJECTED', updated.rejectionReason)
     } catch {
       // Rejection is already persisted.
     }
