@@ -9,6 +9,12 @@ function getDatabaseName(connectionString = process.env.DATABASE_URL) {
   }
 }
 
+// Demo-only features (quick login, resets) require both the flag and the
+// dedicated demo database, so a misconfigured flag cannot expose real data.
+function isDemoEnvironment() {
+  return process.env.DEMO_MODE === 'true' && getDatabaseName() === 'trackplus_demo'
+}
+
 function assertDemoResetAllowed() {
   if (process.env.DEMO_MODE !== 'true') {
     const error = new Error('Demo reset refused: DEMO_MODE is not true')
@@ -27,5 +33,6 @@ function assertDemoResetAllowed() {
 module.exports = {
   DEMO_DATABASE_NAME: 'trackplus_demo',
   getDatabaseName,
+  isDemoEnvironment,
   assertDemoResetAllowed,
 }

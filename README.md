@@ -27,3 +27,18 @@ database and point `DATABASE_URL` at it.
 
 For an exact wall-clock reset, schedule `npm run demo:reset` every 24 hours in
 the hosting platform. The built-in request-time reset remains a fallback.
+
+Demo features (quick login, resets) are active only when `DEMO_MODE=true` and
+the database is named `trackplus_demo`.
+
+## Production build
+
+`npm run build --prefix frontend` builds the web app into `frontend/dist`.
+When that folder exists, `npm start` serves the app and the API from the same
+port, with the API under `/api` and a health check at `/healthz`.
+
+## Google Cloud deployment
+
+The `Dockerfile` builds a single image for Cloud Run. See
+[deploy/gcp/README.md](deploy/gcp/README.md) for the Cloud Run, Cloud SQL,
+Secret Manager and Cloud Scheduler setup.

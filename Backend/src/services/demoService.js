@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 const prisma = require('../lib/prisma')
 const { seedDatabase } = require('../utils/seed')
-const { assertDemoResetAllowed } = require('../lib/demoSafety')
+const { assertDemoResetAllowed, isDemoEnvironment } = require('../lib/demoSafety')
 
 const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000
 const BASELINE_EMAILS = new Set([
@@ -17,7 +17,7 @@ const BASELINE_EMAILS = new Set([
 let resetPromise = null
 
 function assertDemoMode() {
-  if (process.env.DEMO_MODE !== 'true') {
+  if (!isDemoEnvironment()) {
     const error = new Error('Demo access is disabled')
     error.status = 404
     throw error
