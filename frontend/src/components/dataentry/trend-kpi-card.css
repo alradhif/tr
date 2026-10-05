@@ -1,0 +1,118 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+.trend-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 24px; 
+  row-gap: 16px;
+  width: 100%;
+}
+
+.trend-kpi-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 101px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  background-color: #fff;
+  overflow: hidden;
+  
+  direction: ltr;
+}
+
+.trend-kpi-card__badge-col {
+  display: flex;
+  flex-direction: column;
+  row-gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  width: min-content;
+  flex-shrink: 0;
+  margin: 0 auto 0 0;
+}
+
+.trend-kpi-card__badge {
+  border-radius: 17px;
+  display: flex;
+  flex-direction: row;
+  column-gap: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.trend-kpi-card__badge.is-up {
+  background-color: #d1f0e1;
+}
+
+.trend-kpi-card__badge.is-down {
+  background-color: #feedec;
+  transform: rotate(-180deg) scale(-1, 1);
+}
+
+.trend-kpi-card__badge-icon {
+  transform: scale(-1, 1);
+  width: 24px;
+  height: 24px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.trend-kpi-card__delta {
+  display: inline-block;
+  text-align: center;
+  font-size: 19px;
+  font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  font-weight: 400;
+  font-stretch: 100%;
+  color: #8e8f97;
+  width: max-content;
+  flex-shrink: 0;
+}
+
+.trend-kpi-card__info {
+  display: flex;
+  flex-direction: column;
+  row-gap: 12px;
+  align-items: flex-end;
+  justify-content: flex-start;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.trend-kpi-card__label {
+  display: inline-block;
+  text-align: right;
+  line-height: 24px;
+  font-size: 16px;
+  font-family: '42dot Sans', Inter, system-ui, sans-serif;
+  font-weight: 500;
+  font-stretch: 100%;
+  color: #8e8f97;
+  width: max-content;
+}
+
+.trend-kpi-card__value {
+  display: inline-block;
+  text-align: right;
+  line-height: 38px;
+  font-size: 30px;
+  font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  font-weight: 700;
+  font-stretch: 100%;
+  color: #000;
+  width: max-content;
+}
+
+@media (max-width: 768px) {
+  .trend-kpi-row {
+    grid-template-columns: 1fr;
+  }
+}

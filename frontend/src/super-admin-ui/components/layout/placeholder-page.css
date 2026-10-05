@@ -1,0 +1,41 @@
+.placeholder-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 32px;
+  text-align: center;
+}
+
+.placeholder-page__icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #21aa7c, #67bf64);
+  color: #ffffff;
+}
+
+.placeholder-page__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.placeholder-page__title {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.placeholder-page__description {
+  margin: 0;
+  max-width: 360px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #71717a;
+}

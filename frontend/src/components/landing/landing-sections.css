@@ -1,0 +1,29 @@
+/* Styles for the added landing sections (hosting, value, CTA, footer).
+   Scoped under .tp-landing so nothing else in the app is affected. */
+
+.tp-landing .cta-surface {
+  background: linear-gradient(135deg, oklch(0.2 0.035 158), oklch(0.32 0.06 158) 55%, oklch(0.62 0.1 158));
+  box-shadow: 0 40px 80px -40px oklch(0.3 0.04 158 / 0.45);
+}
+
+.tp-landing .text-cta-accent {
+  background: linear-gradient(90deg, oklch(0.78 0.13 158), oklch(0.78 0.13 158 / 0.4));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.tp-landing .cta-pill {
+  background: oklch(1 0 0 / 0.06);
+  border: 1px solid oklch(1 0 0 / 0.08);
+}
+
+.tp-landing .cta-button {
+  background: linear-gradient(100deg, oklch(0.66 0.14 158), oklch(0.78 0.15 152));
+  box-shadow: 0 20px 45px -18px oklch(0.7 0.15 155 / 0.7);
+}
+
+.tp-landing .site-footer {
+  background: oklch(0.31 0.045 158);
+}

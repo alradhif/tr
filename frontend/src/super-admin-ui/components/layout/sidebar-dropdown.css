@@ -1,0 +1,195 @@
+
+
+.sidebar__profile-menu--active {
+  background: #e4e4e7;
+  border-radius: 8px;
+  color: #3f3f46;
+}
+
+.sidebar__profile-menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-dropdown {
+  position: absolute;
+  
+  bottom: calc(100% + 6px);
+  inset-inline-start: 0;
+  min-width: 160px;
+  background: #ffffff;
+  border: 1px solid #e7e8eb;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.08),
+    0 2px 4px -2px rgb(0 0 0 / 0.06);
+  padding: 6px;
+  z-index: 200;
+  
+  animation: dropdown-in 0.13s ease both;
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.profile-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  text-align: start; 
+  white-space: nowrap;
+  color: #3f3f46;
+}
+
+.profile-dropdown__item:hover {
+  background: #f4f4f5;
+}
+
+.profile-dropdown__item--danger {
+  color: #dc2626;
+}
+
+.profile-dropdown__item--danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.signout-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  
+  animation: backdrop-in 0.15s ease both;
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.signout-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 32px 28px 28px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow:
+    0 20px 25px -5px rgb(0 0 0 / 0.12),
+    0 8px 10px -6px rgb(0 0 0 / 0.08);
+  animation: modal-in 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.signout-modal__icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fef2f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.signout-modal__icon {
+  color: #dc2626;
+}
+
+.signout-modal__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #18181b;
+  text-align: center;
+}
+
+.signout-modal__body {
+  margin: 0;
+  font-size: 14px;
+  color: #71717a;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.signout-modal__actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+  
+  flex-direction: row-reverse;
+}
+
+.signout-modal__btn {
+  flex: 1;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.signout-modal__btn--cancel {
+  background: #f4f4f5;
+  color: #3f3f46;
+  border: 1px solid #e4e4e7;
+}
+
+.signout-modal__btn--cancel:hover {
+  background: #e4e4e7;
+  border-color: #d4d4d8;
+}
+
+.signout-modal__btn--confirm {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.signout-modal__btn--confirm:hover {
+  background: #b91c1c;
+}
+
+.signout-modal__btn--confirm:focus-visible {
+  outline: 3px solid #fca5a5;
+  outline-offset: 2px;
+}

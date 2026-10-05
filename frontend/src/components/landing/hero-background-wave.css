@@ -1,0 +1,75 @@
+/* GPU-only wave animation.
+   Only `transform` is animated (translate3d + scaleY) — never `d`, `width`,
+   `top`/`left`, or `stroke-dashoffset`. transform + will-change keep this
+   fully on the GPU compositor thread, so it never triggers layout/paint
+   and stays smooth even on long scroll/resize. */
+
+.hero-wave-svg {
+  overflow: visible;
+}
+
+.wave-layer {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Three depth planes drifting at slightly different ultra-slow speeds,
+   with a barely-there scaleY breathing effect. Vertical (Y) translation
+   stays at 0 the whole time — only X moves — for the low-amplitude,
+   "PS3 wave" ribbon feel rather than an up/down bob. */
+
+.wave-layer-1 {
+  animation: wave-drift-1 46s linear infinite;
+}
+
+.wave-layer-2 {
+  animation: wave-drift-2 63s linear infinite;
+}
+
+.wave-layer-3 {
+  animation: wave-drift-3 81s linear infinite;
+}
+
+@keyframes wave-drift-1 {
+  0% {
+    transform: translate3d(-1.2%, 0, 0) scaleY(1);
+  }
+  50% {
+    transform: translate3d(1.2%, 0, 0) scaleY(1.02);
+  }
+  100% {
+    transform: translate3d(-1.2%, 0, 0) scaleY(1);
+  }
+}
+
+@keyframes wave-drift-2 {
+  0% {
+    transform: translate3d(1%, 0, 0) scaleY(1.01);
+  }
+  50% {
+    transform: translate3d(-1%, 0, 0) scaleY(1);
+  }
+  100% {
+    transform: translate3d(1%, 0, 0) scaleY(1.01);
+  }
+}
+
+@keyframes wave-drift-3 {
+  0% {
+    transform: translate3d(-0.8%, 0, 0) scaleY(1);
+  }
+  50% {
+    transform: translate3d(0.8%, 0, 0) scaleY(1.015);
+  }
+  100% {
+    transform: translate3d(-0.8%, 0, 0) scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-layer-1,
+  .wave-layer-2,
+  .wave-layer-3 {
+    animation: none;
+  }
+}

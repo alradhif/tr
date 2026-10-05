@@ -1,0 +1,137 @@
+/* Track+ landing page design tokens — scoped under .tp-landing so the
+   dashboard's existing `brand` / `brand-strong` Tailwind colors are left
+   untouched. Values copied 1:1 from the original track-plus-project
+   src/styles.css so the landing page's visual design is unchanged. */
+
+.tp-landing {
+  --landing-brand: oklch(0.72 0.16 152);
+  --landing-brand-strong: oklch(0.63 0.16 152);
+  --landing-hero: oklch(0.31 0.05 158);
+  --landing-surface-soft: oklch(0.98 0.004 250);
+  --landing-muted-foreground: oklch(0.554 0.046 257.417);
+  --landing-card-shadow: 0 8px 24px -12px oklch(0.3 0.04 158 / 0.25);
+  --landing-card-shadow-lg: 0 24px 60px -24px oklch(0.3 0.04 158 / 0.35);
+  --landing-gradient-hero: linear-gradient(
+    160deg,
+    oklch(0.42 0.08 155),
+    oklch(0.31 0.05 158) 55%,
+    oklch(0.27 0.05 158)
+  );
+  --landing-gradient-mint: linear-gradient(180deg, oklch(0.99 0.005 150), oklch(0.95 0.03 150));
+
+  font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+}
+
+/* Override the dashboard's `brand` / `brand-strong` Tailwind utilities
+   only inside the landing page, so the rest of the app is unaffected. */
+.tp-landing .bg-brand {
+  background-color: var(--landing-brand) !important;
+}
+.tp-landing .text-brand {
+  color: var(--landing-brand) !important;
+}
+.tp-landing .text-brand-strong {
+  color: var(--landing-brand-strong) !important;
+}
+.tp-landing .text-muted-foreground {
+  color: var(--landing-muted-foreground) !important;
+}
+
+/* Classes with no equivalent in the dashboard's Tailwind config. */
+.tp-landing .text-hero {
+  color: var(--landing-hero);
+}
+.tp-landing .bg-surface-soft {
+  background-color: var(--landing-surface-soft);
+}
+.tp-landing .hero-surface {
+  background: var(--landing-gradient-hero);
+}
+.tp-landing .mint-surface {
+  background: var(--landing-gradient-mint);
+}
+.tp-landing .landing-flow {
+  background: linear-gradient(
+    180deg,
+    oklch(0.98 0.004 250) 0%,
+    oklch(0.95 0.03 150) 22%,
+    oklch(0.98 0.004 250) 45%,
+    oklch(0.95 0.03 150) 68%,
+    oklch(0.95 0.03 150) 82%,
+    oklch(0.98 0.004 250) 100%
+  );
+}
+.tp-landing .soft-card {
+  background: #fff;
+  border: 1px solid oklch(0.92 0.005 250);
+  box-shadow: var(--landing-card-shadow);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  will-change: transform;
+}
+.tp-landing .soft-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 30px -12px rgba(13, 44, 37, 0.18);
+  border-color: var(--landing-brand);
+}
+.tp-landing .float-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  box-shadow: var(--landing-card-shadow-lg);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  will-change: transform;
+}
+.tp-landing .float-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 30px -12px rgba(13, 44, 37, 0.18);
+  border-color: var(--landing-brand);
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-landing .soft-card,
+  .tp-landing .float-card {
+    transition: none;
+  }
+  .tp-landing .soft-card:hover,
+  .tp-landing .float-card:hover {
+    transform: none;
+  }
+}
+
+@keyframes tpFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tpPulse {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.72 0.16 152 / 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 14px oklch(0.72 0.16 152 / 0);
+  }
+}
+
+@keyframes tpToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

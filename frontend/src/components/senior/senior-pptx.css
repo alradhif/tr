@@ -1,0 +1,24 @@
+
+
+.senior-pptx-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.senior-pptx-page__frame-wrap {
+  flex: 1;
+  min-height: 0;
+  padding: 0 24px 24px;
+}
+
+.senior-pptx-page__frame {
+  width: 100%;
+  height: 100%;
+  min-height: 700px;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-surface, #fff);
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.06);
+}

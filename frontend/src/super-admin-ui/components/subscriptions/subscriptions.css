@@ -1,0 +1,128 @@
+
+.subscriptions-header {
+  padding: 12px 32px;
+  justify-content: flex-start;
+}
+
+.subscriptions-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #71717a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.subscriptions-breadcrumb__icon {
+  color: #a1a1aa;
+}
+
+.subscriptions-breadcrumb__link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #71717a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.subscriptions-breadcrumb__link:hover {
+  color: #18181b;
+}
+
+.subscriptions-breadcrumb__sep {
+  color: #a1a1aa;
+  font-size: 13px;
+}
+
+.subscriptions-breadcrumb__current {
+  color: #000000;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.package-form-title {
+  margin: 8px 0 24px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.package-form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.package-permissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.package-permission-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  border: 1px solid #e7e8eb;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #18181b;
+}
+
+.package-permission-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
+@media (max-width: 960px) {
+  .package-form-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .package-form-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.subscriptions-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.subscriptions-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.subscriptions-title-row .tenants-add-btn {
+  align-self: auto;
+}
+
+.subscriptions-stats-row {
+  display: flex;
+  gap: 16px;
+}
+
+.subscriptions-stats-row .tenants-stat-card {
+  flex: 1;
+  min-width: 0;
+}
+
+.subscriptions-table__row {
+  grid-template-columns: minmax(160px, 1.4fr) 110px 100px 130px 130px 110px 110px 48px;
+}

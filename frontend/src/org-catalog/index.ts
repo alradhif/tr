@@ -1,0 +1,7 @@
+import './catalog-shell.css'
+import './goals.css'
+import './subpage-header.css'
+import './project-detail.css'
+import './catalog-form.css'
+import './create-project.css'
+import './add-goal.css'

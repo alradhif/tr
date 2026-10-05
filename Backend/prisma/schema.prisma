@@ -1,0 +1,1325 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  
+}
+
+// ══════════════════════════════════════════
+// ENUMS
+// ══════════════════════════════════════════
+
+enum JodaynRole {
+  JODAYN_UPPER_MGMT
+  JODAYN_DATA_ENTRY
+}
+
+enum OrgRole {
+  ORG_UPPER_MGMT
+  ORG_DATA_ENTRY
+}
+
+enum ClientRole {
+  CLIENT_UPPER_MGMT
+  CLIENT_DATA_ENTRY
+}
+
+enum ContractStatus {
+  ACTIVE
+  EXPIRED
+  UPCOMING
+  CANCELLED
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum ApprovalStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RequestStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum RequestAction {
+  APPROVED
+  REJECTED
+  SENT_FOR_REVIEW
+}
+
+enum DeliverableStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ACHIEVED
+  MISSED
+}
+
+enum KpiStatus {
+  ON_TRACK
+  AT_RISK
+  ACHIEVED
+  MISSED
+}
+
+enum GoalStageStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum DocStatus {
+  PROCESSING
+  EXTRACTED
+  CONFIRMED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum ReportType {
+  EXECUTIVE
+  PROFIT_LOSS
+  RISK
+}
+
+enum NotificationType {
+  APPROVAL
+  REJECTION
+  REVIEW
+  SYSTEM
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum ActorType {
+  SUPER_ADMIN
+  JODAYN
+  ORG
+  CLIENT
+}
+
+// ══════════════════════════════════════════
+// SHARED
+// ══════════════════════════════════════════
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  userId    String
+  actorType ActorType
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  actorType ActorType
+  expiresAt DateTime
+  isUsed    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  action      AuditAction
+  tableName   String
+  recordId    String
+  oldData     Json?
+  newData     Json?
+  performedBy String
+  actorType   ActorType
+  createdAt   DateTime    @default(now())
+
+  @@index([tableName, recordId])
+  @@index([performedBy])
+  @@map("audit_logs")
+}
+
+// ══════════════════════════════════════════
+// JODAYN
+// ══════════════════════════════════════════
+
+model JodaynUser {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  password  String
+  role      JodaynRole
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("jodayn_users")
+}
+
+model Sector {
+  id              String   @id @default(uuid())
+  name            String
+  managerName     String
+  budget          Decimal  @default(0)
+  profit          Decimal  @default(0)
+  employeeCount   Int      @default(0)
+  departmentCount Int      @default(0)
+  annualRevenue   Decimal  @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  orgAccounts    OrgAccount[]
+  clientAccounts ClientAccount[]
+
+  @@map("sectors")
+}
+
+model OrgAccount {
+  id               String         @id @default(uuid())
+  name             String
+  domain           String?
+  branch           String?
+  entityType       String?
+  region           String?
+  phone            String?
+  crNumber         String?
+  contractDuration String?
+  contractStatus   ContractStatus @default(ACTIVE)
+  isActive         Boolean        @default(true)
+  sectorId         String
+  sector           Sector         @relation(fields: [sectorId], references: [id])
+  createdBy        String
+  createdByAdmin   SuperAdmin     @relation(fields: [createdBy], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  orgUsers          OrgUser[]
+  departments       Department[]
+  companies         ExecutingCompany[]
+  orgProjects       OrgProject[]
+  strategyDocs      OrgStrategyDocument[]
+  invoices          Invoice[]
+  forecasts         RevenueForecast[]
+  reports           FinancialReport[]
+  orgStrategicGoals OrgStrategicGoal[]
+
+  @@index([sectorId])
+  @@index([createdBy])
+  @@map("org_accounts")
+}
+
+model ClientAccount {
+  id               String         @id @default(uuid())
+  name             String
+  managerName      String?
+  sectorName       String?
+  branch           String?
+  entityType       String?
+  region           String?
+  phone            String?
+  crNumber         String?
+  contractDuration String?
+  contractStatus   ContractStatus @default(ACTIVE)
+  description      String?
+  isActive         Boolean        @default(true)
+  sectorId         String
+  sector           Sector         @relation(fields: [sectorId], references: [id])
+  createdBy        String
+  createdByAdmin   SuperAdmin     @relation(fields: [createdBy], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  clientUsers          ClientUser[]
+  clientProjects       ClientProject[]
+  strategyDocs         ClientStrategyDocument[]
+  invoices             Invoice[]
+  forecasts            RevenueForecast[]
+  reports              FinancialReport[]
+  clientStrategicGoals ClientStrategicGoal[]
+
+  @@index([sectorId])
+  @@index([createdBy])
+  @@map("client_accounts")
+}
+
+model Invoice {
+  id                String         @id @default(uuid())
+  invoiceNumber     String
+  amount            Decimal
+  remainingAmount   Decimal        @default(0)
+  vatRate           Decimal        @default(0)
+  vatAmount         Decimal        @default(0)
+  totalWithVat      Decimal        @default(0)
+  clientName        String
+  contractReference String?
+  projectName       String?
+  issueDate         DateTime
+  dueDate           DateTime
+  nextInvoiceDate   DateTime?
+  status            InvoiceStatus  @default(PENDING)
+  orgId             String?
+  org               OrgAccount?    @relation(fields: [orgId], references: [id])
+  clientId          String?
+  client            ClientAccount? @relation(fields: [clientId], references: [id])
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([orgId])
+  @@index([clientId])
+  @@map("invoices")
+}
+
+model RevenueForecast {
+  id                      String         @id @default(uuid())
+  quarter                 String
+  year                    Int
+  optimisticValue         Decimal        @default(0)
+  optimisticProbability   Decimal        @default(0)
+  pessimisticValue        Decimal        @default(0)
+  pessimisticProbability  Decimal        @default(0)
+  conservativeValue       Decimal        @default(0)
+  conservativeProbability Decimal        @default(0)
+  branchFilter            String?
+  dateRangeStart          DateTime?
+  dateRangeEnd            DateTime?
+  orgId                   String?
+  org                     OrgAccount?    @relation(fields: [orgId], references: [id])
+  clientId                String?
+  client                  ClientAccount? @relation(fields: [clientId], references: [id])
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  @@index([orgId])
+  @@index([clientId])
+  @@map("revenue_forecasts")
+}
+
+model FinancialReport {
+  id                      String         @id @default(uuid())
+  type                    ReportType
+  totalContractsValue     Decimal        @default(0)
+  netProfit               Decimal        @default(0)
+  budgetVariance          Decimal        @default(0)
+  cashFlowIn              Decimal        @default(0)
+  cashFlowOut             Decimal        @default(0)
+  netCashFlow             Decimal        @default(0)
+  profitTrend             String?
+  revenueTrend            String?
+  sectorRevenueComparison String?
+  period                  String?
+  aiInsights              String?
+  orgId                   String?
+  org                     OrgAccount?    @relation(fields: [orgId], references: [id])
+  clientId                String?
+  client                  ClientAccount? @relation(fields: [clientId], references: [id])
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  @@index([orgId])
+  @@index([clientId])
+  @@map("financial_reports")
+}
+
+// ══════════════════════════════════════════
+// ORGANIZATION
+// ══════════════════════════════════════════
+
+model OrgUser {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  password  String
+  role      OrgRole
+  isActive  Boolean    @default(true)
+  orgId     String
+  org       OrgAccount @relation(fields: [orgId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  projects            OrgProject[]
+  deliverables        OrgDeliverable[]
+  deliverableAttach   OrgDeliverableAttachment[]
+  deliverableComments OrgDeliverableComment[]
+  changeRequests      OrgChangeRequest[]
+  changeReqAttach     OrgChangeRequestAttachment[]
+  requestLogs         OrgRequestLog[]
+  scenarioAnalyses    OrgScenarioAnalysis[]
+  strategyDocs        OrgStrategyDocument[]
+  orgContracts        OrgContract[]
+
+  @@index([orgId])
+  @@map("org_users")
+}
+
+model Department {
+  id            String     @id @default(uuid())
+  name          String
+  type          String?
+  managerName   String?
+  email         String?
+  phone         String?
+  employeeCount Int        @default(0)
+  description   String?
+  isActive      Boolean    @default(true)
+  orgId         String
+  org           OrgAccount @relation(fields: [orgId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  employees DepartmentEmployee[]
+  projects  OrgProject[]
+
+  @@index([orgId])
+  @@map("departments")
+}
+
+model DepartmentEmployee {
+  id           String     @id @default(uuid())
+  name         String
+  email        String?
+  role         String?
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@index([departmentId])
+  @@map("department_employees")
+}
+
+model ExecutingCompany {
+  id             String     @id @default(uuid())
+  name           String
+  registrationNo String?
+  managerName    String?
+  email          String?
+  phone          String?
+  teamCount      Int        @default(0)
+  description    String?
+  isActive       Boolean    @default(true)
+  orgId          String
+  org            OrgAccount @relation(fields: [orgId], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  team     ExecutingCompanyTeam[]
+  projects OrgProject[]
+
+  @@index([orgId])
+  @@map("executing_companies")
+}
+
+model ExecutingCompanyTeam {
+  id        String           @id @default(uuid())
+  name      String
+  email     String?
+  role      String?
+  companyId String
+  company   ExecutingCompany @relation(fields: [companyId], references: [id])
+  createdAt DateTime         @default(now())
+
+  @@index([companyId])
+  @@map("executing_company_team")
+}
+
+model OrgProject {
+  id                       String            @id @default(uuid())
+  name                     String
+  type                     String?
+  classification           String?
+  description              String?
+  status                   ProjectStatus     @default(ACTIVE)
+  approvalStatus           ApprovalStatus    @default(DRAFT)
+  approvedBy               String?
+  approvedAt               DateTime?
+  rejectionReason          String?
+  startDate                DateTime
+  endDate                  DateTime
+  budget                   Decimal           @default(0)
+  profit                   Decimal           @default(0)
+  profitMargin             Decimal           @default(0)
+  progressPct              Int               @default(0)
+  criticalPath             String?
+  orgProjectManagerName    String?
+  clientProjectManagerName String?
+  orgEmail                 String?
+  clientEmail              String?
+  orgPhone                 String?
+  clientPhone              String?
+  departmentId             String?
+  department               Department?       @relation(fields: [departmentId], references: [id])
+  executingCompanyId       String?
+  executingCompany         ExecutingCompany? @relation(fields: [executingCompanyId], references: [id])
+  orgId                    String
+  org                      OrgAccount        @relation(fields: [orgId], references: [id])
+  managerId                String
+  manager                  OrgUser           @relation(fields: [managerId], references: [id])
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  phases           OrgProjectPhase[]
+  teamMembers      OrgProjectTeamMember[]
+  contracts        OrgContract[]
+  risks            OrgRisk[]
+  deliverables     OrgDeliverable[]
+  changeRequests   OrgChangeRequest[]
+  scenarioAnalyses OrgScenarioAnalysis[]
+  goalLinks        OrgGoalProjectLink[]
+
+  @@index([orgId])
+  @@index([managerId])
+  @@index([departmentId])
+  @@index([executingCompanyId])
+  @@map("org_projects")
+}
+
+model OrgProjectPhase {
+  id               String     @id @default(uuid())
+  title            String
+  startDate        DateTime
+  endDate          DateTime
+  scope            String?
+  mainDeliverables String?
+  notes            String?
+  projectId        String
+  project          OrgProject @relation(fields: [projectId], references: [id])
+  createdAt        DateTime   @default(now())
+
+  @@index([projectId])
+  @@map("org_project_phases")
+}
+
+model OrgProjectTeamMember {
+  id        String     @id @default(uuid())
+  name      String
+  email     String?
+  role      String?
+  source    String
+  projectId String
+  project   OrgProject @relation(fields: [projectId], references: [id])
+  createdAt DateTime   @default(now())
+
+  @@index([projectId])
+  @@map("org_project_team_members")
+}
+
+model OrgContract {
+  id         String     @id @default(uuid())
+  name       String
+  fileUrl    String
+  startDate  DateTime
+  endDate    DateTime
+  projectId  String
+  project    OrgProject @relation(fields: [projectId], references: [id])
+  uploadedBy String
+  uploader   OrgUser    @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime   @default(now())
+
+  @@index([projectId])
+  @@index([uploadedBy])
+  @@map("org_contracts")
+}
+
+model OrgRisk {
+  id              String     @id @default(uuid())
+  name            String
+  description     String?
+  probability     RiskLevel
+  impact          RiskLevel
+  status          String     @default("ACTIVE")
+  responsibleName String?
+  projectId       String
+  project         OrgProject @relation(fields: [projectId], references: [id])
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  actions OrgRiskAction[]
+
+  @@index([projectId])
+  @@map("org_risks")
+}
+
+model OrgRiskAction {
+  id               String   @id @default(uuid())
+  action           String
+  responsibleName  String?
+  email            String?
+  price            Decimal  @default(0)
+  aiMitigationPlan String?
+  riskId           String
+  risk             OrgRisk  @relation(fields: [riskId], references: [id])
+  createdAt        DateTime @default(now())
+
+  @@index([riskId])
+  @@map("org_risk_actions")
+}
+
+model OrgDeliverable {
+  id            String            @id @default(uuid())
+  name          String
+  description   String?
+  email         String?
+  price         Decimal           @default(0)
+  status        DeliverableStatus @default(ACTIVE)
+  progressPct   Int               @default(0)
+  projectId     String
+  project       OrgProject        @relation(fields: [projectId], references: [id])
+  responsibleId String?
+  responsible   OrgUser?          @relation(fields: [responsibleId], references: [id])
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  attachments OrgDeliverableAttachment[]
+  comments    OrgDeliverableComment[]
+
+  @@index([projectId])
+  @@index([responsibleId])
+  @@map("org_deliverables")
+}
+
+model OrgDeliverableAttachment {
+  id            String         @id @default(uuid())
+  fileUrl       String
+  fileName      String
+  fileType      String?
+  fileSize      Int?
+  deliverableId String
+  deliverable   OrgDeliverable @relation(fields: [deliverableId], references: [id])
+  uploadedBy    String
+  uploader      OrgUser        @relation(fields: [uploadedBy], references: [id])
+  createdAt     DateTime       @default(now())
+
+  @@index([deliverableId])
+  @@index([uploadedBy])
+  @@map("org_deliverable_attachments")
+}
+
+model OrgDeliverableComment {
+  id            String         @id @default(uuid())
+  content       String
+  deliverableId String
+  deliverable   OrgDeliverable @relation(fields: [deliverableId], references: [id])
+  authorId      String
+  author        OrgUser        @relation(fields: [authorId], references: [id])
+  createdAt     DateTime       @default(now())
+
+  @@index([deliverableId])
+  @@index([authorId])
+  @@map("org_deliverable_comments")
+}
+
+model OrgChangeRequest {
+  id               String        @id @default(uuid())
+  title            String
+  description      String?
+  priority         RiskLevel     @default(MEDIUM)
+  status           RequestStatus @default(PENDING)
+  impactOnCost     String?
+  impactOnSchedule String?
+  submittedBy      String?
+  submittedDate    DateTime?
+  projectId        String
+  project          OrgProject    @relation(fields: [projectId], references: [id])
+  requestedBy      String
+  requester        OrgUser       @relation(fields: [requestedBy], references: [id])
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  attachments OrgChangeRequestAttachment[]
+  logs        OrgRequestLog[]
+
+  @@index([projectId])
+  @@index([requestedBy])
+  @@map("org_change_requests")
+}
+
+model OrgChangeRequestAttachment {
+  id         String           @id @default(uuid())
+  fileUrl    String
+  fileName   String
+  fileType   String?
+  fileSize   Int?
+  requestId  String
+  request    OrgChangeRequest @relation(fields: [requestId], references: [id])
+  uploadedBy String
+  uploader   OrgUser          @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime         @default(now())
+
+  @@index([requestId])
+  @@index([uploadedBy])
+  @@map("org_change_request_attachments")
+}
+
+model OrgRequestLog {
+  id          String           @id @default(uuid())
+  action      RequestAction
+  comment     String?
+  requestId   String
+  request     OrgChangeRequest @relation(fields: [requestId], references: [id])
+  performedBy String
+  performer   OrgUser          @relation(fields: [performedBy], references: [id])
+  createdAt   DateTime         @default(now())
+
+  @@index([requestId])
+  @@index([performedBy])
+  @@map("org_request_logs")
+}
+
+model OrgScenarioAnalysis {
+  id                      String     @id @default(uuid())
+  orgProjectId            String
+  project                 OrgProject @relation(fields: [orgProjectId], references: [id])
+  originalDate            DateTime?
+  originalCost            Decimal    @default(0)
+  originalRiskLevel       RiskLevel?
+  newDate                 DateTime?
+  newCost                 Decimal    @default(0)
+  newRiskLevel            RiskLevel?
+  impactOnSchedule        String?
+  impactOnCost            String?
+  impactOnCriticalPath    String?
+  impactOnRiskLevel       String?
+  recommendations         String?
+  budgetIncrease          Decimal    @default(0)
+  humanResourcesReduction Int        @default(0)
+  aiRecommendations       String?
+  createdBy               String
+  creator                 OrgUser    @relation(fields: [createdBy], references: [id])
+  createdAt               DateTime   @default(now())
+
+  @@index([orgProjectId])
+  @@index([createdBy])
+  @@map("org_scenario_analyses")
+}
+
+model OrgStrategyDocument {
+  id         String     @id @default(uuid())
+  title      String
+  fileUrl    String
+  fileType   String?
+  status     DocStatus  @default(PROCESSING)
+  orgId      String
+  org        OrgAccount @relation(fields: [orgId], references: [id])
+  uploadedBy String
+  uploader   OrgUser    @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  goals OrgStrategicGoal[]
+
+  @@index([orgId])
+  @@index([uploadedBy])
+  @@map("org_strategy_documents")
+}
+
+model OrgStrategicGoal {
+  id                   String              @id @default(uuid())
+  title                String
+  description          String?
+  requiredOutputsCount Int                 @default(0)
+  startDate            DateTime?
+  endDate              DateTime?
+  status               GoalStatus          @default(NOT_STARTED)
+  progressPct          Int                 @default(0)
+  achievementPct       Int                 @default(0)
+  isAiExtracted        Boolean             @default(true)
+  aiSummary            String?
+  documentId           String
+  document             OrgStrategyDocument @relation(fields: [documentId], references: [id])
+  orgId                String
+  org                  OrgAccount          @relation(fields: [orgId], references: [id])
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  stages       OrgStrategicGoalStage[]
+  projectLinks OrgGoalProjectLink[]
+  kpiSnapshots OrgKpiSnapshot[]
+
+  @@index([documentId])
+  @@index([orgId])
+  @@map("org_strategic_goals")
+}
+
+model OrgStrategicGoalStage {
+  id          String           @id @default(uuid())
+  stageName   String
+  startDate   DateTime?
+  endDate     DateTime?
+  status      GoalStageStatus  @default(NOT_STARTED)
+  progressPct Int              @default(0)
+  goalId      String
+  goal        OrgStrategicGoal @relation(fields: [goalId], references: [id])
+  createdAt   DateTime         @default(now())
+
+  @@index([goalId])
+  @@map("org_strategic_goal_stages")
+}
+
+model OrgGoalProjectLink {
+  id             String           @id @default(uuid())
+  goalId         String
+  goal           OrgStrategicGoal @relation(fields: [goalId], references: [id])
+  projectId      String
+  project        OrgProject       @relation(fields: [projectId], references: [id])
+  relevanceScore Int              @default(0)
+  aiNotes        String?
+  isAiLinked     Boolean          @default(true)
+  actionTaken    String?
+  projectStatus  String?
+  createdAt      DateTime         @default(now())
+
+  @@index([goalId])
+  @@index([projectId])
+  @@map("org_goal_project_links")
+}
+
+model OrgKpiSnapshot {
+  id                     String           @id @default(uuid())
+  quarter                String
+  year                   Int
+  progressPct            Int              @default(0)
+  achievementPct         Int              @default(0)
+  linkedProjectsCount    Int              @default(0)
+  completedProjectsCount Int              @default(0)
+  status                 KpiStatus        @default(ON_TRACK)
+  notes                  String?
+  aiAnalysis             String?
+  goalId                 String
+  goal                   OrgStrategicGoal @relation(fields: [goalId], references: [id])
+  createdAt              DateTime         @default(now())
+
+  @@index([goalId])
+  @@map("org_kpi_snapshots")
+}
+
+// ══════════════════════════════════════════
+// CLIENT
+// ══════════════════════════════════════════
+
+model ClientUser {
+  id        String        @id @default(uuid())
+  name      String
+  email     String        @unique
+  password  String
+  role      ClientRole
+  isActive  Boolean       @default(true)
+  clientId  String
+  client    ClientAccount @relation(fields: [clientId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  projects            ClientProject[]
+  deliverables        ClientDeliverable[]
+  deliverableAttach   ClientDeliverableAttachment[]
+  deliverableComments ClientDeliverableComment[]
+  changeRequests      ClientChangeRequest[]
+  changeReqAttach     ClientChangeRequestAttachment[]
+  requestLogs         ClientRequestLog[]
+  scenarioAnalyses    ClientScenarioAnalysis[]
+  strategyDocs        ClientStrategyDocument[]
+  clientContracts     ClientContract[]
+
+  @@index([clientId])
+  @@map("client_users")
+}
+
+model ClientProject {
+  id                       String        @id @default(uuid())
+  name                     String
+  type                     String?
+  classification           String?
+  description              String?
+  status                   ProjectStatus  @default(ACTIVE)
+  approvalStatus           ApprovalStatus @default(DRAFT)
+  approvedBy               String?
+  approvedAt               DateTime?
+  rejectionReason          String?
+  startDate                DateTime
+  endDate                  DateTime
+  budget                   Decimal       @default(0)
+  profit                   Decimal       @default(0)
+  profitMargin             Decimal       @default(0)
+  progressPct              Int           @default(0)
+  criticalPath             String?
+  orgProjectManagerName    String?
+  clientProjectManagerName String?
+  orgEmail                 String?
+  clientEmail              String?
+  orgPhone                 String?
+  clientPhone              String?
+  clientId                 String
+  client                   ClientAccount @relation(fields: [clientId], references: [id])
+  managerId                String
+  manager                  ClientUser    @relation(fields: [managerId], references: [id])
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  phases           ClientProjectPhase[]
+  teamMembers      ClientProjectTeamMember[]
+  contracts        ClientContract[]
+  risks            ClientRisk[]
+  deliverables     ClientDeliverable[]
+  changeRequests   ClientChangeRequest[]
+  scenarioAnalyses ClientScenarioAnalysis[]
+  goalLinks        ClientGoalProjectLink[]
+
+  @@index([clientId])
+  @@index([managerId])
+  @@map("client_projects")
+}
+
+model ClientProjectPhase {
+  id               String        @id @default(uuid())
+  title            String
+  startDate        DateTime
+  endDate          DateTime
+  scope            String?
+  mainDeliverables String?
+  notes            String?
+  projectId        String
+  project          ClientProject @relation(fields: [projectId], references: [id])
+  createdAt        DateTime      @default(now())
+
+  @@index([projectId])
+  @@map("client_project_phases")
+}
+
+model ClientProjectTeamMember {
+  id        String        @id @default(uuid())
+  name      String
+  email     String?
+  role      String?
+  source    String
+  projectId String
+  project   ClientProject @relation(fields: [projectId], references: [id])
+  createdAt DateTime      @default(now())
+
+  @@index([projectId])
+  @@map("client_project_team_members")
+}
+
+model ClientContract {
+  id         String        @id @default(uuid())
+  name       String
+  fileUrl    String
+  startDate  DateTime
+  endDate    DateTime
+  projectId  String
+  project    ClientProject @relation(fields: [projectId], references: [id])
+  uploadedBy String
+  uploader   ClientUser    @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@index([projectId])
+  @@index([uploadedBy])
+  @@map("client_contracts")
+}
+
+model ClientRisk {
+  id              String        @id @default(uuid())
+  name            String
+  description     String?
+  probability     RiskLevel
+  impact          RiskLevel
+  status          String        @default("ACTIVE")
+  responsibleName String?
+  projectId       String
+  project         ClientProject @relation(fields: [projectId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  actions ClientRiskAction[]
+
+  @@index([projectId])
+  @@map("client_risks")
+}
+
+model ClientRiskAction {
+  id               String     @id @default(uuid())
+  action           String
+  responsibleName  String?
+  email            String?
+  price            Decimal    @default(0)
+  aiMitigationPlan String?
+  riskId           String
+  risk             ClientRisk @relation(fields: [riskId], references: [id])
+  createdAt        DateTime   @default(now())
+
+  @@index([riskId])
+  @@map("client_risk_actions")
+}
+
+model ClientDeliverable {
+  id            String            @id @default(uuid())
+  name          String
+  description   String?
+  email         String?
+  price         Decimal           @default(0)
+  status        DeliverableStatus @default(ACTIVE)
+  progressPct   Int               @default(0)
+  projectId     String
+  project       ClientProject     @relation(fields: [projectId], references: [id])
+  responsibleId String?
+  responsible   ClientUser?       @relation(fields: [responsibleId], references: [id])
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  attachments ClientDeliverableAttachment[]
+  comments    ClientDeliverableComment[]
+
+  @@index([projectId])
+  @@index([responsibleId])
+  @@map("client_deliverables")
+}
+
+model ClientDeliverableAttachment {
+  id            String            @id @default(uuid())
+  fileUrl       String
+  fileName      String
+  fileType      String?
+  fileSize      Int?
+  deliverableId String
+  deliverable   ClientDeliverable @relation(fields: [deliverableId], references: [id])
+  uploadedBy    String
+  uploader      ClientUser        @relation(fields: [uploadedBy], references: [id])
+  createdAt     DateTime          @default(now())
+
+  @@index([deliverableId])
+  @@index([uploadedBy])
+  @@map("client_deliverable_attachments")
+}
+
+model ClientDeliverableComment {
+  id            String            @id @default(uuid())
+  content       String
+  deliverableId String
+  deliverable   ClientDeliverable @relation(fields: [deliverableId], references: [id])
+  authorId      String
+  author        ClientUser        @relation(fields: [authorId], references: [id])
+  createdAt     DateTime          @default(now())
+
+  @@index([deliverableId])
+  @@index([authorId])
+  @@map("client_deliverable_comments")
+}
+
+model ClientChangeRequest {
+  id               String        @id @default(uuid())
+  title            String
+  description      String?
+  priority         RiskLevel     @default(MEDIUM)
+  status           RequestStatus @default(PENDING)
+  impactOnCost     String?
+  impactOnSchedule String?
+  submittedBy      String?
+  submittedDate    DateTime?
+  projectId        String
+  project          ClientProject @relation(fields: [projectId], references: [id])
+  requestedBy      String
+  requester        ClientUser    @relation(fields: [requestedBy], references: [id])
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  attachments ClientChangeRequestAttachment[]
+  logs        ClientRequestLog[]
+
+  @@index([projectId])
+  @@index([requestedBy])
+  @@map("client_change_requests")
+}
+
+model ClientChangeRequestAttachment {
+  id         String              @id @default(uuid())
+  fileUrl    String
+  fileName   String
+  fileType   String?
+  fileSize   Int?
+  requestId  String
+  request    ClientChangeRequest @relation(fields: [requestId], references: [id])
+  uploadedBy String
+  uploader   ClientUser          @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime            @default(now())
+
+  @@index([requestId])
+  @@index([uploadedBy])
+  @@map("client_change_request_attachments")
+}
+
+model ClientRequestLog {
+  id          String              @id @default(uuid())
+  action      RequestAction
+  comment     String?
+  requestId   String
+  request     ClientChangeRequest @relation(fields: [requestId], references: [id])
+  performedBy String
+  performer   ClientUser          @relation(fields: [performedBy], references: [id])
+  createdAt   DateTime            @default(now())
+
+  @@index([requestId])
+  @@index([performedBy])
+  @@map("client_request_logs")
+}
+
+model ClientScenarioAnalysis {
+  id                      String        @id @default(uuid())
+  clientProjectId         String
+  project                 ClientProject @relation(fields: [clientProjectId], references: [id])
+  originalDate            DateTime?
+  originalCost            Decimal       @default(0)
+  originalRiskLevel       RiskLevel?
+  newDate                 DateTime?
+  newCost                 Decimal       @default(0)
+  newRiskLevel            RiskLevel?
+  impactOnSchedule        String?
+  impactOnCost            String?
+  impactOnCriticalPath    String?
+  impactOnRiskLevel       String?
+  recommendations         String?
+  budgetIncrease          Decimal       @default(0)
+  humanResourcesReduction Int           @default(0)
+  aiRecommendations       String?
+  createdBy               String
+  creator                 ClientUser    @relation(fields: [createdBy], references: [id])
+  createdAt               DateTime      @default(now())
+
+  @@index([clientProjectId])
+  @@index([createdBy])
+  @@map("client_scenario_analyses")
+}
+
+model ClientStrategyDocument {
+  id         String        @id @default(uuid())
+  title      String
+  fileUrl    String
+  fileType   String?
+  status     DocStatus     @default(PROCESSING)
+  clientId   String
+  client     ClientAccount @relation(fields: [clientId], references: [id])
+  uploadedBy String
+  uploader   ClientUser    @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  goals ClientStrategicGoal[]
+
+  @@index([clientId])
+  @@index([uploadedBy])
+  @@map("client_strategy_documents")
+}
+
+model ClientStrategicGoal {
+  id                   String                 @id @default(uuid())
+  title                String
+  description          String?
+  requiredOutputsCount Int                    @default(0)
+  startDate            DateTime?
+  endDate              DateTime?
+  status               GoalStatus             @default(NOT_STARTED)
+  progressPct          Int                    @default(0)
+  achievementPct       Int                    @default(0)
+  isAiExtracted        Boolean                @default(true)
+  aiSummary            String?
+  documentId           String
+  document             ClientStrategyDocument @relation(fields: [documentId], references: [id])
+  clientId             String
+  client               ClientAccount          @relation(fields: [clientId], references: [id])
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  stages       ClientStrategicGoalStage[]
+  projectLinks ClientGoalProjectLink[]
+  kpiSnapshots ClientKpiSnapshot[]
+
+  @@index([documentId])
+  @@index([clientId])
+  @@map("client_strategic_goals")
+}
+
+model ClientStrategicGoalStage {
+  id          String              @id @default(uuid())
+  stageName   String
+  startDate   DateTime?
+  endDate     DateTime?
+  status      GoalStageStatus     @default(NOT_STARTED)
+  progressPct Int                 @default(0)
+  goalId      String
+  goal        ClientStrategicGoal @relation(fields: [goalId], references: [id])
+  createdAt   DateTime            @default(now())
+
+  @@index([goalId])
+  @@map("client_strategic_goal_stages")
+}
+
+model ClientGoalProjectLink {
+  id             String              @id @default(uuid())
+  goalId         String
+  goal           ClientStrategicGoal @relation(fields: [goalId], references: [id])
+  projectId      String
+  project        ClientProject       @relation(fields: [projectId], references: [id])
+  relevanceScore Int                 @default(0)
+  aiNotes        String?
+  isAiLinked     Boolean             @default(true)
+  actionTaken    String?
+  projectStatus  String?
+  createdAt      DateTime            @default(now())
+
+  @@index([goalId])
+  @@index([projectId])
+  @@map("client_goal_project_links")
+}
+
+model ClientKpiSnapshot {
+  id                     String              @id @default(uuid())
+  quarter                String
+  year                   Int
+  progressPct            Int                 @default(0)
+  achievementPct         Int                 @default(0)
+  linkedProjectsCount    Int                 @default(0)
+  completedProjectsCount Int                 @default(0)
+  status                 KpiStatus           @default(ON_TRACK)
+  notes                  String?
+  aiAnalysis             String?
+  goalId                 String
+  goal                   ClientStrategicGoal @relation(fields: [goalId], references: [id])
+  createdAt              DateTime            @default(now())
+
+  @@index([goalId])
+  @@map("client_kpi_snapshots")
+}
+
+// ══════════════════════════════════════════
+// SUPER ADMIN
+// ══════════════════════════════════════════
+
+enum PackageName {
+  FREE
+  DEMO
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  DEMO
+}
+
+enum AccountType {
+  JODAYN
+  ORG
+  CLIENT
+}
+
+model SuperAdmin {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions  AccountSubscription[]
+  activityLogs   ActivityLog[]
+  orgAccounts    OrgAccount[]
+  clientAccounts ClientAccount[]
+
+  @@map("super_admins")
+}
+
+model Package {
+  id          String      @id @default(uuid())
+  name        PackageName @unique
+  price       Decimal     @default(0)
+  duration    Int         @default(365)
+  maxUsers    Int         @default(10)
+  maxProjects Int         @default(10)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  subscriptions AccountSubscription[]
+
+  @@map("packages")
+}
+
+model AccountSubscription {
+  id          String             @id @default(uuid())
+  accountType AccountType
+  accountId   String
+  packageId   String
+  package     Package            @relation(fields: [packageId], references: [id])
+  startDate   DateTime
+  endDate     DateTime
+  status      SubscriptionStatus @default(ACTIVE)
+  paidAmount  Decimal            @default(0)
+  createdBy   String
+  superAdmin  SuperAdmin         @relation(fields: [createdBy], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([packageId])
+  @@index([createdBy])
+  @@index([accountType, accountId])
+  @@map("account_subscriptions")
+}
+
+model ActivityLog {
+  id           String      @id @default(uuid())
+  userId       String
+  actorType    ActorType
+  action       String
+  details      String?
+  ipAddress    String?
+  superAdminId String?
+  superAdmin   SuperAdmin? @relation(fields: [superAdminId], references: [id])
+  createdAt    DateTime    @default(now())
+
+  @@index([userId])
+  @@index([superAdminId])
+  @@map("activity_logs")
+}

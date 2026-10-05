@@ -1,0 +1,25 @@
+<svg width="180" height="58" viewBox="0 0 180 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@700&amp;display=swap');
+      .btn-text {
+        font-family: 'IBM Plex Sans Arabic', sans-serif;
+        font-weight: 700;
+        font-size: 20px;
+        fill: #FFFFFF;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+    </style>
+    <linearGradient id="paint0_linear_1805_56383" x1="0" y1="29" x2="180" y2="29" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4AA23D"/>
+      <stop offset="1" stop-color="#459B8F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Button Pill Background -->
+  <path d="M0 29C0 12.9837 12.9837 0 29 0H151C167.016 0 180 12.9837 180 29C180 45.0163 167.016 58 151 58H29C12.9837 58 0 45.0163 0 29Z" fill="url(#paint0_linear_1805_56383)"/>
+
+  <!-- Text -->
+  <text x="90" y="28" class="btn-text" direction="rtl">تحديث المؤشر</text>
+</svg>

@@ -1,0 +1,28 @@
+export const theme = {
+  colors: {
+    pageBg: '#F5F5F6',
+    cardBg: '#FFFFFF',
+    border: '#E7E8EB',
+    primary: '#17B26A',
+    primaryDark: '#50B055',
+    primaryLight: '#D1F0E1',
+    warning: '#F79009',
+    warningLight: '#FDE9CE',
+    danger: '#F04438',
+    info: '#2E90FA',
+    textPrimary: '#18181B',
+    textSecondary: '#55555A',
+    textMuted: '#71717A',
+    sidebarBg: '#F5F5F6',
+    avatarBg: '#55555A',
+    searchBg: '#FFFFFF',
+  },
+  radius: {
+    sm: '8px',
+    md: '12px',
+    lg: '16px',
+    pill: '999px',
+  },
+  sidebarWidth: '256px',
+  widgetLibraryWidth: '280px',
+} as const;

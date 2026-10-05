@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>Track+ — مولّد العروض التقديمية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&family=Cairo:wght@400;600;800&family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=Almarai:wght@400;700&family=Readex+Pro:wght@400;500;700&family=Noto+Kufi+Arabic:wght@400;600;800&family=Noto+Naskh+Arabic:wght@400;700&family=Noto+Sans+Arabic:wght@400;500;700&family=Amiri:wght@400;700&family=Lateef:wght@400;700&family=Scheherazade+New:wght@400;700&family=Reem+Kufi:wght@400;600;700&family=Markazi+Text:wght@400;600&family=Mada:wght@400;500;700&family=El+Messiri:wght@400;500;700&family=Lemonada:wght@400;500;700&family=Vibes&family=Rakkas&family=Aref+Ruqaa:wght@400;700&family=Lalezar&family=Changa:wght@400;500;700&family=Harmattan:wght@400;700&family=Mirza:wght@400;500;700&family=Jomhuria&family=Gulzar&family=Katibeh&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  
+  <div class="panel">
+    <h1>البيانات المضافة</h1>
+    <div class="subtitle">اختر الأقسام التي تريد تضمينها في العرض</div>
+
+    <div class="field">
+      <label>الأقسام</label>
+      <div class="section-list" id="sectionList"></div>
+    </div>
+
+    <div class="add-section-row">
+      <div class="add-section-panel" id="addSectionPanel"></div>
+      <input type="text" class="add-section-input" placeholder="أضف قسم جديد" disabled>
+      <button type="button" class="add-section-btn" id="addSectionBtn" aria-haspopup="true" aria-expanded="false">
+        إضافة قسم <span class="chevron">⌄</span>
+      </button>
+    </div>
+  </div>
+
+  
+  <div class="panel">
+    <h1>لوحة المعلومات</h1>
+    <div class="subtitle">اختر الرسوم البيانية لإضافتها كسلايد "لوحة المعلومات"</div>
+    <div class="chart-checklist" id="chartChecklist"></div>
+  </div>
+
+  
+  <div class="panel">
+    <h1>هوية الجهة</h1>
+    <div class="subtitle">عدّل القيم وشوف المعاينة مباشرة</div>
+
+    <div class="identity-row">
+      <div class="field">
+        <label>اللوغو</label>
+        <label class="logo-upload" id="logoLabel">
+          <div class="icon">↑</div>
+          <div class="text">اضغط لاختيار صورة (PNG / JPG / SVG)</div>
+          <input type="file" id="logoInput" accept="image/*">
+        </label>
+        <div class="logo-preview" id="logoPreview" style="display:none;">
+          <button class="remove" id="logoRemove">×</button>
+          <img id="logoImg">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>الخط <span class="field-hint" id="fontCount"></span></label>
+        <select id="fontSelect">
+          <optgroup label="حديث / Modern Sans">
+            <option value="Tajawal">Tajawal — تجوال</option>
+            <option value="Cairo">Cairo — كايرو</option>
+            <option value="IBM Plex Sans Arabic">IBM Plex Sans Arabic — آي بي إم بليكس</option>
+            <option value="Almarai">Almarai — المراعي</option>
+            <option value="Readex Pro">Readex Pro — ريدكس برو</option>
+            <option value="Noto Sans Arabic">Noto Sans Arabic — نوتو سانس</option>
+            <option value="Mada">Mada — مدى</option>
+            <option value="Changa">Changa — شنقا</option>
+          </optgroup>
+          <optgroup label="كوفي / Kufi">
+            <option value="Noto Kufi Arabic">Noto Kufi Arabic — نوتو كوفي</option>
+            <option value="Reem Kufi">Reem Kufi — ريم كوفي</option>
+            <option value="El Messiri">El Messiri — المسيري</option>
+            <option value="Lemonada">Lemonada — ليموناضة</option>
+          </optgroup>
+          <optgroup label="نسخ / Naskh">
+            <option value="Noto Naskh Arabic">Noto Naskh Arabic — نوتو نسخ</option>
+            <option value="Amiri">Amiri — أميري</option>
+            <option value="Scheherazade New">Scheherazade New — شهرزاد</option>
+            <option value="Markazi Text">Markazi Text — مركزي</option>
+            <option value="Harmattan">Harmattan — هرمتان</option>
+            <option value="Lateef">Lateef — لطيف</option>
+            <option value="Mirza">Mirza — ميرزا</option>
+          </optgroup>
+          <optgroup label="عرضي / Display">
+            <option value="Aref Ruqaa">Aref Ruqaa — عارف رقعة</option>
+            <option value="Rakkas">Rakkas — رقّاص</option>
+            <option value="Lalezar">Lalezar — لاله زار</option>
+            <option value="Jomhuria">Jomhuria — جمهورية</option>
+            <option value="Vibes">Vibes — فايبس</option>
+            <option value="Gulzar">Gulzar — جلزار</option>
+            <option value="Katibeh">Katibeh — كاتبة</option>
+          </optgroup>
+        </select>
+        <div class="font-preview" id="fontPreview">أبجد هوز حطي كلمن</div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="panel">
+    <h1>الألوان</h1>
+    <div class="subtitle">عدّل ألوان الهوية وشوف المعاينة مباشرة</div>
+
+    <div class="field">
+      <div class="color-row">
+        <div class="color-field">
+          <label>الأساسي</label>
+          <input type="color" id="primaryColor" value="#0B3D2E">
+          <div class="hex" id="primaryHex">#0B3D2E</div>
+        </div>
+        <div class="color-field">
+          <label>الثانوي</label>
+          <input type="color" id="secondaryColor" value="#C9A961">
+          <div class="hex" id="secondaryHex">#C9A961</div>
+        </div>
+        <div class="color-field">
+          <label>التمييز</label>
+          <input type="color" id="accentColor" value="#E8DCC4">
+          <div class="hex" id="accentHex">#E8DCC4</div>
+        </div>
+        <div class="color-field">
+          <label>الخط</label>
+          <input type="color" id="fontColorInput" value="#0B3D2E">
+          <div class="hex" id="fontColorHex">#0B3D2E</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="panel">
+    <h1>الألوان مقترحة</h1>
+    <div class="subtitle">قوالب جاهزة تطبّق الخط والألوان دفعة واحدة</div>
+
+    <div class="preset-row">
+      <div class="preset" data-preset="ministry">
+        <div class="swatch"><div style="background:#0B3D2E"></div><div style="background:#C9A961"></div><div style="background:#E8DCC4"></div></div>
+        <div class="name">وزاري</div>
+      </div>
+      <div class="preset" data-preset="authority">
+        <div class="swatch"><div style="background:#5B2C6F"></div><div style="background:#00C9A7"></div><div style="background:#F39C12"></div></div>
+        <div class="name">هيئة</div>
+      </div>
+      <div class="preset" data-preset="corporate">
+        <div class="swatch"><div style="background:#1A1F36"></div><div style="background:#4F46E5"></div><div style="background:#F59E0B"></div></div>
+        <div class="name">شركة</div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="panel">
+    <h1>المعاينة المباشرة</h1>
+    <div class="subtitle">هذا شكل السلايدات كما ستظهر في العرض المُصدَّر</div>
+
+    <div class="preview-header">
+      <div class="badge" id="slideBadge">سلايد ١ / ٢ — الغلاف</div>
+    </div>
+
+    <div class="slide-carousel">
+      <button type="button" class="carousel-nav" id="prevSlideBtn" aria-label="السلايد السابق">›</button>
+
+      <div class="slide-preview" id="cover">
+        <div class="slide-cover" id="coverInner">
+          <div class="left-bar" id="leftBar"></div>
+          <div class="top-bar" id="topBar"></div>
+          <div class="logo-corner" id="logoCorner" style="display:none;"><img id="coverLogo"></div>
+          <h1 id="coverTitle">مشروع تطوير منظومة المتابعة الرقمية</h1>
+          <div class="code" id="coverCode">PRJ-2025-001</div>
+          <div class="underline" id="coverUnderline"></div>
+          <div class="dept" id="coverDept">الجهة المنفذة:  إدارة المشاريع الاستراتيجية</div>
+          <div class="date" id="coverDate"></div>
+        </div>
+      </div>
+
+      <div class="slide-preview" id="overviewSlide" style="display:none;">
+        <div class="slide-overview" id="overviewInner">
+          <div class="head" id="overviewHead">
+            <h2 id="overviewTitle">نظرة عامة على المشروع</h2>
+            <img id="overviewLogo" class="logo-mini" style="display:none;">
+          </div>
+          <div class="stats" id="overviewStats"></div>
+          <div class="progress-section">
+            <div class="progress-label" id="progressLabel">نسبة الإنجاز</div>
+            <div class="bar">
+              <div class="bar-fill" id="barFill" style="width:42%"></div>
+              <div class="bar-text">42%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="slide-preview" id="sectionSlide" style="display:none;">
+        <div class="slide-section" id="sectionInner">
+          <div class="head" id="sectionHead">
+            <h2 id="sectionTitle"></h2>
+            <img id="sectionLogo" class="logo-mini" style="display:none;">
+          </div>
+          <div class="body" id="sectionBody"></div>
+        </div>
+      </div>
+
+      <button type="button" class="carousel-nav" id="nextSlideBtn" aria-label="السلايد التالي">‹</button>
+    </div>
+
+    <button class="btn-primary" id="downloadBtn">⬇  تنزيل العرض (.pptx)</button>
+  </div>
+
+</div>
+
+<div class="status-bar" id="status"></div>
+
+<script src="js/config.js"></script>
+<script src="js/chartRender.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

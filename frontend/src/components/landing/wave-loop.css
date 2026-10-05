@@ -1,0 +1,62 @@
+.wave-loop-viewport {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+  direction: ltr;
+}
+
+.wave-loop-track {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+
+  display: flex;
+  flex-wrap: nowrap;
+
+  width: max-content;
+  height: 100%;
+
+  gap: 0;
+  direction: ltr;
+
+  will-change: transform;
+
+  animation: waveLoop 600s linear infinite;
+}
+
+.wave-loop-img {
+  display: block;
+
+  /*
+   * If wave.png contains the 4 x 1440px designs,
+   * the full image is around 4 screens wide.
+   */
+  width: 400vw;
+  height: 100%;
+
+  flex: 0 0 400vw;
+
+  max-width: none;
+
+  object-fit: fill;
+
+  margin: 0;
+  padding: 0;
+
+  user-select: none;
+  pointer-events: none;
+}
+
+@keyframes waveLoop {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+
+  to {
+    transform: translate3d(0%, 0, 0);
+  }
+}

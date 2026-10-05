@@ -1,0 +1,22 @@
+:root {
+  --tp-brand: #17b26a;
+  --tp-brand-dark: #50b055;
+  --tp-brand-light: #67bf64;
+  --tp-brand-100: #d1f0e1;
+  --tp-gray-100: #f5f5f6;
+  --tp-gray-200: #e7e8eb;
+  --tp-gray-500: #71717a;
+  --tp-gray-900: #18181b;
+  --tp-text: #18181b;
+  --tp-text-secondary: #55555a;
+  --tp-black: #18181b;
+  --tp-white: #ffffff;
+  --tp-radius-sm: 8px;
+  --tp-radius-md: 12px;
+  --tp-radius-lg: 16px;
+  --tp-sidebar-width: 256px;
+  --tp-font: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  --tp-info: #2e90fa;
+  --tp-warning: #f79009;
+  --tp-danger: #f04438;
+}
