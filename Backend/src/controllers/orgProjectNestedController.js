@@ -230,16 +230,16 @@ exports.createContract = async (req, res) => {
     await assertOrgProject(projectId, req.user.orgId)
 
     const { name, fileUrl, startDate, endDate } = req.body
-    if (!name || !fileUrl || !startDate || !endDate) {
+    if (!name || !startDate || !endDate) {
       return res.status(400).json({
-        message: 'Required fields: name, fileUrl, startDate, endDate'
+        message: 'Required fields: name, startDate, endDate'
       })
     }
 
     const contract = await prisma.orgContract.create({
       data: {
         name,
-        fileUrl,
+        fileUrl: fileUrl || '',
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         projectId,

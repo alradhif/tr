@@ -354,7 +354,7 @@ export function ProjectForm({
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [savedId, setSavedId] = useState<string | undefined>(mode === 'edit' ? projectId : undefined)
-  const [contractFile, setContractFile] = useState('')
+  const [contractFile, setContractFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const attachmentsInputRef = useRef<HTMLInputElement>(null)
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([])
@@ -508,10 +508,22 @@ export function ProjectForm({
         return createProjectPhase(token, id, body)
       }),
     )
+    let contractFileUrl = ''
+    if (contractFile) {
+      const uploaded = isClient
+        ? await uploadClientProjectAttachments(token, id, [contractFile])
+        : await uploadProjectAttachments(token, id, [contractFile])
+      const saved = uploaded.attachments?.[0]
+      if (saved) {
+        contractFileUrl = saved.downloadPath ?? ''
+        setAttachments((current) => [...current, ...attachmentsFromProject([saved])])
+      }
+      setContractFile(null)
+    }
     if (form.contractNumber.trim() && form.contractStartDate && form.contractEndDate) {
       const contractBody = {
         name: form.contractNumber.trim(),
-        fileUrl: contractFile ? `uploads/${contractFile}` : `uploads/${form.contractNumber.trim()}.pdf`,
+        fileUrl: contractFileUrl,
         startDate: form.contractStartDate,
         endDate: form.contractEndDate,
       }
@@ -737,7 +749,8 @@ export function ProjectForm({
             onChange={(event) => {
               const file = event.target.files?.[0]
               if (!file) return
-              setContractFile(file.name)
+              setContractFile(file)
+              event.target.value = ''
             }}
           />
           <div className="create-project__upload-copy">
@@ -745,7 +758,7 @@ export function ProjectForm({
             <span>{t('aiUploadProjectSubtitle')}</span>
             {contractFile ? (
               <small>
-                <AssetIcon src={projectsAssets.contract} size={14} /> {contractFile}
+                <AssetIcon src={projectsAssets.contract} size={14} /> {contractFile.name}
               </small>
             ) : null}
           </div>

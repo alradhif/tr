@@ -3,6 +3,7 @@ const router = express.Router({ mergeParams: true })
 const auth = require('../middleware/auth')
 const roles = require('../middleware/roles')
 const ctrl = require('../controllers/orgProjectNestedController')
+const attachments = require('../controllers/projectAttachmentsController')
 
 const isUpperMgmt = [auth, roles('ORG_UPPER_MGMT', 'SUPER_ADMIN')]
 const isOrgAny = [auth, roles('ORG_UPPER_MGMT', 'ORG_DATA_ENTRY', 'SUPER_ADMIN')]
@@ -111,6 +112,16 @@ router.get(
   ...isOrgAny,
   ctrl.getRequestLogs
 )
+
+// ============ PROJECT ATTACHMENTS ============
+router.get('/:projectId/attachments', ...isOrgAny, attachments.list('org'))
+router.post('/:projectId/attachments', ...isOrgAny, attachments.receiveFiles, attachments.create('org'))
+router.get(
+  '/:projectId/attachments/:id/download',
+  attachments.downloadAuth('org', ['ORG_UPPER_MGMT', 'ORG_DATA_ENTRY', 'SUPER_ADMIN']),
+  attachments.download('org')
+)
+router.delete('/:projectId/attachments/:id', ...isOrgAny, attachments.remove('org'))
 
 // ============ SCENARIOS ============
 router.get('/:projectId/scenarios', ...isOrgAny, ctrl.getScenarios)

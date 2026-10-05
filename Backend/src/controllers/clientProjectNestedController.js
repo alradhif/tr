@@ -281,16 +281,16 @@ exports.createContract = async (req, res) => {
     const owned = await getOwnedProject(projectId, clientId)
     if (owned.error) return res.status(owned.error.status).json({ message: owned.error.message })
 
-    if (!name || !fileUrl || !startDate || !endDate) {
+    if (!name || !startDate || !endDate) {
       return res.status(400).json({
-        message: 'Required fields: name, fileUrl, startDate, endDate'
+        message: 'Required fields: name, startDate, endDate'
       })
     }
 
     const contract = await prisma.clientContract.create({
       data: {
         name,
-        fileUrl,
+        fileUrl: fileUrl || '',
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         projectId,
