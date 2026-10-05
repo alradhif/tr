@@ -157,7 +157,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
     if (!company) return
     if (tab === 'المشاريع') {
       downloadCsv(
-        `${company.name}-projects.csv`,
+        `company-${company.id.slice(0, 8)}-projects.csv`,
         [
           ['name', 'اسم المشروع'],
           ['progress', 'نسبة التقدم'],
@@ -171,7 +171,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
       )
     } else if (tab === 'الموظفين') {
       downloadCsv(
-        `${company.name}-team.csv`,
+        `company-${company.id.slice(0, 8)}-team.csv`,
         [
           ['name', 'الاسم'],
           ['role', 'الدور'],

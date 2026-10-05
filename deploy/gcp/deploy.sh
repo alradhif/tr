@@ -24,6 +24,7 @@ RUN_SA="trackplus-run@${PROJECT_ID}.iam.gserviceaccount.com"
 SCHEDULER_SA="trackplus-scheduler@${PROJECT_ID}.iam.gserviceaccount.com"
 SECRET_DB_URL="trackplus-database-url"
 SECRET_JWT="trackplus-jwt-secret"
+SECRET_ANTHROPIC="trackplus-anthropic-api-key" # optional: enables the AI assistant and document extraction
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/trackplus:${IMAGE_TAG:-$(git rev-parse --short HEAD 2>/dev/null || date +%s)}"
 CONNECTION="${PROJECT_ID}:${REGION}:${SQL_INSTANCE}"
 MIGRATE_JOB="${SERVICE}-migrate"
@@ -126,9 +127,17 @@ release() {
   fi
 
   echo "==> Deploying Cloud Run service"
+  local service_secrets="DATABASE_URL=${SECRET_DB_URL}:latest,JWT_SECRET=${SECRET_JWT}:latest"
+  if exists gc secrets describe "$SECRET_ANTHROPIC"; then
+    service_secrets+=",ANTHROPIC_API_KEY=${SECRET_ANTHROPIC}:latest"
+    gc secrets add-iam-policy-binding "$SECRET_ANTHROPIC" \
+      --member "serviceAccount:$RUN_SA" --role roles/secretmanager.secretAccessor >/dev/null
+  else
+    echo "    (no $SECRET_ANTHROPIC secret: AI features will report that they are not configured)"
+  fi
   # One instance keeps the request-time reset fallback single-writer; scales to zero when idle.
   gc run deploy "$SERVICE" "${common[@]}" \
-    --set-secrets "DATABASE_URL=${SECRET_DB_URL}:latest,JWT_SECRET=${SECRET_JWT}:latest" \
+    --set-secrets "$service_secrets" \
     --set-env-vars "DEMO_MODE=true,ATTACHMENTS_BUCKET=${ATTACHMENTS_BUCKET}" \
     --allow-unauthenticated --port 8080 --cpu 1 --memory 512Mi \
     --min-instances 0 --max-instances 1 --concurrency 80

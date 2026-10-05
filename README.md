@@ -2,10 +2,15 @@
 
 ## Isolated demo
 
-The demo provides one-click access to every seeded role, supports real project
-approval and user-invitation workflows, and lists newly invited users on the
-login page. Demo data is reset after each 24-hour window on the first API
-request after the window expires.
+The demo provides one-click access to the six seeded portal roles (org, client
+and Jodayn, each with upper management and data entry) and runs every workflow
+against the API and PostgreSQL. Super Admin signs in with its password and code;
+it is never a quick-login button. Demo data is reset to the synthetic baseline
+every 24 hours (scheduled job, with a request-time fallback).
+
+See [docs/FEATURE_INVENTORY.md](docs/FEATURE_INVENTORY.md) for every feature,
+who may use it and its state, and [docs/VERIFICATION.md](docs/VERIFICATION.md)
+for the test results.
 
 Use a dedicated PostgreSQL database for the demo. Never enable demo mode on a
 production database.
@@ -24,6 +29,13 @@ database and point `DATABASE_URL` at it.
    once with `npm run demo:reset`.
 5. Start the backend and frontend with `npm run dev`. The API-only process is
    `npm start`.
+6. Optional: set `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_MODEL`) in
+   `Backend/.env` to enable the AI assistant and document extraction. Without
+   it those features say they are not configured and nothing is simulated.
+
+Seeded logins (password `Demo1234`, demo database only) are behind the six
+quick-login buttons. Super Admin is `admin@trackplus.com`; its password is set
+by the seed and should be changed outside the demo.
 
 For an exact wall-clock reset, schedule `npm run demo:reset` every 24 hours in
 the hosting platform. The built-in request-time reset remains a fallback.
@@ -56,19 +68,40 @@ Secret Manager and Cloud Scheduler setup.
   written to the server log.
 - **The six demo buttons skip the code step** and work only when
   `DEMO_MODE=true`.
-- **Invitations create pending accounts.** Upper management invites a user from
-  Settings; the API stores the account as pending with an unusable password and
-  returns a one-time activation link (`FRONTEND_URL/activate?token=…`, valid for
-  7 days, stored hashed). Pending accounts cannot sign in or use demo login.
-  The inviter can issue a fresh link from the users list, which revokes the
-  previous one. Opening the link lets the invitee set their own password, after
-  which they sign in normally.
+- **Invitations create usable accounts.** Upper management (or Super Admin)
+  adds a user from Settings; the API generates an initial password, stores only
+  its bcrypt hash and returns it once so the inviter can pass it on. The user is
+  listed as **غير نشط** until their first successful sign-in (password + code),
+  which marks them **نشط**. Before that, the inviter can issue new credentials,
+  which invalidates the previous password.
 - **Expired sessions return to the login page.** Any authenticated request that
   gets a 401 (expired token, suspended account, or a user removed by the daily
   demo reset) clears the stored session and redirects to `/login`.
 
-Run `npm run demo:check` against a running API on port 5001 to exercise these
-flows together with the project approval workflow.
+## Approvals
+
+Data entry submits a draft; every upper manager of the account is notified.
+Upper management can **approve**, **reject** with a reason, or **return for
+changes** (back to draft with the requested changes shown on the project). The
+submitter is notified of each decision. Data entry cannot edit a project while
+it waits for a decision.
+
+## Checks
+
+Against a running API on port 5001 with the demo database:
+
+- `npm run demo:check`: sign-in, codes, approvals, invitations, activation.
+- `npm run check:attachments`: uploads, downloads and file permissions.
+- `npm run check:features`: every portal workflow and permission boundary,
+  Super Admin tenant lifecycle, catalog, strategy, finance, notifications,
+  search, layouts, AI and landing-page demo requests.
+- `tests/browser/e2e.js` and `tests/browser/crawl.js`: Playwright runs of the
+  real UI across all roles (`npm i playwright` in that folder, then
+  `node e2e.js`; set `BASE` for another host and `CHROMIUM_PATH` for a local
+  browser).
+
+The checks create records in the demo database; `npm run demo:reset` restores
+the baseline.
 
 ## Project attachments
 

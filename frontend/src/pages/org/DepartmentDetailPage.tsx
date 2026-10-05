@@ -231,7 +231,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
                       disabled={visibleProjects.length === 0}
                       onClick={() =>
                         downloadCsv(
-                          `${department.name}-projects.csv`,
+                          `department-${department.id.slice(0, 8)}-projects.csv`,
                           [
                             ['name', 'اسم المشروع'],
                             ['progress', 'نسبة التقدم'],

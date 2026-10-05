@@ -4,7 +4,7 @@ const { createForUsers } = require('../lib/notify')
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SAUDI_PHONE_PATTERN = /^5\d{8}$/
 const WINDOW_MS = 60 * 60 * 1000
-const MAX_PER_WINDOW = 5
+const MAX_PER_WINDOW = Number(process.env.DEMO_REQUEST_LIMIT_PER_HOUR) || 20
 const recent = new Map()
 
 function rateLimited(ip) {

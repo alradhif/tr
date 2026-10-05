@@ -104,6 +104,7 @@ export async function downloadWithToken(path: string, token: string, filename: s
   saveBlob(await response.blob(), filename)
 }
 
+/** Filenames stay ASCII: some browsers drop non-Latin download names and save the file as "download". */
 export function saveBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

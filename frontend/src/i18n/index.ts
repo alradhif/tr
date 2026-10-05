@@ -214,7 +214,7 @@ const resources = {
       presentationTitle: 'عنوان العرض',
       presentationTitlePlaceholder: 'مثال: تقرير تقدم المشروع',
       generationMode: 'طريقة التوليد',
-      autoGenerate: 'توليد تلقائي بالذكاء الاصطناعي',
+      autoGenerate: 'توليد تلقائي من بيانات المشروع',
       manualGenerate: 'إنشاء يدوي',
       presentationNotes: 'ملاحظات إضافية',
       presentationNotesPlaceholder: 'حدد ما تريد التركيز عليه في العرض',

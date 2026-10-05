@@ -77,6 +77,7 @@ Runtime environment of the Cloud Run service:
 | `DATABASE_URL` | Secret `trackplus-database-url` | `postgresql://trackplus:…@localhost/trackplus_demo?host=/cloudsql/PROJECT:REGION:INSTANCE` |
 | `JWT_SECRET` | Secret `trackplus-jwt-secret` | Signs session tokens. The server refuses to start without it. |
 | `DEMO_MODE` | `true` | Enables quick login and the 24 h reset. |
+| `ANTHROPIC_API_KEY` | Secret `trackplus-anthropic-api-key` (optional) | Enables the AI assistant and document extraction. Without it those features say they are not configured. Create it with `printf %s "$KEY" \| gcloud secrets create trackplus-anthropic-api-key --data-file=-` and run `release` again. `ANTHROPIC_MODEL` optionally overrides the model. |
 | `ATTACHMENTS_BUCKET` | `<project>-trackplus-demo-attachments` | Private bucket for project attachments; the runtime service account has `roles/storage.objectAdmin` on it only. Files are streamed through the API. |
 | `PORT` | Cloud Run (`8080`) | Listen port. |
 | `FRONTEND_URL` | optional | Extra CORS origins, comma separated. Not needed when the app is served by the container. |

@@ -19,7 +19,7 @@
     const budget = Number(p.budget) || 0;
     const spent = Number(p.spent) || 0;
     Object.assign(PROJECT, {
-      name: clean(p.name) || PROJECT.name,
+      name: clean(data.deckTitle) || clean(p.name) || PROJECT.name,
       code: clean(p.code),
       department: clean(p.department) || '—',
       projectManager: clean(p.projectManager) || '—',
@@ -81,6 +81,25 @@
       avg.sampleData = [{ name: 'تقدم المشروع', labels: ['التقدم', 'المتبقي'], values: [PROJECT.progress, 100 - PROJECT.progress] }];
     }
 
+    // Dialog notes appear with the overview figures.
+    const notes = clean(data.notes);
+    const overview = AVAILABLE_SECTIONS.find(s => s.id === 'overview');
+    overview.fields = overview.fields.filter(f => f.id !== 'notes');
+    if (notes) {
+      overview.fields.push({ id: 'notes', label: 'ملاحظات' });
+      const baseOverview = overviewFieldValues;
+      SECTION_FIELD_VALUE_FNS.overview = () => ({ ...baseOverview(), notes });
+    }
+    state.sectionFieldState.overview = new Set(overview.fields.map(f => f.id));
+
+    // Automatic mode starts with every section and chart that has data; manual keeps the core slides.
+    if (data.mode === 'auto') {
+      state.selectedSections = AVAILABLE_SECTIONS
+        .filter(s => s.core || !(s.fields.length === 1 && s.fields[0].id === 'empty'))
+        .map(s => s.id);
+      state.selectedCharts = AVAILABLE_CHARTS.map(c => c.id);
+    }
+
     $('coverCode').textContent = PROJECT.code;
     $('coverDept').textContent = 'الجهة المنفذة:  ' + PROJECT.department;
     $('barFill').style.width = PROJECT.progress + '%';
@@ -91,9 +110,14 @@
     renderPreview();
   }
 
+  let lastApplied = '';
   window.addEventListener('message', event => {
     if (event.origin !== window.location.origin) return;
     if (!event.data || event.data.type !== 'TRACKPLUS_PPT_DATA' || !event.data.payload) return;
+    // The host re-sends on every render; only new data resets the editor, so user choices stick.
+    const key = JSON.stringify(event.data.payload);
+    if (key === lastApplied) return;
+    lastApplied = key;
     applyData(event.data.payload);
   });
 })();
