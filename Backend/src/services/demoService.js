@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken')
 const prisma = require('../lib/prisma')
 const { seedDatabase } = require('../utils/seed')
 const { assertDemoResetAllowed, isDemoEnvironment } = require('../lib/demoSafety')
+const { purgeAllAttachmentFiles } = require('../controllers/projectAttachmentsController')
 
 const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000
 const BASELINE_EMAILS = new Set([
@@ -53,6 +54,8 @@ async function resetDemoDatabase() {
     const quoted = tables.map(({ tablename }) => `"${String(tablename).replaceAll('"', '""')}"`)
     await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${quoted.join(', ')} RESTART IDENTITY CASCADE`)
   }
+  // Uploaded files belong to the rows just truncated; drop them with the data.
+  await purgeAllAttachmentFiles()
 
   await seedDatabase()
   await prisma.$executeRawUnsafe('UPDATE demo_state SET last_reset = NOW() WHERE id = 1')

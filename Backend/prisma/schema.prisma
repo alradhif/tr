@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  
 }
 
 // ══════════════════════════════════════════
@@ -420,6 +419,7 @@ model OrgUser {
   scenarioAnalyses    OrgScenarioAnalysis[]
   strategyDocs        OrgStrategyDocument[]
   orgContracts        OrgContract[]
+  projectAttach       OrgProjectAttachment[]
 
   @@index([orgId])
   @@map("org_users")
@@ -538,6 +538,7 @@ model OrgProject {
   changeRequests   OrgChangeRequest[]
   scenarioAnalyses OrgScenarioAnalysis[]
   goalLinks        OrgGoalProjectLink[]
+  attachments      OrgProjectAttachment[]
 
   @@index([orgId])
   @@index([managerId])
@@ -591,6 +592,23 @@ model OrgContract {
   @@index([projectId])
   @@index([uploadedBy])
   @@map("org_contracts")
+}
+
+model OrgProjectAttachment {
+  id         String     @id @default(uuid())
+  fileName   String
+  fileType   String?
+  fileSize   Int?
+  storageKey String     @unique
+  projectId  String
+  project    OrgProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy String
+  uploader   OrgUser    @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime   @default(now())
+
+  @@index([projectId])
+  @@index([uploadedBy])
+  @@map("org_project_attachments")
 }
 
 model OrgRisk {
@@ -892,13 +910,14 @@ model ClientUser {
   scenarioAnalyses    ClientScenarioAnalysis[]
   strategyDocs        ClientStrategyDocument[]
   clientContracts     ClientContract[]
+  projectAttach       ClientProjectAttachment[]
 
   @@index([clientId])
   @@map("client_users")
 }
 
 model ClientProject {
-  id                       String        @id @default(uuid())
+  id                       String         @id @default(uuid())
   name                     String
   type                     String?
   classification           String?
@@ -910,10 +929,10 @@ model ClientProject {
   rejectionReason          String?
   startDate                DateTime
   endDate                  DateTime
-  budget                   Decimal       @default(0)
-  profit                   Decimal       @default(0)
-  profitMargin             Decimal       @default(0)
-  progressPct              Int           @default(0)
+  budget                   Decimal        @default(0)
+  profit                   Decimal        @default(0)
+  profitMargin             Decimal        @default(0)
+  progressPct              Int            @default(0)
   criticalPath             String?
   orgProjectManagerName    String?
   clientProjectManagerName String?
@@ -922,11 +941,11 @@ model ClientProject {
   orgPhone                 String?
   clientPhone              String?
   clientId                 String
-  client                   ClientAccount @relation(fields: [clientId], references: [id])
+  client                   ClientAccount  @relation(fields: [clientId], references: [id])
   managerId                String
-  manager                  ClientUser    @relation(fields: [managerId], references: [id])
-  createdAt                DateTime      @default(now())
-  updatedAt                DateTime      @updatedAt
+  manager                  ClientUser     @relation(fields: [managerId], references: [id])
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
 
   phases           ClientProjectPhase[]
   teamMembers      ClientProjectTeamMember[]
@@ -936,6 +955,7 @@ model ClientProject {
   changeRequests   ClientChangeRequest[]
   scenarioAnalyses ClientScenarioAnalysis[]
   goalLinks        ClientGoalProjectLink[]
+  attachments      ClientProjectAttachment[]
 
   @@index([clientId])
   @@index([managerId])
@@ -987,6 +1007,23 @@ model ClientContract {
   @@index([projectId])
   @@index([uploadedBy])
   @@map("client_contracts")
+}
+
+model ClientProjectAttachment {
+  id         String        @id @default(uuid())
+  fileName   String
+  fileType   String?
+  fileSize   Int?
+  storageKey String        @unique
+  projectId  String
+  project    ClientProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy String
+  uploader   ClientUser    @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@index([projectId])
+  @@index([uploadedBy])
+  @@map("client_project_attachments")
 }
 
 model ClientRisk {

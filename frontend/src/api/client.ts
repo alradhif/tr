@@ -67,3 +67,9 @@ function handleExpiredSession() {
 export function getApiUrl() {
   return API_URL
 }
+
+// Attachment download links come back relative to the API root (e.g. /org/projects/…/download?sig=…).
+export function resolveApiFileUrl(url: string) {
+  if (!url || /^https?:\/\//i.test(url) || !url.startsWith('/')) return url
+  return `${API_URL.replace(/\/$/, '')}${url}`
+}

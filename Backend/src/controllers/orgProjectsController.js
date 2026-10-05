@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { attachmentsForProject, deleteProjectFiles } = require('./projectAttachmentsController')
 const { writeAuditLog } = require('../lib/audit')
 const { notifyOrgUsers } = require('../lib/notify')
 const { stripUiFields, saveOrgProjectDetails } = require('../lib/projectExtras')
@@ -196,7 +197,8 @@ exports.getProjectById = async (req, res) => {
     if (!sameOrgOrSuperAdmin(req, project.orgId)) {
       return res.status(403).json({ message: 'Access denied' })
     }
-    res.json({ project: await withApproverName(project) })
+    const attachments = await attachmentsForProject('org', id)
+    res.json({ project: { ...(await withApproverName(project)), attachments } })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
@@ -381,6 +383,7 @@ exports.deleteProject = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
     await prisma.orgProject.delete({ where: { id } })
+    await deleteProjectFiles('org', id).catch(() => {})
     res.json({ success: true, message: 'Project deleted' })
   } catch (err) {
     res.status(500).json({ message: err.message })

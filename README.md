@@ -69,3 +69,26 @@ Secret Manager and Cloud Scheduler setup.
 
 Run `npm run demo:check` against a running API on port 5001 to exercise these
 flows together with the project approval workflow.
+
+## Project attachments
+
+Files attached to org and client projects (including contract files) are
+uploaded to `POST /api/{org|client}/projects/:projectId/attachments` as
+multipart field `files` (PDF, Word, Excel, PNG, JPG or Figma, up to 10 MB each,
+10 per request). Records are stored in `org_project_attachments` and
+`client_project_attachments`; the file bytes go to storage:
+
+- **Cloud Storage** when `ATTACHMENTS_BUCKET` is set. Use this on Cloud Run. The
+  service account needs `roles/storage.objectAdmin` on that bucket only; the
+  bucket can stay private because downloads are streamed through the API.
+- **Local disk** otherwise, under `UPLOAD_DIR` (default `Backend/uploads`).
+
+Every member of the project's org or client can list and download. Data Entry
+can add files and remove their own files only while the project is a draft or
+rejected; Upper Management can manage files at any stage. Download links in API
+responses (`fileUrl`, relative to the API root) are signed and expire after one
+hour; reloading the project returns fresh links. The demo reset deletes all
+stored attachment files together with the database rows.
+
+`npm run check:attachments` runs the upload, download and permission checks
+against a running demo API (`API_URL`, default `http://localhost:5001/api`).
