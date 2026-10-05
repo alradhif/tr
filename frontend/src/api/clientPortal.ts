@@ -75,6 +75,7 @@ export type ClientUser = {
   email: string
   role: string
   isActive: boolean
+  pendingActivation?: boolean
   activatedAt?: string | null
   createdAt?: string | null
 }
@@ -83,7 +84,7 @@ export function createClientUser(
   token: string,
   data: { name: string; email: string; accessLevel: 'UPPER' | 'DATA_ENTRY' },
 ) {
-  return apiRequest<{ success: boolean; user: ClientUser; temporaryPassword: string }>('/client/users', {
+  return apiRequest<{ success: boolean; user: ClientUser; inviteUrl: string; inviteExpiresAt: string }>('/client/users', {
     method: 'POST',
     token,
     body: JSON.stringify(data),
@@ -224,6 +225,13 @@ export function uploadClientProjectAttachments(token: string, projectId: string,
 export function deleteClientProjectAttachment(token: string, projectId: string, id: string) {
   return apiRequest<{ success: boolean }>(`/client/projects/${projectId}/attachments/${id}`, {
     method: 'DELETE',
+    token,
+  })
+}
+
+export function reissueClientInvite(token: string, id: string) {
+  return apiRequest<{ success: boolean; inviteUrl: string; inviteExpiresAt: string }>(`/client/users/${id}/invite`, {
+    method: 'POST',
     token,
   })
 }

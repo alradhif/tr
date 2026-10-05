@@ -23,6 +23,7 @@ const {
   createJodaynPortalUser,
   getJodaynUsers,
   toggleJodaynUser,
+  reissueJodaynInvite,
 } = require('../controllers/jodaynUsersController')
 const { getDashboard } = require('../controllers/jodaynDashboardController')
 
@@ -36,6 +37,7 @@ router.get('/dashboard', ...isJodayn, getDashboard)
 router.post('/users', ...isJodaynUpper, createJodaynPortalUser)
 router.get('/users', ...isJodaynUpper, getJodaynUsers)
 router.patch('/users/:id/toggle', ...isJodaynUpper, toggleJodaynUser)
+router.post('/users/:id/invite', ...isJodaynUpper, reissueJodaynInvite)
 
 // ============ INVOICES ============
 router.post('/invoices', ...isJodayn, createInvoice)

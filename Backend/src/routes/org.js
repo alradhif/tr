@@ -6,6 +6,7 @@ const {
   createOrgUser,
   getOrgUsers,
   toggleOrgUser,
+  reissueOrgInvite,
   getDashboard
 } = require('../controllers/orgController')
 
@@ -16,6 +17,7 @@ const isOrgAny = [auth, roles('ORG_UPPER_MGMT', 'ORG_DATA_ENTRY', 'SUPER_ADMIN')
 router.post('/users', ...isOrgUpperMgmt, createOrgUser)
 router.get('/users', ...isOrgUpperMgmt, getOrgUsers)
 router.patch('/users/:id/toggle', ...isOrgUpperMgmt, toggleOrgUser)
+router.post('/users/:id/invite', ...isOrgUpperMgmt, reissueOrgInvite)
 
 // Dashboard
 router.get('/dashboard', ...isOrgAny, getDashboard)

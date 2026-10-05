@@ -4,14 +4,24 @@ import { Check, Copy } from 'lucide-react'
 type CredentialsModalProps = {
   name: string
   email: string
-  temporaryPassword: string
+  inviteUrl: string
+  inviteExpiresAt?: string
+  reissued?: boolean
   onClose: () => void
 }
 
-export function CredentialsModal({ name, email, temporaryPassword, onClose }: CredentialsModalProps) {
-  const [copied, setCopied] = useState<'email' | 'password' | null>(null)
+function formatExpiry(value?: string) {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return new Intl.DateTimeFormat('ar-u-ca-gregory', { year: 'numeric', month: 'short', day: 'numeric' }).format(date)
+}
 
-  async function copy(kind: 'email' | 'password', value: string) {
+export function CredentialsModal({ name, email, inviteUrl, inviteExpiresAt, reissued = false, onClose }: CredentialsModalProps) {
+  const [copied, setCopied] = useState<'email' | 'link' | null>(null)
+  const expiry = formatExpiry(inviteExpiresAt)
+
+  async function copy(kind: 'email' | 'link', value: string) {
     try {
       await navigator.clipboard.writeText(value)
       setCopied(kind)
@@ -36,11 +46,12 @@ export function CredentialsModal({ name, email, temporaryPassword, onClose }: Cr
               />
             </svg>
           </div>
-          <h2 id="creds-title">تم إنشاء المستخدم بنجاح</h2>
+          <h2 id="creds-title">{reissued ? 'تم إصدار رابط دعوة جديد' : 'تم إنشاء المستخدم بنجاح'}</h2>
         </div>
         <div className="td-add-user-modal__divider" />
         <p className="td-credentials-hint">
-          انسخ بيانات الدخول لـ {name} الآن. لن تظهر كلمة المرور مرة أخرى.
+          أرسل رابط التفعيل إلى {name} ليعيّن كلمة المرور الخاصة به عند أول دخول. يعمل الرابط مرة واحدة
+          {expiry ? <> وينتهي في {expiry}</> : null}.
         </p>
         <div className="td-add-user-form">
           <label className="td-add-user-field">
@@ -50,9 +61,9 @@ export function CredentialsModal({ name, email, temporaryPassword, onClose }: Cr
             </p>
           </label>
           <label className="td-add-user-field">
-            <span>كلمة المرور المؤقتة</span>
-            <p className="td-credentials-secret" dir="ltr">
-              {temporaryPassword}
+            <span>رابط التفعيل</span>
+            <p className="td-credentials-secret" dir="ltr" style={{ wordBreak: 'break-all' }}>
+              {inviteUrl}
             </p>
           </label>
         </div>
@@ -64,10 +75,10 @@ export function CredentialsModal({ name, email, temporaryPassword, onClose }: Cr
           <button
             type="button"
             className="td-add-user-submit"
-            onClick={() => void copy('password', temporaryPassword)}
+            onClick={() => void copy('link', inviteUrl)}
           >
-            {copied === 'password' ? <Check size={16} /> : <Copy size={16} />}
-            <span>Copy Password</span>
+            {copied === 'link' ? <Check size={16} /> : <Copy size={16} />}
+            <span>Copy Link</span>
           </button>
           <button type="button" className="td-add-user-cancel" onClick={onClose}>
             <span>إغلاق</span>

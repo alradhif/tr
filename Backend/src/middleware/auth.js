@@ -18,7 +18,7 @@ module.exports = async (req, res, next) => {
     const lookup = lookups[decoded.type]
     if (lookup) {
       const liveUser = await lookup()
-      if (!liveUser || liveUser.isActive === false) {
+      if (!liveUser || liveUser.isActive === false || liveUser.pendingActivation === true) {
         return res.status(401).json({ message: 'هذا الحساب غير نشط' })
       }
     }

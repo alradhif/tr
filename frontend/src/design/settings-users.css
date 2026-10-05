@@ -148,6 +148,7 @@
 
 .td-user-status--active { background: #d1f0e1; color: #067647; }
 .td-user-status--suspended { background: #fee4e2; color: #b42318; }
+.td-user-status--pending { background: #fffaeb; color: #b54708; }
 
 .td-status-dot {
   width: 7px;
