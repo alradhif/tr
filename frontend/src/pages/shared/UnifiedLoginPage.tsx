@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { CheckCircle2, Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { requestPasswordReset, type ForgotPasswordType } from '../../api/auth'
@@ -32,6 +32,21 @@ export function UnifiedLoginPage() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [forgotSent, setForgotSent] = useState(false)
+  const [demoEnabled, setDemoEnabled] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    apiRequest<{ enabled: boolean }>('/auth/demo/status')
+      .then((result) => {
+        if (active) setDemoEnabled(Boolean(result.enabled))
+      })
+      .catch(() => {
+        if (active) setDemoEnabled(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -188,19 +203,21 @@ export function UnifiedLoginPage() {
                 {isSubmitting ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
               </button>
             </form>
-            <div className="auth-quicklogin">
-              {DEMO_LOGINS.map((option) => (
-                <button
-                  key={option.role}
-                  type="button"
-                  className="auth-quicklogin__btn"
-                  disabled={isSubmitting}
-                  onClick={() => void handleDemoLogin(option)}
-                >
-                  <span className="auth-quicklogin__btn-label">{option.label}</span>
-                </button>
-              ))}
-            </div>
+            {demoEnabled ? (
+              <div className="auth-quicklogin">
+                {DEMO_LOGINS.map((option) => (
+                  <button
+                    key={option.role}
+                    type="button"
+                    className="auth-quicklogin__btn"
+                    disabled={isSubmitting}
+                    onClick={() => void handleDemoLogin(option)}
+                  >
+                    <span className="auth-quicklogin__btn-label">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </>
         ) : (
           <>

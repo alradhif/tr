@@ -7,6 +7,7 @@ const {
   loginSuperAdmin,
   forgotPassword,
   resetPassword,
+  getDemoStatus,
   getDemoAccounts,
   loginDemo,
   loginAny,
@@ -19,6 +20,7 @@ router.post('/client/login', loginClient)
 router.post('/super-admin/login', loginSuperAdmin)
 router.post('/forgot-password', forgotPassword)
 router.post('/reset-password', resetPassword)
+router.get('/demo/status', getDemoStatus)
 router.get('/demo/accounts', getDemoAccounts)
 router.post('/demo/login', loginDemo)
 

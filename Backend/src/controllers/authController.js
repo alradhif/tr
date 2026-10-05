@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const prisma = require('../lib/prisma')
 const { listDemoAccounts, loginDemoAccount } = require('../services/demoService')
+const { isDemoEnvironment } = require('../lib/demoSafety')
 
 const ACTOR_TYPE_MAP = {
   SUPER_ADMIN: 'SUPER_ADMIN',
@@ -169,7 +170,8 @@ exports.forgotPassword = async (req, res) => {
     console.log(`[forgot-password] type=${actorType} email=${email} token=${token}`)
 
     const payload = { success: true }
-    if (process.env.NODE_ENV !== 'production') {
+    // No email delivery yet: hand the token back outside production and on the demo
+    if (process.env.NODE_ENV !== 'production' || isDemoEnvironment()) {
       payload.token = token
     }
 
@@ -213,6 +215,10 @@ exports.resetPassword = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
+}
+
+exports.getDemoStatus = (_req, res) => {
+  res.json({ enabled: isDemoEnvironment() })
 }
 
 exports.getDemoAccounts = async (_req, res) => {
