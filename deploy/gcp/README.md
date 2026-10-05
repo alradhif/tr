@@ -16,6 +16,7 @@ Browser ──> Cloud Run service "trackplus-demo" (Express: /api + SPA)
 Cloud Scheduler (daily) ──> Cloud Run job "trackplus-demo-reset"
 Release ──> Cloud Run job "trackplus-demo-migrate" (prisma migrate deploy)
 Secret Manager: trackplus-database-url, trackplus-jwt-secret
+Cloud Storage: private bucket <project>-trackplus-demo-attachments (project attachments)
 ```
 
 ## Cost
@@ -30,6 +31,7 @@ Sized for a temporary demo. Rough monthly cost in `us-central1`:
 | Cloud Scheduler | 1 job | free (3 jobs free) |
 | Secret Manager | 2 secrets | a few cents |
 | Artifact Registry | a few image versions | a few cents |
+| Cloud Storage | private attachments bucket, cleared daily | a few cents |
 
 Cloud SQL is the only always-on cost. Run `deploy/gcp/deploy.sh teardown` when
 the demo is over. Stopping the instance in between
@@ -75,11 +77,12 @@ Runtime environment of the Cloud Run service:
 | `DATABASE_URL` | Secret `trackplus-database-url` | `postgresql://trackplus:…@localhost/trackplus_demo?host=/cloudsql/PROJECT:REGION:INSTANCE` |
 | `JWT_SECRET` | Secret `trackplus-jwt-secret` | Signs session tokens. The server refuses to start without it. |
 | `DEMO_MODE` | `true` | Enables quick login and the 24 h reset. |
+| `ATTACHMENTS_BUCKET` | `<project>-trackplus-demo-attachments` | Private bucket for project attachments; the runtime service account has `roles/storage.objectAdmin` on it only. Files are streamed through the API. |
 | `PORT` | Cloud Run (`8080`) | Listen port. |
 | `FRONTEND_URL` | optional | Extra CORS origins, comma separated. Not needed when the app is served by the container. |
 
 Script settings (environment variables for `deploy.sh`): `PROJECT_ID`
-(required), `REGION`, `SERVICE`, `SQL_INSTANCE`, `SQL_TIER`, `DB_USER`, `REPO`,
+(required), `REGION`, `ATTACHMENTS_BUCKET`, `SERVICE`, `SQL_INSTANCE`, `SQL_TIER`, `DB_USER`, `REPO`,
 `RESET_SCHEDULE` (cron, default `0 0 * * *`), `RESET_TIME_ZONE` (default
 `Asia/Riyadh`), `IMAGE_TAG`.
 
@@ -100,8 +103,9 @@ connected database is named `trackplus_demo`:
   `POST /api/auth/demo/login` returns 404 otherwise.
 - The reset (`Backend/src/utils/resetDemo.js`) refuses to run unless both
   conditions hold, so pointing it at any other database does nothing.
-- The reset truncates every table in the `public` schema of `trackplus_demo`
-  and re-seeds the synthetic baseline. Never reuse this instance or database
+- The reset truncates every table in the `public` schema of `trackplus_demo`,
+  deletes uploaded attachments from the bucket, and re-seeds the synthetic
+  baseline. Never reuse this instance or database
   for real data.
 - On the demo, the forgot-password request returns the reset token in the
   response (there is no email delivery), so testers can complete the flow.
@@ -142,7 +146,8 @@ docker run --rm -e DATABASE_URL=... -e DEMO_MODE=true trackplus node Backend/src
   reset fallback never runs twice at once. That is plenty for a team demo.
 - The first request after the service has scaled to zero takes a few seconds
   (cold start). Set `--min-instances 1` for a warmer demo at extra cost.
-- Container disk is ephemeral. Anything written to local disk (for example
-  uploaded files) is lost on restart; persistent data must live in the database.
+- Container disk is ephemeral. Attachments go to the Cloud Storage bucket
+  when `ATTACHMENTS_BUCKET` is set (the script sets it); without it they would
+  fall back to local disk and be lost on restart.
 - `db-f1-micro` is a shared-core tier without an SLA; fine for a demo, not for
   production.

@@ -16,6 +16,7 @@ SQL_TIER="${SQL_TIER:-db-f1-micro}"
 DB_NAME="trackplus_demo" # demo safety checks refuse any other database name
 DB_USER="${DB_USER:-trackplus}"
 REPO="${REPO:-trackplus}"
+ATTACHMENTS_BUCKET="${ATTACHMENTS_BUCKET:-${PROJECT_ID}-trackplus-demo-attachments}"
 RESET_SCHEDULE="${RESET_SCHEDULE:-0 0 * * *}"
 RESET_TIME_ZONE="${RESET_TIME_ZONE:-Asia/Riyadh}"
 
@@ -78,6 +79,13 @@ setup() {
     gc secrets add-iam-policy-binding "$secret" \
       --member "serviceAccount:$RUN_SA" --role roles/secretmanager.secretAccessor >/dev/null
   done
+
+  echo "==> Private attachments bucket"
+  exists gc storage buckets describe "gs://$ATTACHMENTS_BUCKET" ||
+    gc storage buckets create "gs://$ATTACHMENTS_BUCKET" --location "$REGION" \
+      --uniform-bucket-level-access --public-access-prevention
+  gc storage buckets add-iam-policy-binding "gs://$ATTACHMENTS_BUCKET" \
+    --member "serviceAccount:$RUN_SA" --role roles/storage.objectAdmin >/dev/null
   echo "Setup complete. Next: deploy/gcp/deploy.sh release"
 }
 
@@ -97,7 +105,7 @@ release() {
   echo "==> Demo reset job"
   gc run jobs deploy "$RESET_JOB" "${common[@]}" \
     --set-secrets "DATABASE_URL=${SECRET_DB_URL}:latest" \
-    --set-env-vars DEMO_MODE=true \
+    --set-env-vars "DEMO_MODE=true,ATTACHMENTS_BUCKET=${ATTACHMENTS_BUCKET}" \
     --command node --args Backend/src/utils/resetDemo.js --max-retries 1 --task-timeout 600
   gc run jobs add-iam-policy-binding "$RESET_JOB" --region "$REGION" \
     --member "serviceAccount:$SCHEDULER_SA" --role roles/run.invoker >/dev/null
@@ -121,7 +129,7 @@ release() {
   # One instance keeps the request-time reset fallback single-writer; scales to zero when idle.
   gc run deploy "$SERVICE" "${common[@]}" \
     --set-secrets "DATABASE_URL=${SECRET_DB_URL}:latest,JWT_SECRET=${SECRET_JWT}:latest" \
-    --set-env-vars DEMO_MODE=true \
+    --set-env-vars "DEMO_MODE=true,ATTACHMENTS_BUCKET=${ATTACHMENTS_BUCKET}" \
     --allow-unauthenticated --port 8080 --cpu 1 --memory 512Mi \
     --min-instances 0 --max-instances 1 --concurrency 80
   echo "Demo URL: $(gc run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')"
@@ -143,6 +151,7 @@ teardown() {
   gc secrets delete "$SECRET_DB_URL" || true
   gc secrets delete "$SECRET_JWT" || true
   gc artifacts repositories delete "$REPO" --location "$REGION" || true
+  gc storage rm --recursive "gs://$ATTACHMENTS_BUCKET" || true
   gc iam service-accounts delete "$RUN_SA" || true
   gc iam service-accounts delete "$SCHEDULER_SA" || true
 }
