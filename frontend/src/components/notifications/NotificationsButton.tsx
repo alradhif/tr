@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Bell, CheckCheck, X } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -103,7 +104,8 @@ export function NotificationsButton({ className, catalog }: { className: string;
           </>
         )}
       </button>
-      {open ? (
+      {/* Rendered on body: the sticky sidebar is its own stacking context and would put the panel under the page content. */}
+      {open ? createPortal(
         <div className="notifications-panel" ref={panelRef} dir="rtl" role="dialog" aria-label="الإشعارات">
           <header className="notifications-panel__header">
             <h2>الإشعارات</h2>
@@ -133,7 +135,8 @@ export function NotificationsButton({ className, catalog }: { className: string;
               </li>
             ))}
           </ul>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </>
   )
