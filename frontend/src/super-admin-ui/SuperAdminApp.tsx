@@ -5,6 +5,7 @@ import { Header } from './components/layout/Header'
 import type { PageId } from './components/layout/Sidebar'
 import { TenantsPage } from './components/tenants/TenantsPage'
 import { UsersPage } from './components/users/UsersPage'
+import { SettingsPage } from '../pages/shared/SettingsPage'
 import { AuditLogPage } from './components/audit/AuditLogPage'
 import { SubscriptionsPage } from './components/subscriptions/SubscriptionsPage'
 import { DashboardGrid, useDashboardState } from './components/dashboard/DashboardGrid'
@@ -48,6 +49,9 @@ function DashboardPage({ role }: { role: UserRole }) {
     addWidget,
   } = useDashboardState(
     role === 'admin' ? ADMIN_DEFAULT_ACTIVE_WIDGET_IDS : SUPERADMIN_DEFAULT_ACTIVE_WIDGET_IDS,
+    undefined,
+    undefined,
+    'superadmin',
   )
   const [live, setLive] = useState<LiveDashboardData | null>(null)
   const [loadState, setLoadState] = useState<DashboardLoadState>('loading')
@@ -123,6 +127,7 @@ const PAGE_PATHS: Record<PageId, string> = {
   users: '/super-admin/users',
   subscriptions: '/super-admin/subscriptions',
   'audit-log': '/super-admin/audit-log',
+  settings: '/super-admin/settings',
   companies: '/super-admin',
 }
 
@@ -131,6 +136,7 @@ function pageFromPath(pathname: string): PageId {
   if (pathname.includes('/users')) return 'users'
   if (pathname.includes('/subscriptions')) return 'subscriptions'
   if (pathname.includes('/audit-log')) return 'audit-log'
+  if (pathname.includes('/settings')) return 'settings'
   return 'dashboard'
 }
 
@@ -163,6 +169,7 @@ function SuperAdminAppInner() {
     if (activePage === 'tenants') return <TenantsPage />
     if (activePage === 'users') return <UsersPage />
     if (activePage === 'subscriptions') return <SubscriptionsPage />
+    if (activePage === 'settings') return <SettingsPage />
     return <AuditLogPage />
   }
 

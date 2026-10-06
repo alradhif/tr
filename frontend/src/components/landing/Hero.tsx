@@ -51,6 +51,7 @@ export function Hero() {
             </button>
             <button
               aria-label="استكشف القدرات"
+              onClick={() => document.getElementById("capabilities")?.scrollIntoView({ behavior: "smooth", block: "start" })}
               className="appearance-none border-0 bg-transparent p-0 m-0 cursor-pointer"
             >
               <img src={exploreBtn} alt="استكشف القدرات" className="h-[58px] w-auto transition-transform hover:scale-[1.03]" />

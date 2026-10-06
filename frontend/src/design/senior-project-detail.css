@@ -1997,3 +1997,21 @@
   .output-detail__file-main { width: 100%; }
   .output-detail__file-info { width: calc(100% - 70px); }
 }
+
+.project-stages__activities { list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.project-stages__activities li { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; background:#f8f9fb; font-size:12px; }
+.project-stages__activities li strong { color:#18181b; font-weight:700; }
+.project-stages__activities li span { color:#52525b; }
+.project-stages__activities li em { margin-inline-start:auto; color:#96989f; font-style:normal; }
+.project-outputs__row .row-actions,
+.catalog-record-list__row .row-actions { display:inline-flex; gap:6px; margin-inline-start:8px; }
+.row-actions button { border:1px solid #e4e4e7; background:#fff; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; color:#3f3f46; }
+.row-actions button:hover { background:#f4f4f5; }
+.row-actions button.is-danger { color:#d92d20; border-color:#fecdca; }
+.row-actions button.is-primary { color:#067647; border-color:#abefc6; }
+.row-actions button:disabled { opacity:.5; cursor:not-allowed; }
+/* Sized like the outline buttons beside it in the header. */
+.project-detail__status-select { height:43px; border:0; border-radius:7px; padding:0 16px; font:inherit; font-size:13px; font-weight:700; color:#27272a; background:#fff; cursor:pointer; }
+.project-detail__team-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.project-detail__team-list span { display:inline-flex; gap:6px; align-items:center; background:#f4f4f5; border-radius:999px; padding:4px 10px; font-size:12px; }
+.project-detail__team-list button { border:none; background:none; color:#d92d20; cursor:pointer; padding:0; font-size:14px; line-height:1; }

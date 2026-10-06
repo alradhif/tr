@@ -22,7 +22,8 @@ function formatDate(value?: string | null) {
   return d.toLocaleDateString('ar-SA')
 }
 
-function packageLabel(name?: string | null) {
+function packageLabel(name?: string | null, label?: string | null) {
+  if (label) return label
   if (!name) return '—'
   const labels: Record<string, string> = {
     FREE: 'Free',
@@ -38,8 +39,8 @@ function mapSubscription(sub?: OrgAccount['subscription'] | null) {
   const pkg = sub?.package
   const price = pkg?.price != null ? `${pkg.price} ر.س` : '—'
   return {
-    name: packageLabel(pkg?.name),
-    features: [] as string[],
+    name: packageLabel(pkg?.name, pkg?.label),
+    features: Array.isArray(pkg?.features) ? pkg.features : [],
     monthlyCost: price,
     renewalDate: formatDate(sub?.endDate),
   }
@@ -77,9 +78,9 @@ export function orgToTenant(org: OrgAccount): Tenant {
     entityType: dash(org.entityType),
     region: dash(org.region ?? org.branch),
     usedStorage: '—',
-    storageLimit: '—',
-    activeUsers: 0,
-    userLimit: org.subscription?.package?.maxUsers ?? 0,
+    storageLimit: org.subscription ? `${org.subscription.storageLimitGb ?? org.subscription.package?.storageGb ?? 0} GB` : '—',
+    activeUsers: org.activeUsers ?? 0,
+    userLimit: org.subscription?.userLimit ?? org.subscription?.package?.maxUsers ?? 0,
     package: mapSubscription(org.subscription),
     users: [],
   }
@@ -107,9 +108,9 @@ export function clientToTenant(client: ClientAccount): Tenant {
     entityType: dash(client.entityType),
     region: dash(client.region ?? client.branch),
     usedStorage: '—',
-    storageLimit: '—',
-    activeUsers: 0,
-    userLimit: client.subscription?.package?.maxUsers ?? 0,
+    storageLimit: client.subscription ? `${client.subscription.storageLimitGb ?? client.subscription.package?.storageGb ?? 0} GB` : '—',
+    activeUsers: client.activeUsers ?? 0,
+    userLimit: client.subscription?.userLimit ?? client.subscription?.package?.maxUsers ?? 0,
     package: mapSubscription(client.subscription),
     users: [],
   }
@@ -154,7 +155,7 @@ export function tenantToRow(tenant: Tenant): TenantRow {
     status: tenant.status,
     statusLabel: tenant.statusLabel,
     plan: tenant.package.name,
-    users: tenant.activeUsers || tenant.userLimit,
+    users: tenant.activeUsers,
     expiresAt: tenant.package.renewalDate,
   }
 }

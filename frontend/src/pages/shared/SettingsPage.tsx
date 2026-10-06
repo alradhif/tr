@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { UserCheck, UserX, Users } from 'lucide-react'
+import { KeyRound, UserCheck, UserX, Users } from 'lucide-react'
 import { ApiError } from '../../api/client'
-import { createClientUser, getClientUsers, toggleClientUser, type ClientUser } from '../../api/clientPortal'
-import { createJodaynUser, getJodaynUsers, type JodaynUser } from '../../api/jodayn'
-import { createOrgUser, getOrgUsers, toggleOrgUser, type OrgUser } from '../../api/org'
+import { createClientUser, getClientUsers, resetClientUserCredentials, toggleClientUser, type ClientUser } from '../../api/clientPortal'
+import { createJodaynUser, getJodaynUsers, resetJodaynUserCredentials, toggleJodaynUser, type JodaynUser } from '../../api/jodayn'
+import { createOrgUser, getOrgUsers, resetOrgUserCredentials, toggleOrgUser, type OrgUser } from '../../api/org'
+import { changePassword, getProfile, updateProfile, type Profile } from '../../api/me'
+import { updateStoredUser } from '../../auth/session'
 import { getClientToken, getClientUser } from '../../auth/clientAuth'
 import { getJodaynToken, getJodaynUser } from '../../auth/jodaynAuth'
 import { getOrgToken, getOrgUser } from '../../auth/orgAuth'
+import { getSuperAdminToken, getSuperAdminUser } from '../../auth/superAdminAuth'
 import { isUpperManagement, type AppRole } from '../../auth/permissions'
 import { CredentialsModal } from '../../components/settings/CredentialsModal'
 import { InviteUserModal, type InviteUserPayload } from '../../components/settings/InviteUserModal'
@@ -19,18 +22,24 @@ import '../../design/settings-users.css'
 
 type SettingsTab = 'profile' | 'users'
 type PortalUser = OrgUser | ClientUser | JodaynUser
-type CreatedCredentials = { name: string; email: string; temporaryPassword: string }
+type CreatedCredentials = { name: string; email: string; temporaryPassword: string; reissued?: boolean }
 
 const AVATAR_COLORS = ['#dbeafe', '#d1f0e1', '#e9d5ff', '#fde9ce', '#f4f4f5']
 
-function portalFromPath(pathname: string): PortalKind | null {
+type SettingsPortal = PortalKind | 'superadmin'
+
+function portalFromPath(pathname: string): SettingsPortal | null {
+  if (pathname.startsWith('/super-admin')) return 'superadmin'
   if (pathname.startsWith('/org')) return 'org'
   if (pathname.startsWith('/client')) return 'client'
   if (pathname.startsWith('/jodayn')) return 'jodayn'
   return null
 }
 
-function sessionForPortal(portal: PortalKind | null) {
+function sessionForPortal(portal: SettingsPortal | null) {
+  if (portal === 'superadmin') {
+    return { user: getSuperAdminUser(), token: getSuperAdminToken(), entityLabel: 'منصة TrackPlus' }
+  }
   if (portal === 'org') {
     return { user: getOrgUser(), token: getOrgToken(), entityLabel: getOrgUser()?.orgName || '—' }
   }
@@ -76,15 +85,18 @@ function loginStatus(user: PortalUser) {
   if (user.isActive === false) {
     return { label: 'معلق', tone: 'suspended' as const }
   }
+  if (user.pendingActivation) {
+    return { label: 'غير نشط', tone: 'pending' as const }
+  }
   return { label: 'نشط', tone: 'active' as const }
 }
 
 export function SettingsPage() {
   const { t } = useTranslation()
   const location = useLocation()
-  const { role } = useOutletContext<{ role?: AppRole }>()
+  const { role } = useOutletContext<{ role?: AppRole } | undefined>() ?? {}
   const portal = portalFromPath(location.pathname)
-  const canManageUsers = Boolean(portal && role && isUpperManagement(role))
+  const canManageUsers = Boolean(portal && portal !== 'superadmin' && role && isUpperManagement(role))
   const [tab, setTab] = useState<SettingsTab>('profile')
   const [users, setUsers] = useState<PortalUser[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
@@ -95,8 +107,69 @@ export function SettingsPage() {
   const [credentials, setCredentials] = useState<CreatedCredentials | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
-  const { user, token, entityLabel } = useMemo(() => sessionForPortal(portal), [portal, location.pathname])
+  const showActions = true
+  const { user: sessionUser, token, entityLabel } = useMemo(() => sessionForPortal(portal), [portal, location.pathname])
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const user = profile ?? sessionUser
+  const [nameDraft, setNameDraft] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMessage, setProfileMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '' })
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const initial = user?.name?.trim()?.charAt(0) || '—'
+
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    getProfile(token)
+      .then(({ user: fresh }) => {
+        if (cancelled) return
+        setProfile(fresh)
+        setNameDraft(fresh.name)
+      })
+      .catch(() => {
+        if (!cancelled) setNameDraft(sessionUser?.name || '')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [token, sessionUser?.name])
+
+  async function handleSaveProfile() {
+    if (!token || !portal) return
+    setProfileSaving(true)
+    setProfileMessage(null)
+    try {
+      const { user: saved } = await updateProfile(token, { name: nameDraft })
+      setProfile(saved)
+      updateStoredUser(portal, { name: saved.name })
+      setProfileMessage({ ok: true, text: 'تم حفظ الملف الشخصي' })
+    } catch (error) {
+      setProfileMessage({ ok: false, text: error instanceof ApiError ? error.message : 'تعذر حفظ الملف الشخصي' })
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!token) return
+    if (passwordForm.next !== passwordForm.confirm) {
+      setPasswordMessage({ ok: false, text: 'كلمتا المرور غير متطابقتين' })
+      return
+    }
+    setPasswordSaving(true)
+    setPasswordMessage(null)
+    try {
+      await changePassword(token, { currentPassword: passwordForm.current, newPassword: passwordForm.next })
+      setPasswordForm({ current: '', next: '', confirm: '' })
+      setPasswordMessage({ ok: true, text: 'تم تغيير كلمة المرور' })
+    } catch (error) {
+      setPasswordMessage({ ok: false, text: error instanceof ApiError ? error.message : 'تعذر تغيير كلمة المرور' })
+    } finally {
+      setPasswordSaving(false)
+    }
+  }
 
   const tabs = useMemo(() => {
     const items: Array<[SettingsTab, string]> = [['profile', 'الملف الشخصي']]
@@ -160,12 +233,37 @@ export function SettingsPage() {
     }
   }
 
+  async function handleReissueInvite(row: PortalUser) {
+    if (!token || !portal) return
+    setTogglingId(row.id)
+    setUsersError(null)
+    try {
+      const result =
+        portal === 'org'
+          ? await resetOrgUserCredentials(token, row.id)
+          : portal === 'client'
+            ? await resetClientUserCredentials(token, row.id)
+            : await resetJodaynUserCredentials(token, row.id)
+      setCredentials({
+        name: row.name,
+        email: row.email,
+        temporaryPassword: result.temporaryPassword,
+        reissued: true,
+      })
+    } catch (error) {
+      setUsersError(error instanceof ApiError ? error.message : 'تعذر إصدار بيانات دخول جديدة')
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
   async function handleToggle(id: string) {
-    if (!token || !portal || portal === 'jodayn') return
+    if (!token || !portal) return
     setTogglingId(id)
     try {
       if (portal === 'org') await toggleOrgUser(token, id)
-      else await toggleClientUser(token, id)
+      else if (portal === 'client') await toggleClientUser(token, id)
+      else await toggleJodaynUser(token, id)
       await loadUsers()
     } catch (error) {
       setUsersError(error instanceof ApiError ? error.message : 'تعذر تحديث حالة الحساب')
@@ -211,7 +309,7 @@ export function SettingsPage() {
             <div className="senior-settings__profile-grid">
               <label className="senior-settings__field">
                 <span className="senior-settings__field-label">الاسم</span>
-                <input value={user?.name || ''} readOnly />
+                <input value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} />
               </label>
               <label className="senior-settings__field">
                 <span className="senior-settings__field-label">البريد الإلكتروني</span>
@@ -225,6 +323,67 @@ export function SettingsPage() {
                 <span className="senior-settings__field-label">الدور</span>
                 <input value={roleLabel(user?.role || role || '')} readOnly />
               </label>
+            </div>
+            <div className="senior-settings__form-actions">
+              {profileMessage ? (
+                <span className={profileMessage.ok ? 'senior-settings__note--ok' : 'td-add-user-error'}>{profileMessage.text}</span>
+              ) : null}
+              <button
+                type="button"
+                className="td-add-user-submit"
+                disabled={profileSaving || !nameDraft.trim() || nameDraft.trim() === user?.name}
+                onClick={() => void handleSaveProfile()}
+              >
+                {profileSaving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+              </button>
+            </div>
+
+            <div className="senior-settings__card-title senior-settings__card-title--spaced">تغيير كلمة المرور</div>
+            <div className="senior-settings__separator" />
+            <div className="senior-settings__profile-grid">
+              <label className="senior-settings__field">
+                <span className="senior-settings__field-label">كلمة المرور الحالية</span>
+                <input
+                  type="password"
+                  dir="ltr"
+                  autoComplete="current-password"
+                  value={passwordForm.current}
+                  onChange={(event) => setPasswordForm((prev) => ({ ...prev, current: event.target.value }))}
+                />
+              </label>
+              <label className="senior-settings__field">
+                <span className="senior-settings__field-label">كلمة المرور الجديدة</span>
+                <input
+                  type="password"
+                  dir="ltr"
+                  autoComplete="new-password"
+                  value={passwordForm.next}
+                  onChange={(event) => setPasswordForm((prev) => ({ ...prev, next: event.target.value }))}
+                />
+              </label>
+              <label className="senior-settings__field">
+                <span className="senior-settings__field-label">تأكيد كلمة المرور</span>
+                <input
+                  type="password"
+                  dir="ltr"
+                  autoComplete="new-password"
+                  value={passwordForm.confirm}
+                  onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirm: event.target.value }))}
+                />
+              </label>
+            </div>
+            <div className="senior-settings__form-actions">
+              {passwordMessage ? (
+                <span className={passwordMessage.ok ? 'senior-settings__note--ok' : 'td-add-user-error'}>{passwordMessage.text}</span>
+              ) : null}
+              <button
+                type="button"
+                className="td-add-user-submit"
+                disabled={passwordSaving || !passwordForm.current || !passwordForm.next}
+                onClick={() => void handleChangePassword()}
+              >
+                {passwordSaving ? 'جاري الحفظ...' : 'تغيير كلمة المرور'}
+              </button>
             </div>
           </section>
         ) : null}
@@ -245,12 +404,12 @@ export function SettingsPage() {
             <div className="senior-settings__separator" />
             {usersError ? <p className="td-add-user-error">{usersError}</p> : null}
             <div className={`td-users-table senior-settings__users-table`}>
-              <div className={`td-users-row td-users-row--head ${portal === 'jodayn' ? 'td-users-row--no-actions' : ''}`}>
+              <div className={`td-users-row td-users-row--head ${showActions ? '' : 'td-users-row--no-actions'}`}>
                 <span className="td-users-head-cell">المستخدم</span>
                 <span className="td-users-head-cell">الصلاحية / الدور</span>
                 <span className="td-users-head-cell">الحالة</span>
                 <span className="td-users-head-cell">تاريخ الانضمام</span>
-                {portal !== 'jodayn' ? <span className="td-users-head-cell">إجراءات</span> : null}
+                {showActions ? <span className="td-users-head-cell">إجراءات</span> : null}
               </div>
               {usersLoading ? (
                 <div style={{ padding: '24px 0', color: '#a1a1aa', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
@@ -260,9 +419,10 @@ export function SettingsPage() {
               {!usersLoading &&
                 users.map((row) => {
                   const status = loginStatus(row)
+                  const showInviteLink = Boolean(row.pendingActivation) && row.isActive !== false
                   return (
                     <div
-                      className={`td-users-row ${portal === 'jodayn' ? 'td-users-row--no-actions' : ''}`}
+                      className={`td-users-row ${showActions ? '' : 'td-users-row--no-actions'}`}
                       key={row.id}
                     >
                       <div className="td-user-identity">
@@ -286,8 +446,19 @@ export function SettingsPage() {
                         {status.label}
                       </span>
                       <span className="td-user-joined">{formatJoinDate(row.createdAt)}</span>
-                      {portal !== 'jodayn' ? (
+                      {showActions ? (
                         <div className="td-user-actions">
+                          {showInviteLink ? (
+                            <button
+                              type="button"
+                              className="td-user-btn td-user-btn--activate"
+                              disabled={togglingId === row.id}
+                              onClick={() => void handleReissueInvite(row)}
+                            >
+                              <KeyRound size={11} strokeWidth={2.5} /> بيانات دخول جديدة
+                            </button>
+                          ) : null}
+                          {row.id !== user?.id ? (
                           <button
                             type="button"
                             className={`td-user-btn ${row.isActive === false ? 'td-user-btn--activate' : 'td-user-btn--danger'}`}
@@ -304,6 +475,7 @@ export function SettingsPage() {
                               </>
                             )}
                           </button>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -321,7 +493,7 @@ export function SettingsPage() {
 
       {inviteOpen && portal ? (
         <InviteUserModal
-          portal={portal}
+          portal={portal as PortalKind}
           submitting={inviteSubmitting}
           error={inviteError}
           onClose={() => !inviteSubmitting && setInviteOpen(false)}
@@ -334,6 +506,7 @@ export function SettingsPage() {
           name={credentials.name}
           email={credentials.email}
           temporaryPassword={credentials.temporaryPassword}
+          reissued={credentials.reissued}
           onClose={() => setCredentials(null)}
         />
       ) : null}

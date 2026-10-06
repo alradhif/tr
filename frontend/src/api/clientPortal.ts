@@ -75,7 +75,9 @@ export type ClientUser = {
   email: string
   role: string
   isActive: boolean
+  pendingActivation?: boolean
   activatedAt?: string | null
+  lastLoginAt?: string | null
   createdAt?: string | null
 }
 
@@ -213,6 +215,7 @@ export function uploadClientProjectAttachments(token: string, projectId: string,
       fileName: string
       fileType?: string | null
       fileSize?: number | null
+      downloadPath?: string
     }>
   }>(`/client/projects/${projectId}/attachments`, {
     method: 'POST',
@@ -226,4 +229,20 @@ export function deleteClientProjectAttachment(token: string, projectId: string, 
     method: 'DELETE',
     token,
   })
+}
+
+/** New one-time initial password for an invited user who has not signed in yet. */
+export function resetClientUserCredentials(token: string, id: string) {
+  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string }>(
+    `/client/users/${id}/credentials`,
+    { method: 'POST', token },
+  )
+}
+
+/** Active members of the account, readable by any role (e.g. to choose a project manager). */
+export function getAssignableClientUsers(token: string) {
+  return apiRequest<{ users: ClientUser[] }>(
+    '/client/users/assignable',
+    { method: 'GET', token },
+  )
 }

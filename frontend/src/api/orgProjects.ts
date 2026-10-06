@@ -6,6 +6,7 @@ export type ProjectAttachment = {
   fileName: string
   fileType?: string | null
   fileSize?: number | null
+  downloadPath?: string
 }
 
 export type OrgProject = {

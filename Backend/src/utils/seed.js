@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs')
 const prisma = require('../lib/prisma')
-const { getDatabaseName } = require('../lib/demoSafety')
+const { assertConnectedToDemoDatabase } = require('../lib/demoSafety')
 const { seedMockBaseline } = require('./demoBaseline')
 
 async function findOrCreate(model, where, create) {
@@ -29,10 +29,8 @@ async function ensureActiveSubscription({ accountType, accountId, packageId, cre
 }
 
 async function seedDatabase() {
-  const databaseName = getDatabaseName()
-  if (databaseName !== 'trackplus_demo') {
-    throw new Error('Seed refused: active database is not trackplus_demo')
-  }
+  // Seeding wipes nothing, but it must still only ever write into the demo database.
+  await assertConnectedToDemoDatabase(prisma)
 
   const hashed = await bcrypt.hash('Demo1234', 10)
   const adminHashed = await bcrypt.hash('admin123456', 10)
@@ -250,11 +248,11 @@ async function seedDatabase() {
 
   // ── Packages ─────────────────────────────────────────────────
   const packageSeeds = [
-    { name: 'FREE', price: 0, duration: 365, maxUsers: 5, maxProjects: 3 },
-    { name: 'DEMO', price: 0, duration: 30, maxUsers: 10, maxProjects: 5 },
-    { name: 'BASIC', price: 999, duration: 365, maxUsers: 25, maxProjects: 15 },
-    { name: 'PREMIUM', price: 2499, duration: 365, maxUsers: 50, maxProjects: 40 },
-    { name: 'ENTERPRISE', price: 5000, duration: 365, maxUsers: 100, maxProjects: 100 },
+    { name: 'FREE', label: 'Free', packageType: 'اساسية', price: 0, duration: 365, billingCycle: 'YEARLY', storageGb: 5, maxUsers: 5, maxProjects: 3, features: ['إدارة الحسابات'] },
+    { name: 'DEMO', label: 'Demo', packageType: 'اساسية', price: 0, duration: 30, billingCycle: 'MONTHLY', storageGb: 10, maxUsers: 10, maxProjects: 5, features: ['إدارة الحسابات', 'تصدير البيانات'] },
+    { name: 'BASIC', label: 'Basic', packageType: 'متقدمة', price: 999, duration: 365, billingCycle: 'YEARLY', storageGb: 50, maxUsers: 25, maxProjects: 15, features: ['إدارة الحسابات', 'تصدير البيانات'] },
+    { name: 'PREMIUM', label: 'Premium', packageType: 'متقدمة', price: 2499, duration: 365, billingCycle: 'YEARLY', storageGb: 200, maxUsers: 50, maxProjects: 40, features: ['إدارة الحسابات', 'تصدير البيانات', 'إدارة الفوترة'] },
+    { name: 'ENTERPRISE', label: 'Enterprise', packageType: 'مؤسسية', price: 5000, duration: 365, billingCycle: 'YEARLY', storageGb: 1024, maxUsers: 100, maxProjects: 100, features: ['إدارة الحسابات', 'تصدير البيانات', 'إدارة الفوترة'] },
   ]
   for (const seed of packageSeeds) {
     await prisma.package.upsert({

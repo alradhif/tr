@@ -14,6 +14,7 @@ export type PptBridgePayload = {
     endDate?: string
     budget?: number
     budgetCurrency?: string
+    spent?: number
     statusLabel?: string
     progress?: number
     description?: string
@@ -25,6 +26,10 @@ export type PptBridgePayload = {
   changeRequests?: Array<{ title: string; status?: string }>
   scenarios?: string[]
   sourceLabel?: string
+  /** Options from the "create presentation" dialog. */
+  deckTitle?: string
+  mode?: 'auto' | 'manual'
+  notes?: string
 }
 
 type PptGeneratorFrameProps = {

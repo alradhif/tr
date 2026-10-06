@@ -7,6 +7,8 @@ import './subscriptions.css';
 export const PERMISSION_OPTIONS = ['إدارة الحسابات', 'تصدير البيانات', 'إدارة الفوترة'];
 
 export interface NewPackageData {
+  name: string;
+  isActive: boolean;
   planType: string;
   userLimit: string;
   storageLimit: string;
@@ -19,7 +21,7 @@ interface AddPackagePageProps {
   mode?: 'add' | 'edit';
   initialData?: NewPackageData;
   onCancel: () => void;
-  onSave: (data: NewPackageData) => void;
+  onSave: (data: NewPackageData) => Promise<void> | void;
 }
 
 const PLAN_TYPE_OPTIONS = ['اساسية', 'متقدمة', 'مؤسسية'];
@@ -37,6 +39,10 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
     ? [initialData.userLimit, ...USER_LIMIT_OPTIONS]
     : USER_LIMIT_OPTIONS;
 
+  const [name, setName] = useState(initialData?.name ?? '');
+  const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [planType, setPlanType] = useState(initialData?.planType ?? planTypeOptions[0]);
   const [userLimit, setUserLimit] = useState(initialData?.userLimit ?? userLimitOptions[0]);
   const [storageLimit, setStorageLimit] = useState(
@@ -59,8 +65,25 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
     setPermissions((prev) => ({ ...prev, [permission]: !prev[permission] }));
   };
 
-  const handleSave = () => {
-    onSave({
+  const handleSave = async () => {
+    if (!name.trim()) {
+      setFormError('اسم الباقة مطلوب');
+      return;
+    }
+    if (!period) {
+      setFormError('اختر فترة الباقة');
+      return;
+    }
+    if (price !== '' && (Number.isNaN(Number(price)) || Number(price) < 0)) {
+      setFormError('السعر يجب أن يكون رقماً موجباً');
+      return;
+    }
+    setFormError('');
+    setSaving(true);
+    try {
+      await onSave({
+      name: name.trim(),
+      isActive,
       planType,
       userLimit,
       storageLimit,
@@ -68,6 +91,11 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
       price,
       permissions: PERMISSION_OPTIONS.filter((permission) => permissions[permission]),
     });
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'تعذر حفظ الباقة');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -83,6 +111,17 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
         <div className="tenant-form-card">
           <div className="tenant-form-card__header">
             {isEdit ? 'تعديل معلومات الباقة' : 'معلومات الباقة الجديدة'}
+          </div>
+
+          <div className="tenant-form-field">
+            <label>اسم الباقة</label>
+            <input
+              type="text"
+              className="tenant-form-input"
+              placeholder="مثال: Premium"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
           </div>
 
           <div className="tenant-form-field">
@@ -182,16 +221,26 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
                   <span>{permission}</span>
                 </label>
               ))}
+              <label className="package-permission-row">
+                <input
+                  type="checkbox"
+                  className="package-permission-checkbox"
+                  checked={isActive}
+                  onChange={() => setIsActive((value) => !value)}
+                />
+                <span>الباقة مفعلة ومتاحة للمستأجرين الجدد</span>
+              </label>
             </div>
           </div>
         </div>
+        {formError ? <p style={{ color: '#b91c1c', textAlign: 'center', marginTop: 8 }}>{formError}</p> : null}
 
         <div className="tenant-form-actions">
           <button type="button" className="tenant-form-btn tenant-form-btn--cancel" onClick={onCancel}>
             إلغاء
           </button>
-          <button type="button" className="tenant-form-btn tenant-form-btn--next" onClick={handleSave}>
-            {isEdit ? 'حفظ التعديلات' : 'حفظ'}
+          <button type="button" className="tenant-form-btn tenant-form-btn--next" disabled={saving} onClick={() => void handleSave()}>
+            {saving ? 'جاري الحفظ...' : isEdit ? 'حفظ التعديلات' : 'حفظ'}
           </button>
         </div>
       </div>

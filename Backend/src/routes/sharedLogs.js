@@ -5,6 +5,7 @@ const roles = require('../middleware/roles')
 const {
   getNotifications,
   markNotificationRead,
+  markAllNotificationsRead,
   getAuditLogs,
   getActivityLogs
 } = require('../controllers/sharedLogsController')
@@ -14,6 +15,7 @@ const isSuperAdmin = [auth, roles('SUPER_ADMIN')]
 
 // Notifications — any authenticated user (scoped to self)
 router.get('/notifications', ...isAuthenticated, getNotifications)
+router.patch('/notifications/read-all', ...isAuthenticated, markAllNotificationsRead)
 router.patch('/notifications/:id/read', ...isAuthenticated, markNotificationRead)
 
 // Audit + Activity — SUPER_ADMIN only

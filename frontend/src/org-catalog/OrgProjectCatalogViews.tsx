@@ -15,6 +15,7 @@ type PhaseRow = {
   endDate: string
   startRaw?: string
   endRaw?: string
+  activities?: string[]
 }
 
 type DeliverableRow = {
@@ -24,6 +25,8 @@ type DeliverableRow = {
   endDate: string
   status: string
   createdAt?: string
+  progress?: number
+  actions?: ReactNode
 }
 
 type RecordRow = {
@@ -89,6 +92,7 @@ export function OrgProjectStagesView({
           status,
           startRaw: phase.startRaw,
           endRaw: phase.endRaw,
+          activities: phase.activities ?? [],
         }
       }),
     [phases],
@@ -185,7 +189,22 @@ export function OrgProjectStagesView({
               <div className="project-stages__details">
                 <div className="project-stages__divider" />
                 <h3>{t('activities')}</h3>
-                <div className="project-stages__empty">{t('noActivitiesYet')}</div>
+                {stage.activities.length > 0 ? (
+                  <ul className="project-stages__activities">
+                    {stage.activities.map((activity, index) => {
+                      const [name, owner, start, end] = activity.split('|').map((part) => part.trim())
+                      return (
+                        <li key={`${stage.number}-${index}`}>
+                          <strong>{name}</strong>
+                          {owner ? <span>{owner}</span> : null}
+                          {start || end ? <em>{[start, end].filter(Boolean).join(' — ')}</em> : null}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : (
+                  <div className="project-stages__empty">{t('noActivitiesYet')}</div>
+                )}
               </div>
             ) : null}
           </article>
@@ -219,8 +238,9 @@ export function OrgProjectOutputsView({ rows }: { rows: DeliverableRow[] }) {
               <div>{row.createdAt ?? '—'}</div>
               <div>
                 <Badge variant={completed ? 'success' : 'neutral'} icon={<span className="tenants-status-dot" />}>
-                  {completed ? t('completed') : t('planned')}
+                  {completed ? t('completed') : row.progress ? `${row.progress}%` : t('planned')}
                 </Badge>
+                {row.actions}
               </div>
             </div>
           )

@@ -6,10 +6,11 @@ import { commonAssets, projectsAssets } from '@/assets'
 import { AssetIcon } from '../components/ui/AssetIcon'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
+import { extractFromDocument } from '../api/me'
 import {
   getCompanies,
   getDepartments,
-  getOrgUsers,
+  getAssignableOrgUsers,
   type Department,
   type ExecutingCompany,
 } from '../api/org'
@@ -18,7 +19,7 @@ import {
   createClientProject,
   deleteClientProjectAttachment,
   getClientProjectById,
-  getClientUsers,
+  getAssignableClientUsers,
   submitClientProject,
   updateClientNested,
   updateClientProject,
@@ -45,6 +46,7 @@ import { getClientRole, getClientToken } from '../auth/clientAuth'
 import { getOrgRole, getOrgToken } from '../auth/orgAuth'
 import { isDataEntry } from '../auth/permissions'
 import { isPendingApproval } from './approvalStatus'
+import { parsePhaseActivities } from './phaseActivities'
 import { SubpageHeader } from '../components/ui'
 
 type ProjectPortal = 'org' | 'client'
@@ -331,7 +333,10 @@ function fromProject(project: OrgProject): ProjectFormState {
               status: String(rec.scope ?? ''),
               startDate: toInputDate(typeof rec.startDate === 'string' ? rec.startDate : null),
               endDate: toInputDate(typeof rec.endDate === 'string' ? rec.endDate : null),
-              activities: [],
+              activities: parsePhaseActivities(rec.notes).map((activity, activityIndex) => ({
+                id: activityIndex + 1,
+                ...activity,
+              })),
             }
           })
         : [emptyStage(1)],
@@ -354,7 +359,7 @@ export function ProjectForm({
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [savedId, setSavedId] = useState<string | undefined>(mode === 'edit' ? projectId : undefined)
-  const [contractFile, setContractFile] = useState('')
+  const [contractFile, setContractFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const attachmentsInputRef = useRef<HTMLInputElement>(null)
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([])
@@ -404,12 +409,12 @@ export function ProjectForm({
     ;(async () => {
       try {
         if (isClient) {
-          const usersRes = await getClientUsers(token)
+          const usersRes = await getAssignableClientUsers(token)
           if (cancelled) return
           setUsers(usersRes.users ?? [])
         } else {
           const [usersRes, deptsRes, companiesRes] = await Promise.all([
-            getOrgUsers(token),
+            getAssignableOrgUsers(token),
             getDepartments(token),
             getCompanies(token),
           ])
@@ -454,6 +459,45 @@ export function ProjectForm({
       'stages',
       form.stages.map((stage) => (stage.id === stageId ? { ...stage, [key]: value } : stage)),
     )
+  }
+
+  const [extracting, setExtracting] = useState(false)
+
+  /** Reads the contract with the AI extractor and fills only the fields that are still empty. */
+  async function prefillFromContract(file: File) {
+    const token = isClient ? getClientToken() : getOrgToken()
+    if (!token) return
+    if (!/\.(pdf|txt|md)$/i.test(file.name)) {
+      message.info('سيُرفق الملف مع المشروع، والتعبئة التلقائية تدعم ملفات PDF والنصوص فقط')
+      return
+    }
+    setExtracting(true)
+    try {
+      const { fields } = await extractFromDocument(token, 'project', file)
+      const text = (value: unknown) => (typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '')
+      const date = (value: unknown) => (/^\d{4}-\d{2}-\d{2}/.test(text(value)) ? text(value).slice(0, 10) : '')
+      const found: Partial<ProjectFormState> = {
+        name: text(fields.name),
+        description: text(fields.description),
+        startDate: date(fields.startDate),
+        endDate: date(fields.endDate),
+        budget: Number.isFinite(Number(fields.budget)) && text(fields.budget) ? String(Number(fields.budget)) : '',
+        orgProjectManagerName: text(fields.orgProjectManagerName),
+        clientProjectManagerName: text(fields.clientProjectManagerName),
+      }
+      const updates = (Object.entries(found) as Array<[keyof ProjectFormState, string]>).filter(
+        ([key, value]) => value && !String(form[key] ?? '').trim(),
+      )
+      const filled = updates.length
+      if (filled) setForm((current) => ({ ...current, ...Object.fromEntries(updates) }))
+      message.success(filled ? `تمت تعبئة ${filled} من الحقول من الملف، راجعها قبل الحفظ` : 'لم تُعبأ حقول جديدة من الملف')
+    } catch (err) {
+      const text = err instanceof ApiError ? err.message : t('loadError')
+      if (err instanceof ApiError && err.status === 503) message.warning(`${text} سيُرفق الملف مع المشروع.`)
+      else message.error(text)
+    } finally {
+      setExtracting(false)
+    }
   }
 
   const payload = useMemo<CreateProjectPayload | CreateClientProjectPayload>(
@@ -508,10 +552,22 @@ export function ProjectForm({
         return createProjectPhase(token, id, body)
       }),
     )
+    let contractFileUrl = ''
+    if (contractFile) {
+      const uploaded = isClient
+        ? await uploadClientProjectAttachments(token, id, [contractFile])
+        : await uploadProjectAttachments(token, id, [contractFile])
+      const saved = uploaded.attachments?.[0]
+      if (saved) {
+        contractFileUrl = saved.downloadPath ?? ''
+        setAttachments((current) => [...current, ...attachmentsFromProject([saved])])
+      }
+      setContractFile(null)
+    }
     if (form.contractNumber.trim() && form.contractStartDate && form.contractEndDate) {
       const contractBody = {
         name: form.contractNumber.trim(),
-        fileUrl: contractFile ? `uploads/${contractFile}` : `uploads/${form.contractNumber.trim()}.pdf`,
+        fileUrl: contractFileUrl,
         startDate: form.contractStartDate,
         endDate: form.contractEndDate,
       }
@@ -737,15 +793,17 @@ export function ProjectForm({
             onChange={(event) => {
               const file = event.target.files?.[0]
               if (!file) return
-              setContractFile(file.name)
+              setContractFile(file)
+              event.target.value = ''
+              void prefillFromContract(file)
             }}
           />
           <div className="create-project__upload-copy">
             <strong>{t('aiUploadProjectTitle')}</strong>
-            <span>{t('aiUploadProjectSubtitle')}</span>
+            <span>{extracting ? 'جاري قراءة الملف...' : t('aiUploadProjectSubtitle')}</span>
             {contractFile ? (
               <small>
-                <AssetIcon src={projectsAssets.contract} size={14} /> {contractFile}
+                <AssetIcon src={projectsAssets.contract} size={14} /> {contractFile.name}
               </small>
             ) : null}
           </div>

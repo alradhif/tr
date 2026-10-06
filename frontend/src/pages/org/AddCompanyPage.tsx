@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { createCompany, createCompanyTeamMember, getOrgUsers, type OrgUser } from '../../api/org'
+import { createCompany, createCompanyTeamMember, getAssignableOrgUsers, type OrgUser } from '../../api/org'
 import { getOrgToken } from '../../auth/orgAuth'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { SubpageHeader } from '../../components/ui'
@@ -33,7 +33,7 @@ export function OrgAddCompanyPage() {
   useEffect(() => {
     const token = getOrgToken()
     if (!token) return
-    getOrgUsers(token)
+    getAssignableOrgUsers(token)
       .then((data) => setUsers(data.users))
       .catch(() => setUsers([]))
   }, [])

@@ -1,4 +1,6 @@
 const prisma = require('../lib/prisma')
+const { normalizeDeliverableInput, recomputeProjectProgress } = require('../lib/projectWorkflow')
+const { notifyChangeRequestCreated } = require('../lib/changeRequests')
 
 async function assertOrgProject(projectId, orgId) {
   const project = await prisma.orgProject.findUnique({ where: { id: projectId } })
@@ -230,16 +232,16 @@ exports.createContract = async (req, res) => {
     await assertOrgProject(projectId, req.user.orgId)
 
     const { name, fileUrl, startDate, endDate } = req.body
-    if (!name || !fileUrl || !startDate || !endDate) {
+    if (!name || !startDate || !endDate) {
       return res.status(400).json({
-        message: 'Required fields: name, fileUrl, startDate, endDate'
+        message: 'Required fields: name, startDate, endDate'
       })
     }
 
     const contract = await prisma.orgContract.create({
       data: {
         name,
-        fileUrl,
+        fileUrl: fileUrl || '',
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         projectId,
@@ -554,7 +556,7 @@ exports.createDeliverable = async (req, res) => {
     const { projectId } = req.params
     await assertOrgProject(projectId, req.user.orgId)
 
-    const { name, description, email, price, status, progressPct, responsibleId } = req.body
+    const { name, description, email, price, status, progressPct, responsibleId } = normalizeDeliverableInput(req.body)
     if (!name) {
       return res.status(400).json({ message: 'Required field: name' })
     }
@@ -572,6 +574,7 @@ exports.createDeliverable = async (req, res) => {
       }
     })
 
+    await recomputeProjectProgress('ORG', projectId)
     res.json({ success: true, deliverable })
   } catch (err) {
     handleError(res, err)
@@ -594,11 +597,12 @@ exports.updateDeliverable = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
 
-    const data = { ...req.body }
+    const data = normalizeDeliverableInput({ ...req.body })
     delete data.projectId
     delete data.id
 
     const deliverable = await prisma.orgDeliverable.update({ where: { id }, data })
+    await recomputeProjectProgress('ORG', projectId)
     res.json({ success: true, deliverable })
   } catch (err) {
     handleError(res, err)
@@ -622,6 +626,7 @@ exports.deleteDeliverable = async (req, res) => {
     }
 
     await prisma.orgDeliverable.delete({ where: { id } })
+    await recomputeProjectProgress('ORG', projectId)
     res.json({ success: true, message: 'Deliverable deleted' })
   } catch (err) {
     handleError(res, err)
@@ -844,7 +849,7 @@ exports.getChangeRequests = async (req, res) => {
 exports.createChangeRequest = async (req, res) => {
   try {
     const { projectId } = req.params
-    await assertOrgProject(projectId, req.user.orgId)
+    const project = await assertOrgProject(projectId, req.user.orgId)
 
     const {
       title,
@@ -866,7 +871,7 @@ exports.createChangeRequest = async (req, res) => {
         title,
         description,
         priority,
-        status,
+        status: 'PENDING',
         impactOnCost,
         impactOnSchedule,
         submittedBy,
@@ -875,6 +880,7 @@ exports.createChangeRequest = async (req, res) => {
         requestedBy: req.user.userId
       }
     })
+    await notifyChangeRequestCreated('ORG', project, changeRequest).catch(() => {})
 
     res.json({ success: true, changeRequest })
   } catch (err) {
@@ -930,82 +936,6 @@ exports.deleteChangeRequest = async (req, res) => {
 
     await prisma.orgChangeRequest.delete({ where: { id } })
     res.json({ success: true, message: 'Change request deleted' })
-  } catch (err) {
-    handleError(res, err)
-  }
-}
-
-exports.approveChangeRequest = async (req, res) => {
-  try {
-    const { projectId, id } = req.params
-    await assertOrgProject(projectId, req.user.orgId)
-
-    const existing = await prisma.orgChangeRequest.findUnique({
-      where: { id },
-      include: { project: { select: { orgId: true } } }
-    })
-    if (!existing || existing.projectId !== projectId) {
-      return res.status(404).json({ message: 'Change request not found' })
-    }
-    if (existing.project.orgId !== req.user.orgId) {
-      return res.status(403).json({ message: 'Access denied' })
-    }
-
-    const { comment } = req.body
-
-    const changeRequest = await prisma.orgChangeRequest.update({
-      where: { id },
-      data: { status: 'APPROVED' }
-    })
-
-    await prisma.orgRequestLog.create({
-      data: {
-        action: 'APPROVED',
-        comment,
-        requestId: id,
-        performedBy: req.user.userId
-      }
-    })
-
-    res.json({ success: true, changeRequest, message: 'Change request approved' })
-  } catch (err) {
-    handleError(res, err)
-  }
-}
-
-exports.rejectChangeRequest = async (req, res) => {
-  try {
-    const { projectId, id } = req.params
-    await assertOrgProject(projectId, req.user.orgId)
-
-    const existing = await prisma.orgChangeRequest.findUnique({
-      where: { id },
-      include: { project: { select: { orgId: true } } }
-    })
-    if (!existing || existing.projectId !== projectId) {
-      return res.status(404).json({ message: 'Change request not found' })
-    }
-    if (existing.project.orgId !== req.user.orgId) {
-      return res.status(403).json({ message: 'Access denied' })
-    }
-
-    const { comment } = req.body
-
-    const changeRequest = await prisma.orgChangeRequest.update({
-      where: { id },
-      data: { status: 'REJECTED' }
-    })
-
-    await prisma.orgRequestLog.create({
-      data: {
-        action: 'REJECTED',
-        comment,
-        requestId: id,
-        performedBy: req.user.userId
-      }
-    })
-
-    res.json({ success: true, changeRequest, message: 'Change request rejected' })
   } catch (err) {
     handleError(res, err)
   }

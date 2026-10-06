@@ -14,7 +14,20 @@ import {
 } from 'lucide-react';
 import { companiesAssets, dashboardAssets } from '@/assets';
 import { AssetIcon } from '../../../components/ui/AssetIcon';
+import { useCallback, useEffect, useState } from 'react';
 import { useTenantById, useTenantMutations, type TenantUser } from '../../context/TenantContext';
+import {
+  deleteTenantAccount,
+  getTenantDetails,
+  notifyTenant,
+  resetPlatformUserCredentials,
+  toggleAccount,
+  updatePlatformUser,
+  type TenantDetails,
+} from '../../../api/superAdmin';
+import { downloadWithToken } from '../../../api/me';
+import { getSuperAdminToken } from '../../../auth/superAdminAuth';
+import { CredentialsModal } from '../../../components/settings/CredentialsModal';
 import { PageHeader } from '../layout/PageHeader';
 import './tenant-details.css';
 
@@ -52,9 +65,88 @@ function barClass(p: number) {
   return 'td-progress-fill--green';
 }
 
+const AVATAR_COLORS = ['#dbeafe', '#d1f0e1', '#e9d5ff', '#fde9ce', '#f4f4f5'];
+
+function splitTenantId(id: string): { kind: 'org' | 'client' | 'jodayn'; id: string } {
+  const [kind, ...rest] = id.split('-');
+  return { kind: kind as 'org' | 'client' | 'jodayn', id: rest.join('-') };
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '—';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('ar-SA');
+}
+
 export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetailsPageProps) {
-  const tenant = useTenantById(tenantId);
-  const { updateTenant, deleteTenant } = useTenantMutations();
+  const baseTenant = useTenantById(tenantId);
+  const { refreshTenants, deleteTenant } = useTenantMutations();
+  const ref = splitTenantId(tenantId);
+  const [details, setDetails] = useState<TenantDetails | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [credentials, setCredentials] = useState<{ name: string; email: string; temporaryPassword: string } | null>(null);
+
+  const loadDetails = useCallback(async () => {
+    const token = getSuperAdminToken();
+    if (!token || ref.kind === 'jodayn') return;
+    try {
+      setDetails(await getTenantDetails(token, ref.kind, ref.id));
+    } catch (err) {
+      setNotice({ ok: false, text: err instanceof Error ? err.message : 'تعذر تحميل تفاصيل المستأجر' });
+    }
+  }, [ref.kind, ref.id]);
+
+  useEffect(() => {
+    void loadDetails();
+  }, [loadDetails]);
+
+  async function run(action: (token: string) => Promise<unknown>, success: string) {
+    const token = getSuperAdminToken();
+    if (!token) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      await action(token);
+      setNotice({ ok: true, text: success });
+      await Promise.all([refreshTenants(), loadDetails()]);
+    } catch (err) {
+      setNotice({ ok: false, text: err instanceof Error ? err.message : 'تعذر تنفيذ العملية' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const tenant = baseTenant
+    ? {
+        ...baseTenant,
+        users: details
+          ? details.users.map<TenantUser & { pending: boolean; accessLevel: string }>((user, index) => ({
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              initials: user.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join(''),
+              avatarColor: AVATAR_COLORS[index % AVATAR_COLORS.length],
+              role: user.accessLevel === 'UPPER' ? 'مدير النظام' : 'مستخدم',
+              status: user.isActive ? 'active' : 'suspended',
+              statusLabel: user.statusLabel,
+              pending: user.pendingActivation,
+              accessLevel: user.accessLevel,
+            }))
+          : [],
+        activeUsers: details?.usage.activeUsers ?? baseTenant.activeUsers,
+        userLimit: details?.usage.userLimit ?? baseTenant.userLimit,
+        usedStorage: details ? formatBytes(details.usage.storageBytes) : baseTenant.usedStorage,
+        storageLimit: details?.usage.storageLimitGb != null ? `${details.usage.storageLimitGb} GB` : baseTenant.storageLimit,
+        lastActivity: details ? formatDateTime(details.lastActivityAt) : baseTenant.lastActivity,
+      }
+    : undefined;
 
   
 
@@ -79,7 +171,9 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
 
   
 
-  const storagePct = pct(parseBytes(tenant.usedStorage), parseBytes(tenant.storageLimit));
+  const storagePct = details?.usage.storageLimitGb
+    ? pct(details.usage.storageBytes, details.usage.storageLimitGb * 1024 * 1024 * 1024)
+    : pct(parseBytes(tenant.usedStorage), parseBytes(tenant.storageLimit));
   const userPct    = pct(tenant.activeUsers, tenant.userLimit);
   const isSuspended = tenant.status === 'suspended';
 
@@ -107,32 +201,89 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
 
   function handleToggleSuspend() {
     if (!tenant) return;
-    const next: typeof tenant.status = isSuspended ? 'active' : 'suspended';
-    updateTenant(tenant.id, {
-      status:      next,
-      statusLabel: next === 'active' ? 'نشط' : 'معلق',
-    });
+    const next = isSuspended ? 'تفعيل' : 'تعليق';
+    if (!window.confirm(`${next} حساب "${tenant.name}"؟`)) return;
+    void run(
+      (token) => toggleAccount(token, ref.kind, ref.id),
+      isSuspended ? 'تم إعادة تفعيل الحساب' : 'تم تعليق الحساب ومنع وصول مستخدميه',
+    );
   }
 
-  function handleDelete() {
-    if (!tenant) return;
-    const ok = window.confirm(
-      `هل أنت متأكد من حذف "${tenant.name}" نهائياً؟\nلا يمكن التراجع عن هذه العملية.`,
+  async function handleDelete() {
+    if (!tenant || ref.kind === 'jodayn') return;
+    const typed = window.prompt(
+      `سيتم حذف "${tenant.name}" وجميع مشاريعه ومستخدميه وملفاته نهائياً.\nاكتب اسم الجهة للتأكيد:`,
     );
-    if (!ok) return;
-    deleteTenant(tenant.id);
-    onDeleted();
+    if (typed === null) return;
+    const token = getSuperAdminToken();
+    if (!token) return;
+    setBusy(true);
+    try {
+      await deleteTenantAccount(token, ref.kind, ref.id, typed.trim());
+      deleteTenant(tenant.id);
+      await refreshTenants();
+      onDeleted();
+    } catch (err) {
+      setNotice({ ok: false, text: err instanceof Error ? err.message : 'تعذر حذف المستأجر' });
+    } finally {
+      setBusy(false);
+    }
   }
 
   function handleToggleUser(userId: string, current: 'active' | 'suspended') {
-    if (!tenant) return;
-    const next: 'active' | 'suspended' = current === 'active' ? 'suspended' : 'active';
-    const updatedUsers = tenant.users.map((u) =>
-      u.id === userId
-        ? { ...u, status: next, statusLabel: next === 'active' ? 'نشط' : 'معلق' }
-        : u,
+    if (ref.kind === 'jodayn') return;
+    void run(
+      (token) => updatePlatformUser(token, ref.kind as 'org' | 'client', userId, { isActive: current !== 'active' }),
+      current === 'active' ? 'تم تعليق المستخدم' : 'تم تفعيل المستخدم',
     );
-    updateTenant(tenant.id, { users: updatedUsers });
+  }
+
+  function handleEditRole(userId: string, accessLevel: string) {
+    if (ref.kind === 'jodayn') return;
+    const next = accessLevel === 'UPPER' ? 'DATA_ENTRY' : 'UPPER';
+    const label = next === 'UPPER' ? 'إدارة عليا' : 'مدخل بيانات';
+    if (!window.confirm(`تغيير صلاحية المستخدم إلى «${label}»؟`)) return;
+    void run(
+      (token) => updatePlatformUser(token, ref.kind as 'org' | 'client', userId, { accessLevel: next }),
+      'تم تحديث الدور',
+    );
+  }
+
+  async function handleResetCredentials(userId: string) {
+    if (ref.kind === 'jodayn') return;
+    const token = getSuperAdminToken();
+    if (!token) return;
+    if (!window.confirm('إصدار كلمة مرور مؤقتة جديدة؟ سيعود الحساب «غير نشط» حتى أول دخول.')) return;
+    try {
+      const result = await resetPlatformUserCredentials(token, ref.kind, userId);
+      setCredentials({ name: result.user.name, email: result.user.email, temporaryPassword: result.temporaryPassword });
+      await loadDetails();
+    } catch (err) {
+      setNotice({ ok: false, text: err instanceof Error ? err.message : 'تعذر إصدار بيانات الدخول' });
+    }
+  }
+
+  function handleExport() {
+    if (ref.kind === 'jodayn') return;
+    void run(
+      (token) => downloadWithToken(`/super-admin/accounts/${ref.kind}/${ref.id}/export`, token, `tenant-${ref.id}.csv`),
+      'تم تنزيل ملف البيانات',
+    );
+  }
+
+  function handleNotify() {
+    if (ref.kind === 'jodayn') return;
+    const title = window.prompt('عنوان الإشعار');
+    if (!title?.trim()) return;
+    const body = window.prompt('نص الإشعار');
+    if (!body?.trim()) return;
+    void run(
+      async (token) => {
+        const result = await notifyTenant(token, ref.kind as 'org' | 'client', ref.id, { title: title.trim(), message: body.trim() });
+        setNotice({ ok: true, text: `تم إرسال الإشعار إلى ${result.recipients} مستخدم` });
+      },
+      'تم إرسال الإشعار',
+    );
   }
 
   
@@ -147,6 +298,9 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
 
         {}
         <div className="td-body">
+          {notice ? (
+            <p style={{ color: notice.ok ? '#067647' : '#b91c1c', fontSize: 13, fontWeight: 600 }}>{notice.text}</p>
+          ) : null}
 
           {}
           <div className="td-title-row">
@@ -168,11 +322,11 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
             </div>
 
             <div className="td-actions">
-              <button type="button" className="td-btn td-btn--outline">
+              <button type="button" className="td-btn td-btn--outline" disabled={busy || ref.kind === 'jodayn'} onClick={handleExport}>
                 <Download size={14} strokeWidth={2.25} />
                 تصدير البيانات
               </button>
-              <button type="button" className="td-btn td-btn--solid">
+              <button type="button" className="td-btn td-btn--solid" disabled={busy || ref.kind === 'jodayn'} onClick={handleNotify}>
                 <AssetIcon src={dashboardAssets.notification} size={14} />
                 إرسال إشعار
               </button>
@@ -368,10 +522,22 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                         type="button"
                         className="td-user-btn"
                         title="تعديل الدور"
+                        disabled={busy}
+                        onClick={() => handleEditRole(user.id, user.accessLevel)}
                       >
                         <Pencil size={11} strokeWidth={2.5} />
                         تعديل الدور
                       </button>
+                      {user.pending ? (
+                        <button
+                          type="button"
+                          className="td-user-btn td-user-btn--activate"
+                          disabled={busy}
+                          onClick={() => void handleResetCredentials(user.id)}
+                        >
+                          <RefreshCw size={11} strokeWidth={2.5} /> بيانات دخول جديدة
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className={`td-user-btn ${
@@ -379,6 +545,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                             ? 'td-user-btn--danger'
                             : 'td-user-btn--activate'
                         }`}
+                        disabled={busy}
                         onClick={() => handleToggleUser(user.id, user.status)}
                       >
                         {user.status === 'active' ? (
@@ -416,6 +583,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                     <input
                       type="checkbox"
                       checked={isSuspended}
+                      disabled={busy}
                       onChange={handleToggleSuspend}
                     />
                     <span className="td-toggle__track" />
@@ -445,7 +613,8 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                   <button
                     type="button"
                     className="td-delete-btn"
-                    onClick={handleDelete}
+                    disabled={busy || ref.kind === 'jodayn'}
+                    onClick={() => void handleDelete()}
                   >
                     <Trash2 size={13} strokeWidth={2.25} />
                     حذف الحساب
@@ -457,6 +626,15 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
           </div>{}
         </div>{}
       </div>{}
+      {credentials ? (
+        <CredentialsModal
+          name={credentials.name}
+          email={credentials.email}
+          temporaryPassword={credentials.temporaryPassword}
+          reissued
+          onClose={() => setCredentials(null)}
+        />
+      ) : null}
     </div>
   );
 }

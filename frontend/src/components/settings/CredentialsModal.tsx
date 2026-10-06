@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
+import '../../design/settings-users.css'
 
 type CredentialsModalProps = {
   name: string
   email: string
   temporaryPassword: string
+  reissued?: boolean
   onClose: () => void
 }
 
-export function CredentialsModal({ name, email, temporaryPassword, onClose }: CredentialsModalProps) {
+export function CredentialsModal({ name, email, temporaryPassword, reissued = false, onClose }: CredentialsModalProps) {
   const [copied, setCopied] = useState<'email' | 'password' | null>(null)
 
   async function copy(kind: 'email' | 'password', value: string) {
@@ -36,11 +38,11 @@ export function CredentialsModal({ name, email, temporaryPassword, onClose }: Cr
               />
             </svg>
           </div>
-          <h2 id="creds-title">تم إنشاء المستخدم بنجاح</h2>
+          <h2 id="creds-title">{reissued ? 'تم إصدار بيانات دخول جديدة' : 'تم إنشاء المستخدم بنجاح'}</h2>
         </div>
         <div className="td-add-user-modal__divider" />
         <p className="td-credentials-hint">
-          انسخ بيانات الدخول لـ {name} الآن. لن تظهر كلمة المرور مرة أخرى.
+          انسخ بيانات الدخول لـ {name} الآن. لن تظهر كلمة المرور مرة أخرى. يبقى الحساب «غير نشط» حتى أول تسجيل دخول ناجح.
         </p>
         <div className="td-add-user-form">
           <label className="td-add-user-field">
@@ -51,7 +53,7 @@ export function CredentialsModal({ name, email, temporaryPassword, onClose }: Cr
           </label>
           <label className="td-add-user-field">
             <span>كلمة المرور المؤقتة</span>
-            <p className="td-credentials-secret" dir="ltr">
+            <p className="td-credentials-secret" dir="ltr" data-testid="temporary-password">
               {temporaryPassword}
             </p>
           </label>

@@ -4,6 +4,7 @@ import { Badge } from '../../ui/Badge'
 import { ProgressBar } from '../../ui/ProgressBar'
 import { useLiveField } from '../../../../features/portal/DashboardLiveContext'
 import { WidgetBodyGate } from '../../../../features/portal/WidgetBodyGate'
+import { useWidgetLinks } from '../../../../features/portal/widgetLinks'
 
 const statusVariant = {
   'on-track': 'success',
@@ -28,6 +29,7 @@ const statusIcon = {
 
 export function ProjectsListWidget() {
   const projects = useLiveField('projects') ?? []
+  const { links, go } = useWidgetLinks()
 
   return (
     <Card>
@@ -35,7 +37,12 @@ export function ProjectsListWidget() {
         <div className="widget-icon-header">
           <h3 className="widget-header__title">المشاريع</h3>
         </div>
-        <button type="button" className="widget-header__link">
+        <button
+          type="button"
+          className="widget-header__link"
+          disabled={!links.projects}
+          onClick={() => go(links.projects)}
+        >
           عرض الكل
         </button>
       </div>
@@ -58,7 +65,13 @@ export function ProjectsListWidget() {
                 <Badge variant={statusVariant[item.status]} icon={<StatusIcon size={12} />}>
                   {item.statusLabel}
                 </Badge>
-                <button type="button" className="list-row__nav-btn" aria-label="عرض التفاصيل">
+                <button
+                  type="button"
+                  className="list-row__nav-btn"
+                  aria-label="عرض التفاصيل"
+                  disabled={!links.project(item.id)}
+                  onClick={() => go(links.project(item.id))}
+                >
                   <ChevronLeft size={14} />
                 </button>
               </div>

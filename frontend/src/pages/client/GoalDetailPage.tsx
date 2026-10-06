@@ -9,14 +9,16 @@ import { ApiError } from '../../api/client'
 import { getClientProjects, type ClientProject } from '../../api/clientPortal'
 import {
   createClientGoalLink,
+  deleteClientGoal,
   getClientGoalById,
   type ClientGoalLinkedProject,
   type ClientStrategicGoal,
 } from '../../api/clientStrategy'
 import { getClientRole, getClientToken } from '../../auth/clientAuth'
-import { canCreateDraft } from '../../auth/permissions'
+import { canCreateDraft, isUpperManagement } from '../../auth/permissions'
 import { Badge, CatalogButton, SubpageHeader, type BadgeVariant } from '../../components/ui'
 import { ProgressBar } from '../../org-catalog/ProgressBar'
+import { CatalogConfirmDialog } from '../../org-catalog/CatalogConfirmDialog'
 
 function formatDate(value?: string | null) {
   if (!value) return '—'
@@ -58,6 +60,8 @@ export function ClientGoalDetailPage() {
   const [linking, setLinking] = useState(false)
   const role = getClientRole()
   const canLink = Boolean(role && canCreateDraft(role))
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const load = async () => {
     const token = getClientToken()
@@ -127,6 +131,18 @@ export function ClientGoalDetailPage() {
         parent={t('strategicGoals')}
         title={goal?.title ?? t('strategicGoals')}
         onBack={() => navigate('/client/goals')}
+        actions={
+          <div className="detail-actions">
+            {canLink ? (
+              <CatalogButton onClick={() => navigate(`/client/goals/${goalId}/edit`)}>{t('edit')}</CatalogButton>
+            ) : null}
+            {role && isUpperManagement(role) ? (
+              <CatalogButton variant="danger" onClick={() => setConfirmDelete(true)}>
+                {t('delete')}
+              </CatalogButton>
+            ) : null}
+          </div>
+        }
       />
 
       <div className="tenants-body" dir="rtl">
@@ -243,6 +259,30 @@ export function ClientGoalDetailPage() {
           </div>
         </div>
       ) : null}
+      <CatalogConfirmDialog
+        open={confirmDelete}
+        title={t('delete')}
+        message={t('confirmDeleteGoal')}
+        confirmLabel={t('delete')}
+        cancelLabel={t('cancel')}
+        loading={deleting}
+        onConfirm={async () => {
+          const token = getClientToken()
+          if (!token || !goalId) return
+          setDeleting(true)
+          try {
+            await deleteClientGoal(token, goalId)
+            message.success(t('deletedSuccessfully'))
+            navigate('/client/goals')
+          } catch (err) {
+            message.error(err instanceof ApiError ? err.message : t('loadError'))
+          } finally {
+            setDeleting(false)
+            setConfirmDelete(false)
+          }
+        }}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   )
 }

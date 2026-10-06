@@ -29,7 +29,8 @@ import { canCreateDraft, isUpperManagement } from '../../auth/permissions'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { SubpageHeader } from '../../components/ui'
 import { TrendKpiRow } from '../../components/senior/TrendKpiCard'
-import { averageProgress, projectStatusClass, STATUS_META } from './orgEntityUi'
+import { downloadCsv } from '../../api/me'
+import { averageProgress, projectStatusClass, STATUS_META, nextStatusFilter, type StatusClass } from './orgEntityUi'
 import '../../design/departments-detail.css'
 import '../../design/departments.css'
 
@@ -50,9 +51,12 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [banner, setBanner] = useState<'success' | 'error' | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<StatusClass | 'all'>('all')
 
   const canEdit = canCreateDraft(role)
   const canDelete = isUpperManagement(role)
+  const visibleProjects =
+    statusFilter === 'all' ? projects : projects.filter((project) => projectStatusClass(project.status) === statusFilter)
 
   useEffect(() => {
     const token = getOrgToken()
@@ -221,13 +225,37 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
               {tab === 'المشاريع' ? (
                 <>
                   <div className="department-detail-toolbar">
-                    <button type="button" className="department-detail-outline">
+                    <button
+                      type="button"
+                      className="department-detail-outline"
+                      disabled={visibleProjects.length === 0}
+                      onClick={() =>
+                        downloadCsv(
+                          `department-${department.id.slice(0, 8)}-projects.csv`,
+                          [
+                            ['name', 'اسم المشروع'],
+                            ['progress', 'نسبة التقدم'],
+                            ['status', 'الحالة'],
+                          ],
+                          visibleProjects.map((project) => ({
+                            name: project.name,
+                            progress: `${project.progressPct || 0}%`,
+                            status: STATUS_META[projectStatusClass(project.status)],
+                          })),
+                        )
+                      }
+                    >
                       <Download />
                       تصدير
                     </button>
-                    <button type="button" className="department-detail-outline">
+                    <button
+                      type="button"
+                      className="department-detail-outline"
+                      title="تصفية المشاريع حسب الحالة"
+                      onClick={() => setStatusFilter(nextStatusFilter(statusFilter))}
+                    >
                       <ListFilter />
-                      حفظ
+                      {statusFilter === 'all' ? 'تصفية: الكل' : `تصفية: ${STATUS_META[statusFilter]}`}
                     </button>
                   </div>
                   <table className="department-detail-project-table">
@@ -240,14 +268,14 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
                       </tr>
                     </thead>
                     <tbody>
-                      {projects.length === 0 ? (
+                      {visibleProjects.length === 0 ? (
                         <tr>
                           <td colSpan={4} className="department-detail-empty">
-                            لا توجد مشاريع مرتبطة بهذه الإدارة
+                            {projects.length === 0 ? 'لا توجد مشاريع مرتبطة بهذه الإدارة' : 'لا توجد مشاريع بهذه الحالة'}
                           </td>
                         </tr>
                       ) : null}
-                      {projects.map((project) => {
+                      {visibleProjects.map((project) => {
                         const status = projectStatusClass(project.status)
                         const meta = { label: STATUS_META[status], barClass: `is-${status === 'delay' ? 'late' : status === 'blocked' ? 'risk' : status === 'done' ? 'done' : 'track'}`, className: status === 'delay' ? 'is-late' : status === 'blocked' ? 'is-risk' : status === 'done' ? 'is-done' : 'is-track' }
                         return (

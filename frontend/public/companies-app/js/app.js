@@ -61,14 +61,13 @@ function overviewFieldValues() {
 }
 function milestonesFieldValues() {
   const p = PLACEHOLDER_METRICS.phaseProgress;
-  return { phase1: p.values[0], phase2: p.values[1], phase3: p.values[2], phase4: p.values[3] };
+  const section = AVAILABLE_SECTIONS.find(s => s.id === 'milestones');
+  const values = {};
+  (section.fields || []).forEach((f, i) => { values[f.id] = p.values[i] || 0; });
+  return values;
 }
 function changesFieldValues() {
-  return {
-    approved: { crId: 'CR-01', status: 'معتمد' },
-    inReview: { crId: 'CR-02', status: 'قيد المراجعة' },
-    rejected: { crId: 'CR-03', status: 'مرفوض' }
-  };
+  return CHANGE_REQUEST_VALUES;
 }
 function risksFieldValues() {
   const r = AVAILABLE_CHARTS.find(c => c.id === 'openRisks').sampleData[0];
@@ -84,11 +83,7 @@ function financeFieldValues() {
   };
 }
 function whatifFieldValues() {
-  return {
-    supplyDelay: 'ماذا لو تأخر التوريد؟',
-    budgetIncrease: 'ماذا لو زادت الميزانية المطلوبة؟',
-    scopeChange: 'ماذا لو تغيّر نطاق المشروع؟'
-  };
+  return WHATIF_VALUES;
 }
 const SECTION_FIELD_VALUE_FNS = {
   overview: overviewFieldValues,
@@ -799,11 +794,7 @@ function buildChangeRequestsSlide(pres) {
   const s = pres.addSlide();
   addSlideHeader(pres, s, 'طلبات التغيير');
 
-  const rows = [
-    { id: 'CR-01', status: 'معتمد' },
-    { id: 'CR-02', status: 'قيد المراجعة' },
-    { id: 'CR-03', status: 'مرفوض' }
-  ];
+  const rows = getCheckedFieldItems('changes').map(f => ({ id: f.value.crId, status: f.value.status }));
   const rowH = 0.65, x0 = 0.6, y0 = 1.4, w = 12.1;
   rows.forEach((r, i) => {
     const y = y0 + i * (rowH + 0.12);
@@ -854,11 +845,7 @@ function buildWhatIfSlide(pres) {
   const s = pres.addSlide();
   addSlideHeader(pres, s, 'ماذا لو ؟');
 
-  const scenarios = [
-    'ماذا لو تأخر التوريد؟',
-    'ماذا لو زادت الميزانية المطلوبة؟',
-    'ماذا لو تغيّر نطاق المشروع؟'
-  ];
+  const scenarios = getCheckedFieldItems('whatif').map(f => f.value);
   const rowH = 0.75, x0 = 0.6, y0 = 1.4, w = 12.1;
   scenarios.forEach((label, i) => {
     const y = y0 + i * (rowH + 0.15);

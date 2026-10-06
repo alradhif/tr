@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getPlatformUsers } from '../../../api/superAdmin';
+import { getSuperAdminToken } from '../../../auth/superAdminAuth';
+import { useTenants } from '../../context/TenantContext';
 import { ChevronLeft, Plus } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
-import { AddPackagePage, PERMISSION_OPTIONS, type NewPackageData } from './AddPackagePage';
+import { AddPackagePage, type NewPackageData } from './AddPackagePage';
 import { PackageDetailsPage } from './PackageDetailsPage';
 import {
   usePackages,
@@ -41,7 +44,7 @@ function StatCard({ iconSrc, label, value, unit }: StatCardProps) {
   );
 }
 
-function buildStatCards(packages: PackageModel[]): StatCardProps[] {
+function buildStatCards(packages: PackageModel[], totalUsers: number, activeTenants: number): StatCardProps[] {
   const activeCount = packages.filter((pkg) => pkg.status === 'active').length;
   return [
     {
@@ -59,24 +62,19 @@ function buildStatCards(packages: PackageModel[]): StatCardProps[] {
     {
       iconSrc: dashboardDataAssets.totalUsers,
       label: 'إجمالي المستخدمين',
-      value: 140,
+      value: totalUsers,
       unit: 'مستخدم',
     },
     {
       iconSrc: dashboardDataAssets.activeEntities,
       label: 'الجهات النشطة',
-      value: 30,
+      value: activeTenants,
       unit: 'جهة',
     },
   ];
 }
 
 type SubscriptionsView = 'list' | 'add' | 'details' | 'edit';
-
-function formatPrice(priceValue: number, duration: string): string {
-  const periodLabel = duration === 'شهري' ? 'شهر' : 'سنة';
-  return `${priceValue.toLocaleString('en-US')} ر.س / ${periodLabel}`;
-}
 
 function formatStorageValue(storage: string): string {
   return storage.match(/\d+(\.\d+)?/)?.[0] ?? storage;
@@ -85,6 +83,15 @@ function formatStorageValue(storage: string): string {
 export function SubscriptionsPage() {
   const packages = usePackages();
   const { addPackage, updatePackage, deletePackage } = usePackageMutations();
+  const tenants = useTenants();
+  const [totalUsers, setTotalUsers] = useState(0);
+  useEffect(() => {
+    const token = getSuperAdminToken();
+    if (!token) return;
+    getPlatformUsers(token)
+      .then((data) => setTotalUsers(data.count))
+      .catch(() => setTotalUsers(0));
+  }, []);
 
   const [view, setView] = useState<SubscriptionsView>('list');
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
@@ -92,62 +99,39 @@ export function SubscriptionsPage() {
   const selectedPackage = packages.find((pkg) => pkg.id === selectedPackageId) ?? null;
 
   
-  const handleSavePackage = (data: NewPackageData) => {
-    const duration = (data.period || 'سنوي') as PackageModel['duration'];
-    const priceValue = Number(data.price) || 0;
-    const newPkg: PackageModel = {
-      id: `pkg-${Date.now()}`,
-      name: data.planType,
-      price: formatPrice(priceValue, duration),
-      priceValue,
-      duration,
-      storage: data.storageLimit ? `${data.storageLimit} GB` : 'غير محدد',
-      users: Number(data.userLimit) || 0,
-      status: 'active',
-      statusLabel: 'مفعلة',
-      tenants: 0,
-      userLimit: Number(data.userLimit) || 0,
-      packageType: data.planType,
-      permissions: PERMISSION_OPTIONS.map((name) => ({
-        name,
-        granted: data.permissions.includes(name),
-      })),
-    };
-    addPackage(newPkg);
+  const toInput = (data: NewPackageData) => ({
+    label: data.name,
+    packageType: data.planType,
+    billingCycle: (data.period === 'شهري' ? 'MONTHLY' : 'YEARLY') as 'MONTHLY' | 'YEARLY',
+    storageGb: data.storageLimit ? Number(data.storageLimit) : undefined,
+    maxUsers: Number(data.userLimit) || undefined,
+    price: data.price !== '' ? Number(data.price) : undefined,
+    features: data.permissions,
+    isActive: data.isActive,
+  });
+
+  const handleSavePackage = async (data: NewPackageData) => {
+    await addPackage(toInput(data));
     setView('list');
   };
 
-  
-  const handleUpdatePackage = (data: NewPackageData) => {
-    if (!selectedPackageId || !selectedPackage) return;
-    const duration = (data.period || selectedPackage.duration) as PackageModel['duration'];
-    const priceValue =
-      data.price !== '' ? Number(data.price) || selectedPackage.priceValue : selectedPackage.priceValue;
-    updatePackage(selectedPackageId, {
-      name: data.planType,
-      price: formatPrice(priceValue, duration),
-      priceValue,
-      duration,
-      storage: data.storageLimit ? `${data.storageLimit} GB` : selectedPackage.storage,
-      users: Number(data.userLimit) || selectedPackage.users,
-      userLimit: Number(data.userLimit) || selectedPackage.userLimit,
-      packageType: data.planType,
-      permissions: PERMISSION_OPTIONS.map((name) => ({
-        name,
-        granted: data.permissions.includes(name),
-      })),
-    });
+  const handleUpdatePackage = async (data: NewPackageData) => {
+    if (!selectedPackageId) return;
+    await updatePackage(selectedPackageId, toInput(data));
     setView('details');
   };
 
-  
-  const handleDeletePackage = () => {
+  const handleDeletePackage = async () => {
     if (!selectedPackageId) return;
     const confirmed = window.confirm('هل أنت متأكد من حذف هذه الباقة؟');
     if (!confirmed) return;
-    deletePackage(selectedPackageId);
-    setSelectedPackageId(null);
-    setView('list');
+    try {
+      await deletePackage(selectedPackageId);
+      setSelectedPackageId(null);
+      setView('list');
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'تعذر حذف الباقة');
+    }
   };
 
   
@@ -164,7 +148,7 @@ export function SubscriptionsPage() {
           setView('list');
         }}
         onEdit={() => setView('edit')}
-        onDelete={handleDeletePackage}
+        onDelete={() => void handleDeletePackage()}
       />
     );
   }
@@ -174,7 +158,9 @@ export function SubscriptionsPage() {
       <AddPackagePage
         mode="edit"
         initialData={{
-          planType: selectedPackage.name,
+          name: selectedPackage.name,
+          isActive: selectedPackage.status === 'active',
+          planType: selectedPackage.packageType,
           userLimit: String(selectedPackage.userLimit),
           storageLimit: selectedPackage.storage,
           period: selectedPackage.duration,
@@ -189,7 +175,7 @@ export function SubscriptionsPage() {
     );
   }
 
-  const statCards = buildStatCards(packages);
+  const statCards = buildStatCards(packages, totalUsers, tenants.filter((tenant) => tenant.status === 'active').length);
 
   return (
     <div className="dashboard-page">

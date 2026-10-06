@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken')
 const prisma = require('../lib/prisma')
+const { parentAccountActive } = require('../lib/accountAccess')
 
 module.exports = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1]
@@ -18,8 +19,11 @@ module.exports = async (req, res, next) => {
     const lookup = lookups[decoded.type]
     if (lookup) {
       const liveUser = await lookup()
-      if (!liveUser || liveUser.isActive === false) {
+      if (!liveUser || liveUser.isActive === false || liveUser.pendingActivation === true) {
         return res.status(401).json({ message: 'هذا الحساب غير نشط' })
+      }
+      if (!(await parentAccountActive(decoded.type, liveUser))) {
+        return res.status(401).json({ message: 'تم تعليق حساب الجهة', code: 'SUSPENDED' })
       }
     }
 

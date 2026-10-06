@@ -15,7 +15,9 @@ export type AccountSubscription = {
   startDate?: string
   endDate?: string
   status?: string
-  package?: AccountPackage | null
+  userLimit?: number | null
+  storageLimitGb?: number | null
+  package?: (AccountPackage & { storageGb?: number; label?: string | null; features?: string[] | null }) | null
 }
 
 export type TenantType = 'ORG' | 'CLIENT' | 'JODAYN'
@@ -39,6 +41,8 @@ export type OrgAccount = {
   tenantType?: TenantType
   subscription?: AccountSubscription | null
   createdAt?: string
+  userCount?: number
+  activeUsers?: number
 }
 
 export type ClientAccount = {
@@ -59,6 +63,8 @@ export type ClientAccount = {
   tenantType?: TenantType
   subscription?: AccountSubscription | null
   createdAt?: string
+  userCount?: number
+  activeUsers?: number
 }
 
 export type JodaynAccount = {
@@ -88,11 +94,141 @@ export type Sector = {
 export type PlatformPackage = {
   id: string
   name: string
+  label?: string | null
+  packageType?: string | null
+  billingCycle?: 'MONTHLY' | 'YEARLY' | string
+  storageGb?: number
+  features?: string[] | null
   price: number | string
   duration: number
   maxUsers: number
   maxProjects: number
   isActive?: boolean
+  tenants?: number
+}
+
+export type PackageInput = {
+  label?: string
+  packageType?: string
+  billingCycle?: 'MONTHLY' | 'YEARLY'
+  storageGb?: number
+  features?: string[]
+  price?: number
+  maxUsers?: number
+  maxProjects?: number
+  isActive?: boolean
+}
+
+export function getAllPackages(token: string) {
+  return apiRequest<{ packages: PlatformPackage[] }>('/super-admin/packages/all', { method: 'GET', token })
+}
+
+export function createPackage(token: string, data: PackageInput) {
+  return apiRequest<{ success: boolean; package: PlatformPackage }>('/super-admin/packages', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
+export function updatePackage(token: string, id: string, data: PackageInput) {
+  return apiRequest<{ success: boolean; package: PlatformPackage }>(`/super-admin/packages/${id}`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
+export function deletePackage(token: string, id: string) {
+  return apiRequest<{ success: boolean }>(`/super-admin/packages/${id}`, { method: 'DELETE', token })
+}
+
+export type AccountKind = 'org' | 'client'
+
+export type TenantDetails = {
+  account: (OrgAccount | ClientAccount) & { tenantType: TenantType; subscription?: AccountSubscription | null }
+  users: Array<{
+    id: string
+    name: string
+    email: string
+    role: string
+    isActive: boolean
+    pendingActivation: boolean
+    accessLevel: 'UPPER' | 'DATA_ENTRY'
+    status: 'active' | 'pending' | 'suspended'
+    statusLabel: string
+    createdAt?: string
+    lastLoginAt?: string | null
+  }>
+  usage: {
+    projects: number
+    activeUsers: number
+    totalUsers: number
+    userLimit: number | null
+    storageBytes: number
+    storageLimitGb: number | null
+  }
+  lastActivityAt: string | null
+}
+
+export function getTenantDetails(token: string, type: AccountKind, id: string) {
+  return apiRequest<TenantDetails>(`/super-admin/accounts/${type}/${id}`, { method: 'GET', token })
+}
+
+export function updateTenantAccount(token: string, type: AccountKind, id: string, data: Record<string, unknown>) {
+  return apiRequest<{ success: boolean }>(`/super-admin/accounts/${type}/${id}`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
+export function deleteTenantAccount(token: string, type: AccountKind, id: string, confirmName: string) {
+  return apiRequest<{ success: boolean; deleted: { projects: number; users: number } }>(`/super-admin/accounts/${type}/${id}`, {
+    method: 'DELETE',
+    token,
+    body: JSON.stringify({ confirmName }),
+  })
+}
+
+export function notifyTenant(token: string, type: AccountKind, id: string, data: { title: string; message: string }) {
+  return apiRequest<{ success: boolean; recipients: number }>(`/super-admin/accounts/${type}/${id}/notify`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
+export function updatePlatformUser(
+  token: string,
+  portal: 'org' | 'client' | 'jodayn',
+  id: string,
+  data: { accessLevel?: 'UPPER' | 'DATA_ENTRY'; isActive?: boolean; name?: string },
+) {
+  return apiRequest<{ success: boolean; user: PlatformUser }>(`/super-admin/users/${portal}/${id}`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
+export function resetPlatformUserCredentials(token: string, portal: 'org' | 'client' | 'jodayn', id: string) {
+  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string }>(
+    `/super-admin/users/${portal}/${id}/credentials`,
+    { method: 'POST', token },
+  )
+}
+
+export type AuditSummary = {
+  periodDays: number
+  failedLogins: number
+  totalChanges: number
+  mostActive: { userId: string; name: string | null; count: number } | null
+  recentFailures: Array<{ id: string; userId: string; actorType: string; details: string | null; createdAt: string; name: string | null }>
+}
+
+export function getAuditSummary(token: string) {
+  return apiRequest<AuditSummary>('/super-admin/audit/summary', { method: 'GET', token })
 }
 
 export type AccountsResponse = {
@@ -160,6 +296,9 @@ export function createTenant(
     packageId?: string
     managerName?: string
     managerEmail?: string
+    userLimit?: number
+    storageLimitGb?: number
+    subscriptionStart?: string
   },
 ) {
   return apiRequest<{
@@ -168,7 +307,8 @@ export function createTenant(
     org?: OrgAccount
     client?: ClientAccount
     jodaynUser?: JodaynAccount
-    temporaryPassword?: string | null
+      temporaryPassword?: string | null
+    manager?: { id: string; name: string; email: string }
   }>('/super-admin/tenants', {
     method: 'POST',
     token,
@@ -273,10 +413,14 @@ export type PlatformUser = {
   clientId?: string | null
   accountName?: string | null
   createdAt?: string | null
+  pendingActivation?: boolean
+  status?: 'active' | 'pending' | 'suspended'
+  statusLabel?: string
+  lastLoginAt?: string | null
 }
 
 export function getAuditLogs(token: string) {
-  return apiRequest<{ logs: Array<Record<string, unknown>> }>('/audit-logs', {
+  return apiRequest<{ logs: Array<Record<string, unknown>> }>('/audit-logs?limit=500', {
     method: 'GET',
     token,
   })

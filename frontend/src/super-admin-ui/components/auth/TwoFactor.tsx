@@ -1,23 +1,28 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { AuthBackground } from './AuthBackground';
 import { AuthCardHeader } from './AuthCardHeader';
-import { isMockOtpValid, MOCK_OTP_LENGTH } from '../../../auth/mockOtp';
 import clockIcon from '../../../assets/new-ui-icons/clock-2.svg';
 import './auth.css';
 
-const CODE_LENGTH = MOCK_OTP_LENGTH;
+const CODE_LENGTH = 6;
 const RESEND_SECONDS = 30;
 
 interface TwoFactorProps {
-  onSuccess: () => void;
+  /** Verifies the code with the server; rejects with an Error whose message is shown. */
+  onVerify: (code: string) => Promise<void>;
+  /** Requests a new code from the server. */
+  onResend: () => Promise<void>;
   onBack: () => void;
+  /** Code shown on screen when the server has no mail delivery (demo environment only). */
+  demoCode?: string | null;
+  resendSeconds?: number;
 }
 
-export function TwoFactor({ onSuccess, onBack }: TwoFactorProps) {
+export function TwoFactor({ onVerify, onResend, onBack, demoCode, resendSeconds = RESEND_SECONDS }: TwoFactorProps) {
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
+  const [secondsLeft, setSecondsLeft] = useState(resendSeconds);
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -64,7 +69,7 @@ export function TwoFactor({ onSuccess, onBack }: TwoFactorProps) {
     inputsRef.current[focusIndex]?.focus();
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const code = digits.join('');
 
     if (code.length < CODE_LENGTH) {
@@ -72,24 +77,27 @@ export function TwoFactor({ onSuccess, onBack }: TwoFactorProps) {
       return;
     }
 
-    if (!isMockOtpValid(code)) {
-      setError('الرمز غير صحيح، الرجاء المحاولة مرة أخرى');
-      return;
-    }
-
     setIsSubmitting(true);
-    window.setTimeout(() => {
+    try {
+      await onVerify(code);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'الرمز غير صحيح، الرجاء المحاولة مرة أخرى');
+    } finally {
       setIsSubmitting(false);
-      onSuccess();
-    }, 350);
+    }
   }
 
-  function handleResend() {
-    if (secondsLeft > 0) return;
-    setDigits(Array(CODE_LENGTH).fill(''));
+  async function handleResend() {
+    if (secondsLeft > 0 || isSubmitting) return;
     setError('');
-    setSecondsLeft(RESEND_SECONDS);
-    inputsRef.current[0]?.focus();
+    try {
+      await onResend();
+      setDigits(Array(CODE_LENGTH).fill(''));
+      setSecondsLeft(resendSeconds);
+      inputsRef.current[0]?.focus();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذر إرسال رمز جديد');
+    }
   }
 
   return (
@@ -100,7 +108,7 @@ export function TwoFactor({ onSuccess, onBack }: TwoFactorProps) {
         <AuthCardHeader />
 
         <h1 className="auth-card__title">التحقق الثنائي</h1>
-        <p className="auth-card__subtitle">أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة</p>
+        <p className="auth-card__subtitle">أدخل رمز التحقق المكوّن من 6 أرقام</p>
 
         <div className="otp-row" dir="ltr" onPaste={handlePaste}>
           {digits.map((digit, index) => (
@@ -125,21 +133,27 @@ export function TwoFactor({ onSuccess, onBack }: TwoFactorProps) {
           <img src={clockIcon} alt="" width={16} height={16} className="asset-icon" />
           <span>
             {secondsLeft > 0 ? (
-              `الرمز صالح لمدة ${secondsLeft} ثانية`
+              `يمكنك طلب رمز جديد بعد ${secondsLeft} ثانية`
             ) : (
-              <button type="button" className="otp-timer__resend" onClick={handleResend}>
+              <button type="button" className="otp-timer__resend" onClick={() => void handleResend()}>
                 إعادة إرسال الرمز
               </button>
             )}
           </span>
         </div>
 
+        {demoCode ? (
+          <p className="otp-demo-hint">
+            رمز التحقق في بيئة العرض التجريبي: <bdi dir="ltr">{demoCode}</bdi>
+          </p>
+        ) : null}
+
         {error && <p className="auth-form__error">{error}</p>}
 
         <button
           type="button"
           className="auth-form__submit"
-          onClick={handleSubmit}
+          onClick={() => void handleSubmit()}
           disabled={isSubmitting}
         >
           {isSubmitting ? 'جاري التحقق...' : 'التأكيد والدخول'}

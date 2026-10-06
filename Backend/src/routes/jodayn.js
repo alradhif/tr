@@ -23,6 +23,8 @@ const {
   createJodaynPortalUser,
   getJodaynUsers,
   toggleJodaynUser,
+  reissueJodaynInvite,
+  resetJodaynUserCredentials,
 } = require('../controllers/jodaynUsersController')
 const { getDashboard } = require('../controllers/jodaynDashboardController')
 
@@ -36,26 +38,28 @@ router.get('/dashboard', ...isJodayn, getDashboard)
 router.post('/users', ...isJodaynUpper, createJodaynPortalUser)
 router.get('/users', ...isJodaynUpper, getJodaynUsers)
 router.patch('/users/:id/toggle', ...isJodaynUpper, toggleJodaynUser)
+router.post('/users/:id/invite', ...isJodaynUpper, reissueJodaynInvite)
+router.post('/users/:id/credentials', ...isJodaynUpper, resetJodaynUserCredentials)
 
 // ============ INVOICES ============
 router.post('/invoices', ...isJodayn, createInvoice)
 router.get('/invoices', ...isJodayn, getInvoices)
 router.get('/invoices/:id', ...isJodayn, getInvoiceById)
 router.put('/invoices/:id', ...isJodayn, updateInvoice)
-router.delete('/invoices/:id', ...isJodayn, deleteInvoice)
+router.delete('/invoices/:id', ...isJodaynUpper, deleteInvoice)
 
 // ============ FORECASTS ============
 router.post('/forecasts', ...isJodayn, createForecast)
 router.get('/forecasts', ...isJodayn, getForecasts)
 router.get('/forecasts/:id', ...isJodayn, getForecastById)
 router.put('/forecasts/:id', ...isJodayn, updateForecast)
-router.delete('/forecasts/:id', ...isJodayn, deleteForecast)
+router.delete('/forecasts/:id', ...isJodaynUpper, deleteForecast)
 
 // ============ REPORTS ============
 router.post('/reports', ...isJodayn, createReport)
 router.get('/reports', ...isJodayn, getReports)
 router.get('/reports/:id', ...isJodayn, getReportById)
 router.put('/reports/:id', ...isJodayn, updateReport)
-router.delete('/reports/:id', ...isJodayn, deleteReport)
+router.delete('/reports/:id', ...isJodaynUpper, deleteReport)
 
 module.exports = router

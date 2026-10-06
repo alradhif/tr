@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Input } from 'antd'
 import { MoreOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons'
 import { LogOut, MoreVertical, Search } from 'lucide-react'
+import { PortalSearch } from '../search/PortalSearch'
+import { NotificationsButton } from '../notifications/NotificationsButton'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { TrackLogo } from '../TrackLogo'
@@ -189,16 +191,25 @@ export function AppSidebar({
         {catalog ? (
           <>
             <Search size={18} strokeWidth={2.5} className="sidebar__search-icon app-sidebar__search-icon" aria-hidden />
-            <input type="search" placeholder={t('search')} aria-label={t('search')} />
+            <PortalSearch
+              className="app-sidebar__search-box"
+              renderInput={(props) => <input type="search" placeholder={t('search')} aria-label={t('search')} {...props} />}
+            />
           </>
         ) : (
-          <Input placeholder={t('search')} prefix={<SearchOutlined />} allowClear />
+          <PortalSearch
+            renderInput={(props) => <Input placeholder={t('search')} prefix={<SearchOutlined />} allowClear {...props} />}
+          />
         )}
       </div>
 
       <nav className="sidebar__nav app-sidebar__nav">{navItems.map(renderItem)}</nav>
 
       <div className="sidebar__footer app-sidebar__footer">
+        <NotificationsButton
+          catalog={catalog}
+          className="sidebar__nav-item app-sidebar__item notifications-nav-item"
+        />
         {settingsButton}
 
         <div className="sidebar__profile app-sidebar__profile">

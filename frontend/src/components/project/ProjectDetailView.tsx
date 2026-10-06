@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { message } from 'antd'
-import { Check, Plus, Presentation, X } from 'lucide-react'
+import { Check, Plus, Presentation, RotateCcw, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { companiesAssets, matchCompanyLogo, projectsAssets } from '@/assets'
 import { AssetIcon } from '../ui/AssetIcon'
 import { useNavigate } from 'react-router-dom'
-import { ApiError } from '../../api/client'
+import { ApiError, resolveApiFileUrl } from '../../api/client'
 import {
   approveClientProject,
   deleteClientProject,
@@ -13,7 +13,6 @@ import {
   getClientProjectById,
   rejectClientProject,
   submitClientProject,
-  updateClientNested,
   type ClientProject,
 } from '../../api/clientPortal'
 import {
@@ -27,6 +26,7 @@ import {
   submitProject,
   type OrgProject,
 } from '../../api/orgProjects'
+import { decideChangeRequest, deleteNested, updateNested, returnProjectForChanges, updateProjectStatus } from '../../api/projectNested'
 import { getClientRole, getClientToken } from '../../auth/clientAuth'
 import { getOrgRole, getOrgToken } from '../../auth/orgAuth'
 import { canCreateDraft, isDataEntry, isUpperManagement } from '../../auth/permissions'
@@ -41,6 +41,7 @@ import {
 import { CreatePresentationModal } from './CreatePresentationModal'
 import { ProjectAddModal, type ProjectAddKind } from './ProjectAddModals'
 import { CatalogConfirmDialog } from '../../org-catalog/CatalogConfirmDialog'
+import { parsePhaseActivities } from '../../org-catalog/phaseActivities'
 import {
   approvalBadgeVariant,
   approvalLabelKey,
@@ -99,6 +100,21 @@ function asRows(items: unknown[] | undefined, map: (item: AnyRecord, index: numb
   return (items ?? []).map((item, index) => map((item ?? {}) as AnyRecord, index))
 }
 
+/** Phases have no progress field, so the presentation shows how much of each phase's schedule has elapsed. */
+function phaseScheduleProgress(start?: string, end?: string) {
+  const from = start ? new Date(start).getTime() : NaN
+  const to = end ? new Date(end).getTime() : NaN
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return 0
+  return Math.round(Math.min(1, Math.max(0, (Date.now() - from) / (to - from))) * 100)
+}
+
+const CHANGE_REQUEST_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'بانتظار القرار',
+  UNDER_REVIEW: 'قيد المراجعة',
+  APPROVED: 'معتمد',
+  REJECTED: 'مرفوض',
+}
+
 export function ProjectDetailView({
   projectId,
   backPath,
@@ -127,6 +143,7 @@ export function ProjectDetailView({
   const [approvalWorking, setApprovalWorking] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+  const [decisionMode, setDecisionMode] = useState<'reject' | 'return'>('reject')
   const [addKind, setAddKind] = useState<ProjectAddKind | null>(null)
 
   const load = async () => {
@@ -194,6 +211,9 @@ export function ProjectDetailView({
         startRaw: item.startDate ? String(item.startDate) : undefined,
         endRaw: item.endDate ? String(item.endDate) : undefined,
         scope: String(item.scope ?? '—'),
+        activities: parsePhaseActivities(item.notes).map((activity) =>
+          [activity.name, activity.owner, activity.startDate, activity.endDate].join(' | '),
+        ),
       })),
     [project],
   )
@@ -233,8 +253,10 @@ export function ProjectDetailView({
         title: String(item.title ?? '—'),
         priority: String(item.priority ?? '—'),
         status: String(item.status ?? '—'),
-        submittedBy: String(item.submittedBy ?? '—'),
-        submittedDate: formatDate(item.submittedDate),
+        submittedBy: String(
+          (item.requester as AnyRecord | undefined)?.name ?? item.submittedBy ?? '—',
+        ),
+        submittedDate: formatDate(item.submittedDate ?? item.createdAt),
       })),
     [changeRequests],
   )
@@ -251,18 +273,41 @@ export function ProjectDetailView({
     [scenarios],
   )
 
-  const updateChangeStatus = async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
-    const token = getClientToken()
+  const [rowWorking, setRowWorking] = useState<string | null>(null)
+  const runRowAction = async (key: string, action: (token: string, projectId: string) => Promise<unknown>, done: string) => {
+    const token = resolvedPortal === 'client' ? getClientToken() : getOrgToken()
     if (!token || !projectId) return
+    setRowWorking(key)
     try {
-      await updateClientNested(token, projectId, 'change-requests', requestId, { status })
-      message.success(status === 'APPROVED' ? t('approve') : t('reject'))
+      await action(token, projectId)
+      message.success(done)
       await load()
     } catch (err) {
       message.error(err instanceof ApiError ? err.message : t('loadError'))
+    } finally {
+      setRowWorking(null)
     }
   }
 
+  const orgRole = getOrgRole()
+  const clientRole = getClientRole()
+  const portalRole = isClient ? clientRole : orgRole
+  const portalToken = isClient ? getClientToken() : getOrgToken()
+  const canMutate = portalRole ? canCreateDraft(portalRole) : false
+  const canDeleteProject = Boolean(portalRole && isUpperManagement(portalRole))
+  const approvalStatus = isClient
+    ? (project as ClientProject | null)?.approvalStatus
+    : (project as OrgProject | null)?.approvalStatus
+  const pendingApproval = isPendingApproval(approvalStatus)
+  const canAddNested = canMutate && !(portalRole && isDataEntry(portalRole) && pendingApproval)
+  const crStatusLabel = (status: string) =>
+    ({ PENDING: 'بانتظار القرار', UNDER_REVIEW: 'قيد المراجعة', APPROVED: 'معتمد', REJECTED: 'مرفوض' })[status] ?? status
+  const riskStatusLabel = (status: string) => (status.toUpperCase() === 'CLOSED' ? 'مغلق' : 'قائم')
+
+  const teamMembers = asRows(
+    (project as { teamMembers?: unknown[] } | null)?.teamMembers,
+    (item) => item,
+  ).map((item) => ({ id: String(item.id), name: String(item.name ?? '—'), role: item.role ? String(item.role) : '' }))
   const progress = project?.progressPct ?? 0
   const budget = Number(project?.budget ?? 0)
 
@@ -287,6 +332,7 @@ export function ProjectDetailView({
           endDate: String(phase.endDate),
           startRaw: phase.startRaw ? String(phase.startRaw) : undefined,
           endRaw: phase.endRaw ? String(phase.endRaw) : undefined,
+          activities: phase.activities as string[],
         }))}
       />
     ),
@@ -299,6 +345,45 @@ export function ProjectDetailView({
           endDate: String(row.endDate),
           createdAt: row.createdAt ? String(row.createdAt) : undefined,
           status: String(row.status),
+          progress: Number(row.progress),
+          actions:
+            canAddNested || canDeleteProject ? (
+              <span className="row-actions">
+                {canAddNested && String(row.status).toUpperCase() !== 'COMPLETED' ? (
+                  <button
+                    type="button"
+                    className="is-primary"
+                    disabled={rowWorking === row.key}
+                    onClick={() =>
+                      void runRowAction(
+                        String(row.key),
+                        (token, pid) => updateNested(resolvedPortal, token, pid, 'deliverables', String(row.key), { status: 'COMPLETED' }),
+                        'تم تحديد المخرج كمكتمل',
+                      )
+                    }
+                  >
+                    تم الإنجاز
+                  </button>
+                ) : null}
+                {canDeleteProject ? (
+                  <button
+                    type="button"
+                    className="is-danger"
+                    disabled={rowWorking === row.key}
+                    onClick={() => {
+                      if (!window.confirm(`حذف المخرج «${row.name}»؟`)) return
+                      void runRowAction(
+                        String(row.key),
+                        (token, pid) => deleteNested(resolvedPortal, token, pid, 'deliverables', String(row.key)),
+                        t('deletedSuccessfully'),
+                      )
+                    }}
+                  >
+                    {t('delete')}
+                  </button>
+                ) : null}
+              </span>
+            ) : null,
         }))}
       />
     ),
@@ -309,8 +394,46 @@ export function ProjectDetailView({
           key: String(row.key),
           title: String(row.name),
           subtitle: String(row.responsible),
-          meta: String(row.impact),
-          status: String(row.status),
+          meta: `${t('probability', { defaultValue: 'الاحتمالية' })}: ${row.probability} · ${t('impact', { defaultValue: 'الأثر' })}: ${row.impact}`,
+          status: riskStatusLabel(String(row.status)),
+          actions:
+            canAddNested || canDeleteProject ? (
+              <span className="row-actions">
+                {canAddNested && String(row.status).toUpperCase() !== 'CLOSED' ? (
+                  <button
+                    type="button"
+                    className="is-primary"
+                    disabled={rowWorking === row.key}
+                    onClick={() =>
+                      void runRowAction(
+                        String(row.key),
+                        (token, pid) => updateNested(resolvedPortal, token, pid, 'risks', String(row.key), { status: 'CLOSED' }),
+                        'تم إغلاق الخطر',
+                      )
+                    }
+                  >
+                    إغلاق الخطر
+                  </button>
+                ) : null}
+                {canDeleteProject ? (
+                  <button
+                    type="button"
+                    className="is-danger"
+                    disabled={rowWorking === row.key}
+                    onClick={() => {
+                      if (!window.confirm(`حذف الخطر «${row.name}»؟`)) return
+                      void runRowAction(
+                        String(row.key),
+                        (token, pid) => deleteNested(resolvedPortal, token, pid, 'risks', String(row.key)),
+                        t('deletedSuccessfully'),
+                      )
+                    }}
+                  >
+                    {t('delete')}
+                  </button>
+                ) : null}
+              </span>
+            ) : null,
         }))}
       />
     ),
@@ -322,17 +445,56 @@ export function ProjectDetailView({
           title: String(row.title),
           subtitle: String(row.submittedBy),
           meta: String(row.submittedDate),
-          status: String(row.status),
-          actions: canApprove ? (
-            <div className="detail-actions">
-              <CatalogButton onClick={() => void updateChangeStatus(String(row.key), 'APPROVED')}>
-                {t('approve')}
-              </CatalogButton>
-              <CatalogButton variant="danger" onClick={() => void updateChangeStatus(String(row.key), 'REJECTED')}>
-                {t('reject')}
-              </CatalogButton>
-            </div>
-          ) : null,
+          status: crStatusLabel(String(row.status)),
+          actions:
+            canApprove && ['PENDING', 'UNDER_REVIEW'].includes(String(row.status)) ? (
+              <span className="row-actions">
+                <button
+                  type="button"
+                  className="is-primary"
+                  disabled={rowWorking === row.key}
+                  onClick={() =>
+                    void runRowAction(
+                      String(row.key),
+                      (token, pid) => decideChangeRequest(resolvedPortal, token, pid, String(row.key), 'approve'),
+                      'تمت الموافقة على طلب التغيير',
+                    )
+                  }
+                >
+                  {t('approve')}
+                </button>
+                {String(row.status) === 'PENDING' ? (
+                  <button
+                    type="button"
+                    disabled={rowWorking === row.key}
+                    onClick={() =>
+                      void runRowAction(
+                        String(row.key),
+                        (token, pid) => decideChangeRequest(resolvedPortal, token, pid, String(row.key), 'review'),
+                        'أُحيل الطلب للمراجعة',
+                      )
+                    }
+                  >
+                    مراجعة
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="is-danger"
+                  disabled={rowWorking === row.key}
+                  onClick={() => {
+                    const comment = window.prompt('سبب الرفض (اختياري)') ?? undefined
+                    void runRowAction(
+                      String(row.key),
+                      (token, pid) => decideChangeRequest(resolvedPortal, token, pid, String(row.key), 'reject', comment),
+                      'تم رفض طلب التغيير',
+                    )
+                  }}
+                >
+                  {t('reject')}
+                </button>
+              </span>
+            ) : null,
         }))}
       />
     ),
@@ -356,7 +518,8 @@ export function ProjectDetailView({
     uiStatus === 'onTrack' ? 'onTrack' : uiStatus === 'delayed' ? 'delayed' : uiStatus === 'stalled' ? 'stalled' : 'completed'
   const statusTone = uiStatus === 'delayed' ? 'warning' : uiStatus === 'stalled' ? 'danger' : 'success'
   const remainingDays = daysUntil(project?.endDate)
-  const spent = 0
+  const financials = (project as { financials?: { spent?: number; committed?: number } } | null)?.financials
+  const spent = Number(financials?.spent ?? 0)
   const remainingBudget = Math.max(0, budget - spent)
   const budgetPct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0
   const companyLogoSrc = matchCompanyLogo(orgProject?.executingCompany?.name) ?? companiesAssets.company
@@ -386,8 +549,9 @@ export function ProjectDetailView({
           projectManager: project.manager?.name,
           startDate: formatDate(project.startDate),
           endDate: formatDate(project.endDate),
-          statusLabel: project.status,
+          statusLabel: t(statusKey),
           progress,
+          spent,
           description: project.description ?? undefined,
           remainingDays,
           ...(Number.isFinite(budget) ? { budget, budgetCurrency: 'SAR' } : {}),
@@ -395,33 +559,25 @@ export function ProjectDetailView({
         outputs: deliverables.map((d) => String(d.name)).filter(Boolean),
         phases: phases.map((phase) => ({
           name: String(phase.title),
+          progress: phaseScheduleProgress(phase.startRaw as string | undefined, phase.endRaw as string | undefined),
           startDate: phase.startRaw ? String(phase.startRaw) : undefined,
           endDate: phase.endRaw ? String(phase.endRaw) : undefined,
         })),
         risks: riskCounts,
         changeRequests: changeRequestRows.map((row) => ({
           title: String(row.title),
-          status: String(row.status),
+          status: CHANGE_REQUEST_STATUS_LABELS[String(row.status).toUpperCase()] ?? String(row.status),
         })),
         scenarios: scenarioRows.map((row) =>
           String(row.impactOnSchedule || `${row.originalDate} → ${row.newDate}`),
         ),
       }
     : null
-  const orgRole = getOrgRole()
-  const clientRole = getClientRole()
-  const portalRole = isClient ? clientRole : orgRole
-  const portalToken = isClient ? getClientToken() : getOrgToken()
-  const canMutate = portalRole ? canCreateDraft(portalRole) : false
-  const canDeleteProject = Boolean(portalRole && isUpperManagement(portalRole))
-  const approvalStatus = isClient ? clientProject?.approvalStatus : orgProject?.approvalStatus
   const rejectionReason = isClient ? clientProject?.rejectionReason : orgProject?.rejectionReason
   const approvedByName = isClient ? clientProject?.approvedByUser?.name : orgProject?.approvedByUser?.name
-  const pendingApproval = isPendingApproval(approvalStatus)
   const dataEntryCanEdit = Boolean(portalRole && isDataEntry(portalRole) && isDraftOrRejected(approvalStatus))
   const dataEntryCanSubmit = dataEntryCanEdit
   const managerCanDecide = Boolean(portalRole && isUpperManagement(portalRole) && pendingApproval)
-  const canAddNested = canMutate && !(portalRole && isDataEntry(portalRole) && pendingApproval)
   const canEditProject = Boolean(portalRole && isUpperManagement(portalRole)) || dataEntryCanEdit
   const catalogAdd = (label: string, kind: ProjectAddKind) => (
     <CatalogButton className="project-detail__add-output" onClick={() => setAddKind(kind)}>
@@ -494,6 +650,7 @@ export function ProjectDetailView({
               variant="danger"
               disabled={approvalWorking}
               onClick={() => {
+                setDecisionMode('reject')
                 setRejectReason('')
                 setRejectOpen(true)
               }}
@@ -501,7 +658,46 @@ export function ProjectDetailView({
               <X size={14} strokeWidth={2.5} />
               {t('reject')}
             </CatalogButton>
+            <CatalogButton
+              variant="outline"
+              disabled={approvalWorking}
+              onClick={() => {
+                setDecisionMode('return')
+                setRejectReason('')
+                setRejectOpen(true)
+              }}
+            >
+              <RotateCcw size={14} strokeWidth={2.5} />
+              إعادة للتعديل
+            </CatalogButton>
           </>
+        ) : null}
+        {canDeleteProject && activeTab === 'overview' && project && !pendingApproval ? (
+          <select
+            className="project-detail__status-select"
+            aria-label="حالة المشروع"
+            value={String(project.status ?? 'ACTIVE')}
+            disabled={approvalWorking}
+            onChange={async (event) => {
+              const token = portalToken
+              if (!token || !projectId) return
+              setApprovalWorking(true)
+              try {
+                await updateProjectStatus(resolvedPortal, token, projectId, event.target.value)
+                message.success('تم تحديث حالة المشروع')
+                await load()
+              } catch (err) {
+                message.error(err instanceof ApiError ? err.message : t('loadError'))
+              } finally {
+                setApprovalWorking(false)
+              }
+            }}
+          >
+            <option value="ACTIVE">نشط</option>
+            <option value="ON_HOLD">متوقف مؤقتاً</option>
+            <option value="COMPLETED">مكتمل</option>
+            <option value="CANCELLED">ملغي</option>
+          </select>
         ) : null}
         {canEditProject && activeTab === 'overview' ? (
           <CatalogButton variant="outline" onClick={() => navigate(`${formBase}/edit`)}>
@@ -554,7 +750,7 @@ export function ProjectDetailView({
           <ul className="project-detail__attachment-list">
             {attachments.map((file) => (
               <li key={file.id}>
-                <a href={file.fileUrl} target="_blank" rel="noreferrer">
+                <a href={resolveApiFileUrl(file.fileUrl)} target="_blank" rel="noreferrer">
                   {file.fileName}
                 </a>
               </li>
@@ -567,7 +763,7 @@ export function ProjectDetailView({
         <article className="project-detail__card">
           <h3>{t('progressRate')}</h3>
           <strong>{progress}%</strong>
-          <span className="project-detail__on-track">{t('onTrack')}</span>
+          <span className="project-detail__on-track">{t(statusKey)}</span>
           <ProgressBar value={progress} tone="success" />
         </article>
         <article className="project-detail__card project-detail__remaining-card">
@@ -660,7 +856,7 @@ export function ProjectDetailView({
           </div>
           <div className="pd-summary-row is-total">
             <span>{t('totalBudget')}</span>
-            <strong>{budget}</strong>
+            <strong>{budget.toLocaleString('en-US')}</strong>
           </div>
         </section>
       </div>
@@ -707,6 +903,41 @@ export function ProjectDetailView({
             </span>
           </div>
         ))}
+        <div className="project-detail__section-heading" style={{ marginTop: 16 }}>
+          <h2>{t('teamMembers', { defaultValue: 'فريق المشروع' })}</h2>
+          {canAddNested ? (
+            <CatalogButton className="project-detail__add-output" onClick={() => setAddKind('team')}>
+              إضافة عضو
+              <Plus size={14} strokeWidth={2.5} />
+            </CatalogButton>
+          ) : null}
+        </div>
+        <div className="project-detail__team-list">
+          {teamMembers.length === 0 ? <em style={{ color: '#96989f', fontSize: 12 }}>لا يوجد أعضاء مضافون بعد</em> : null}
+          {teamMembers.map((member) => (
+            <span key={member.id}>
+              <strong>{member.name}</strong>
+              {member.role ? <small>{member.role}</small> : null}
+              {canDeleteProject ? (
+                <button
+                  type="button"
+                  aria-label={`حذف ${member.name}`}
+                  disabled={rowWorking === member.id}
+                  onClick={() => {
+                    if (!window.confirm(`إزالة ${member.name} من فريق المشروع؟`)) return
+                    void runRowAction(
+                      member.id,
+                      (token, pid) => deleteNested(resolvedPortal, token, pid, 'team', member.id),
+                      t('deletedSuccessfully'),
+                    )
+                  }}
+                >
+                  ×
+                </button>
+              ) : null}
+            </span>
+          ))}
+        </div>
       </section>
     </div>
   )
@@ -732,6 +963,15 @@ export function ProjectDetailView({
                     {t(statusKey)}
                   </Badge>
                   <span className="project-detail__hero-type">{orgProject?.type || clientProject?.type || t('projects')}</span>
+                </div>
+              ) : null}
+              {approvalStatus === 'DRAFT' && rejectionReason ? (
+                <div className="approval-banner approval-banner--rejected">
+                  <p>
+                    <strong>مطلوب تعديلات قبل إعادة الإرسال: </strong>
+                    {rejectionReason}
+                    {approvedByName ? ` — ${approvedByName}` : ''}
+                  </p>
                 </div>
               ) : null}
               {approvalStatus === 'REJECTED' && rejectionReason ? (
@@ -803,13 +1043,17 @@ export function ProjectDetailView({
         />
         <CatalogConfirmDialog
           open={rejectOpen}
-          title={t('reject')}
-          message={t('rejectProjectConfirm')}
-          confirmLabel={t('confirmReject')}
+          title={decisionMode === 'return' ? 'إعادة المشروع للتعديل' : t('reject')}
+          message={
+            decisionMode === 'return'
+              ? 'سيعود المشروع إلى مدخل البيانات كمسودة مع ملاحظاتك، ويمكنه تعديله وإعادة إرساله.'
+              : t('rejectProjectConfirm')
+          }
+          confirmLabel={decisionMode === 'return' ? 'إعادة للتعديل' : t('confirmReject')}
           cancelLabel={t('cancel')}
           icon={<X size={22} />}
           loading={approvalWorking}
-          promptLabel={t('rejectionReason')}
+          promptLabel={decisionMode === 'return' ? 'التعديلات المطلوبة' : t('rejectionReason')}
           promptPlaceholder={t('rejectionReasonPlaceholder')}
           promptValue={rejectReason}
           onPromptChange={setRejectReason}
@@ -822,9 +1066,14 @@ export function ProjectDetailView({
             }
             setApprovalWorking(true)
             try {
-              if (isClient) await rejectClientProject(token, projectId, rejectReason.trim())
-              else await rejectProject(token, projectId, rejectReason.trim())
-              message.success(t('projectRejected'))
+              if (decisionMode === 'return') {
+                await returnProjectForChanges(isClient ? 'client' : 'org', token, projectId, rejectReason.trim())
+                message.success('أُعيد المشروع لمدخل البيانات للتعديل')
+              } else {
+                if (isClient) await rejectClientProject(token, projectId, rejectReason.trim())
+                else await rejectProject(token, projectId, rejectReason.trim())
+                message.success(t('projectRejected'))
+              }
               setRejectOpen(false)
               setRejectReason('')
               await load()

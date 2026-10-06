@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getDashboardLayout, saveDashboardLayout, tokenForPath, type DashboardPortal } from '../../../api/me';
 import GridLayout, {
   WidthProvider,
   type Layout,
@@ -141,6 +142,7 @@ export function useDashboardState(
   initialActiveWidgetIds: WidgetId[] = DEFAULT_ACTIVE_WIDGET_IDS,
   availableWidgetIds: WidgetId[] = ALL_WIDGET_IDS,
   initialLayout: LayoutItem[] = DEFAULT_LAYOUT,
+  persistPortal?: DashboardPortal,
 ) {
   const [isEditMode, setIsEditMode] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -148,6 +150,48 @@ export function useDashboardState(
   });
   const [activeWidgetIds, setActiveWidgetIds] = useState<WidgetId[]>(initialActiveWidgetIds);
   const [layout, setLayout] = useState<LayoutItem[]>(initialLayout);
+
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const wasEditing = useRef(isEditMode);
+  const latest = useRef({ activeWidgetIds, layout });
+  latest.current = { activeWidgetIds, layout };
+
+  // Load the user's saved arrangement for this portal from the server.
+  useEffect(() => {
+    if (!persistPortal) return;
+    const token = tokenForPath(window.location.pathname);
+    if (!token) return;
+    let cancelled = false;
+    getDashboardLayout(token, persistPortal)
+      .then(({ layout: saved }) => {
+        if (cancelled || !saved) return;
+        const valid = (saved.widgetIds as string[]).filter((id): id is WidgetId => id in WIDGET_REGISTRY);
+        if (valid.length === 0) return;
+        setActiveWidgetIds(valid);
+        setLayout((saved.layout as LayoutItem[]).filter((item) => valid.includes(item.i as WidgetId)));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [persistPortal]);
+
+  // Leaving edit mode saves the arrangement, so it survives refresh and new sessions.
+  useEffect(() => {
+    const leaving = wasEditing.current && !isEditMode;
+    wasEditing.current = isEditMode;
+    if (!leaving || !persistPortal) return;
+    const token = tokenForPath(window.location.pathname);
+    if (!token) return;
+    setSaveState('saving');
+    const { activeWidgetIds: ids, layout: items } = latest.current;
+    saveDashboardLayout(token, persistPortal, {
+      widgetIds: ids,
+      layout: items.map(({ i, x, y, w, h, minW, minH }) => ({ i, x, y, w, h, minW, minH })),
+    })
+      .then(() => setSaveState('saved'))
+      .catch(() => setSaveState('error'));
+  }, [isEditMode, persistPortal]);
 
   const removedWidgetIds = useMemo(
     () => {
@@ -192,5 +236,6 @@ export function useDashboardState(
     removedWidgetIds,
     removeWidget,
     addWidget,
+    saveState,
   };
 }

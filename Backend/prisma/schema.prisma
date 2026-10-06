@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  
 }
 
 // ══════════════════════════════════════════
@@ -143,6 +142,7 @@ model Notification {
   title     String
   message   String
   type      NotificationType
+  link      String?
   isRead    Boolean          @default(false)
   userId    String
   actorType ActorType
@@ -163,6 +163,35 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+model AccountInvite {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  actorType ActorType
+  invitedBy String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("account_invites")
+}
+
+model LoginChallenge {
+  id        String    @id @default(uuid())
+  userId    String
+  actorType ActorType
+  codeHash  String
+  attempts  Int       @default(0)
+  sentAt    DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("login_challenges")
 }
 
 model AuditLog {
@@ -186,14 +215,17 @@ model AuditLog {
 // ══════════════════════════════════════════
 
 model JodaynUser {
-  id        String     @id @default(uuid())
-  name      String
-  email     String     @unique
-  password  String
-  role      JodaynRole
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id                String     @id @default(uuid())
+  name              String
+  email             String     @unique
+  password          String
+  role              JodaynRole
+  isActive          Boolean    @default(true)
+  pendingActivation Boolean    @default(false)
+  activatedAt       DateTime?
+  lastLoginAt       DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   @@map("jodayn_users")
 }
@@ -368,16 +400,19 @@ model FinancialReport {
 // ══════════════════════════════════════════
 
 model OrgUser {
-  id        String     @id @default(uuid())
-  name      String
-  email     String     @unique
-  password  String
-  role      OrgRole
-  isActive  Boolean    @default(true)
-  orgId     String
-  org       OrgAccount @relation(fields: [orgId], references: [id])
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id                String     @id @default(uuid())
+  name              String
+  email             String     @unique
+  password          String
+  role              OrgRole
+  isActive          Boolean    @default(true)
+  pendingActivation Boolean    @default(false)
+  activatedAt       DateTime?
+  lastLoginAt       DateTime?
+  orgId             String
+  org               OrgAccount @relation(fields: [orgId], references: [id])
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   projects            OrgProject[]
   deliverables        OrgDeliverable[]
@@ -389,6 +424,7 @@ model OrgUser {
   scenarioAnalyses    OrgScenarioAnalysis[]
   strategyDocs        OrgStrategyDocument[]
   orgContracts        OrgContract[]
+  projectAttach       OrgProjectAttachment[]
 
   @@index([orgId])
   @@map("org_users")
@@ -422,7 +458,7 @@ model DepartmentEmployee {
   email        String?
   role         String?
   departmentId String
-  department   Department @relation(fields: [departmentId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())
 
   @@index([departmentId])
@@ -457,7 +493,7 @@ model ExecutingCompanyTeam {
   email     String?
   role      String?
   companyId String
-  company   ExecutingCompany @relation(fields: [companyId], references: [id])
+  company   ExecutingCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdAt DateTime         @default(now())
 
   @@index([companyId])
@@ -475,6 +511,8 @@ model OrgProject {
   approvedBy               String?
   approvedAt               DateTime?
   rejectionReason          String?
+  submittedById            String?
+  submittedAt              DateTime?
   startDate                DateTime
   endDate                  DateTime
   budget                   Decimal           @default(0)
@@ -489,9 +527,9 @@ model OrgProject {
   orgPhone                 String?
   clientPhone              String?
   departmentId             String?
-  department               Department?       @relation(fields: [departmentId], references: [id])
+  department               Department?       @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   executingCompanyId       String?
-  executingCompany         ExecutingCompany? @relation(fields: [executingCompanyId], references: [id])
+  executingCompany         ExecutingCompany? @relation(fields: [executingCompanyId], references: [id], onDelete: SetNull)
   orgId                    String
   org                      OrgAccount        @relation(fields: [orgId], references: [id])
   managerId                String
@@ -507,6 +545,7 @@ model OrgProject {
   changeRequests   OrgChangeRequest[]
   scenarioAnalyses OrgScenarioAnalysis[]
   goalLinks        OrgGoalProjectLink[]
+  attachments      OrgProjectAttachment[]
 
   @@index([orgId])
   @@index([managerId])
@@ -524,7 +563,7 @@ model OrgProjectPhase {
   mainDeliverables String?
   notes            String?
   projectId        String
-  project          OrgProject @relation(fields: [projectId], references: [id])
+  project          OrgProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt        DateTime   @default(now())
 
   @@index([projectId])
@@ -538,7 +577,7 @@ model OrgProjectTeamMember {
   role      String?
   source    String
   projectId String
-  project   OrgProject @relation(fields: [projectId], references: [id])
+  project   OrgProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt DateTime   @default(now())
 
   @@index([projectId])
@@ -552,7 +591,7 @@ model OrgContract {
   startDate  DateTime
   endDate    DateTime
   projectId  String
-  project    OrgProject @relation(fields: [projectId], references: [id])
+  project    OrgProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   uploadedBy String
   uploader   OrgUser    @relation(fields: [uploadedBy], references: [id])
   createdAt  DateTime   @default(now())
@@ -560,6 +599,23 @@ model OrgContract {
   @@index([projectId])
   @@index([uploadedBy])
   @@map("org_contracts")
+}
+
+model OrgProjectAttachment {
+  id         String     @id @default(uuid())
+  fileName   String
+  fileType   String?
+  fileSize   Int?
+  storageKey String     @unique
+  projectId  String
+  project    OrgProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy String
+  uploader   OrgUser    @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime   @default(now())
+
+  @@index([projectId])
+  @@index([uploadedBy])
+  @@map("org_project_attachments")
 }
 
 model OrgRisk {
@@ -571,7 +627,7 @@ model OrgRisk {
   status          String     @default("ACTIVE")
   responsibleName String?
   projectId       String
-  project         OrgProject @relation(fields: [projectId], references: [id])
+  project         OrgProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
@@ -589,7 +645,7 @@ model OrgRiskAction {
   price            Decimal  @default(0)
   aiMitigationPlan String?
   riskId           String
-  risk             OrgRisk  @relation(fields: [riskId], references: [id])
+  risk             OrgRisk  @relation(fields: [riskId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
 
   @@index([riskId])
@@ -605,7 +661,7 @@ model OrgDeliverable {
   status        DeliverableStatus @default(ACTIVE)
   progressPct   Int               @default(0)
   projectId     String
-  project       OrgProject        @relation(fields: [projectId], references: [id])
+  project       OrgProject        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   responsibleId String?
   responsible   OrgUser?          @relation(fields: [responsibleId], references: [id])
   createdAt     DateTime          @default(now())
@@ -626,7 +682,7 @@ model OrgDeliverableAttachment {
   fileType      String?
   fileSize      Int?
   deliverableId String
-  deliverable   OrgDeliverable @relation(fields: [deliverableId], references: [id])
+  deliverable   OrgDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
   uploadedBy    String
   uploader      OrgUser        @relation(fields: [uploadedBy], references: [id])
   createdAt     DateTime       @default(now())
@@ -640,7 +696,7 @@ model OrgDeliverableComment {
   id            String         @id @default(uuid())
   content       String
   deliverableId String
-  deliverable   OrgDeliverable @relation(fields: [deliverableId], references: [id])
+  deliverable   OrgDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
   authorId      String
   author        OrgUser        @relation(fields: [authorId], references: [id])
   createdAt     DateTime       @default(now())
@@ -661,7 +717,7 @@ model OrgChangeRequest {
   submittedBy      String?
   submittedDate    DateTime?
   projectId        String
-  project          OrgProject    @relation(fields: [projectId], references: [id])
+  project          OrgProject    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   requestedBy      String
   requester        OrgUser       @relation(fields: [requestedBy], references: [id])
   createdAt        DateTime      @default(now())
@@ -682,7 +738,7 @@ model OrgChangeRequestAttachment {
   fileType   String?
   fileSize   Int?
   requestId  String
-  request    OrgChangeRequest @relation(fields: [requestId], references: [id])
+  request    OrgChangeRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   uploadedBy String
   uploader   OrgUser          @relation(fields: [uploadedBy], references: [id])
   createdAt  DateTime         @default(now())
@@ -697,7 +753,7 @@ model OrgRequestLog {
   action      RequestAction
   comment     String?
   requestId   String
-  request     OrgChangeRequest @relation(fields: [requestId], references: [id])
+  request     OrgChangeRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   performedBy String
   performer   OrgUser          @relation(fields: [performedBy], references: [id])
   createdAt   DateTime         @default(now())
@@ -710,7 +766,7 @@ model OrgRequestLog {
 model OrgScenarioAnalysis {
   id                      String     @id @default(uuid())
   orgProjectId            String
-  project                 OrgProject @relation(fields: [orgProjectId], references: [id])
+  project                 OrgProject @relation(fields: [orgProjectId], references: [id], onDelete: Cascade)
   originalDate            DateTime?
   originalCost            Decimal    @default(0)
   originalRiskLevel       RiskLevel?
@@ -767,7 +823,7 @@ model OrgStrategicGoal {
   isAiExtracted        Boolean             @default(true)
   aiSummary            String?
   documentId           String
-  document             OrgStrategyDocument @relation(fields: [documentId], references: [id])
+  document             OrgStrategyDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
   orgId                String
   org                  OrgAccount          @relation(fields: [orgId], references: [id])
   createdAt            DateTime            @default(now())
@@ -790,7 +846,7 @@ model OrgStrategicGoalStage {
   status      GoalStageStatus  @default(NOT_STARTED)
   progressPct Int              @default(0)
   goalId      String
-  goal        OrgStrategicGoal @relation(fields: [goalId], references: [id])
+  goal        OrgStrategicGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
   createdAt   DateTime         @default(now())
 
   @@index([goalId])
@@ -800,9 +856,9 @@ model OrgStrategicGoalStage {
 model OrgGoalProjectLink {
   id             String           @id @default(uuid())
   goalId         String
-  goal           OrgStrategicGoal @relation(fields: [goalId], references: [id])
+  goal           OrgStrategicGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
   projectId      String
-  project        OrgProject       @relation(fields: [projectId], references: [id])
+  project        OrgProject       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   relevanceScore Int              @default(0)
   aiNotes        String?
   isAiLinked     Boolean          @default(true)
@@ -827,7 +883,7 @@ model OrgKpiSnapshot {
   notes                  String?
   aiAnalysis             String?
   goalId                 String
-  goal                   OrgStrategicGoal @relation(fields: [goalId], references: [id])
+  goal                   OrgStrategicGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
   createdAt              DateTime         @default(now())
 
   @@index([goalId])
@@ -839,16 +895,19 @@ model OrgKpiSnapshot {
 // ══════════════════════════════════════════
 
 model ClientUser {
-  id        String        @id @default(uuid())
-  name      String
-  email     String        @unique
-  password  String
-  role      ClientRole
-  isActive  Boolean       @default(true)
-  clientId  String
-  client    ClientAccount @relation(fields: [clientId], references: [id])
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id                String        @id @default(uuid())
+  name              String
+  email             String        @unique
+  password          String
+  role              ClientRole
+  isActive          Boolean       @default(true)
+  pendingActivation Boolean       @default(false)
+  activatedAt       DateTime?
+  lastLoginAt       DateTime?
+  clientId          String
+  client            ClientAccount @relation(fields: [clientId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   projects            ClientProject[]
   deliverables        ClientDeliverable[]
@@ -860,13 +919,14 @@ model ClientUser {
   scenarioAnalyses    ClientScenarioAnalysis[]
   strategyDocs        ClientStrategyDocument[]
   clientContracts     ClientContract[]
+  projectAttach       ClientProjectAttachment[]
 
   @@index([clientId])
   @@map("client_users")
 }
 
 model ClientProject {
-  id                       String        @id @default(uuid())
+  id                       String         @id @default(uuid())
   name                     String
   type                     String?
   classification           String?
@@ -876,12 +936,14 @@ model ClientProject {
   approvedBy               String?
   approvedAt               DateTime?
   rejectionReason          String?
+  submittedById            String?
+  submittedAt              DateTime?
   startDate                DateTime
   endDate                  DateTime
-  budget                   Decimal       @default(0)
-  profit                   Decimal       @default(0)
-  profitMargin             Decimal       @default(0)
-  progressPct              Int           @default(0)
+  budget                   Decimal        @default(0)
+  profit                   Decimal        @default(0)
+  profitMargin             Decimal        @default(0)
+  progressPct              Int            @default(0)
   criticalPath             String?
   orgProjectManagerName    String?
   clientProjectManagerName String?
@@ -890,11 +952,11 @@ model ClientProject {
   orgPhone                 String?
   clientPhone              String?
   clientId                 String
-  client                   ClientAccount @relation(fields: [clientId], references: [id])
+  client                   ClientAccount  @relation(fields: [clientId], references: [id])
   managerId                String
-  manager                  ClientUser    @relation(fields: [managerId], references: [id])
-  createdAt                DateTime      @default(now())
-  updatedAt                DateTime      @updatedAt
+  manager                  ClientUser     @relation(fields: [managerId], references: [id])
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
 
   phases           ClientProjectPhase[]
   teamMembers      ClientProjectTeamMember[]
@@ -904,6 +966,7 @@ model ClientProject {
   changeRequests   ClientChangeRequest[]
   scenarioAnalyses ClientScenarioAnalysis[]
   goalLinks        ClientGoalProjectLink[]
+  attachments      ClientProjectAttachment[]
 
   @@index([clientId])
   @@index([managerId])
@@ -919,7 +982,7 @@ model ClientProjectPhase {
   mainDeliverables String?
   notes            String?
   projectId        String
-  project          ClientProject @relation(fields: [projectId], references: [id])
+  project          ClientProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt        DateTime      @default(now())
 
   @@index([projectId])
@@ -933,7 +996,7 @@ model ClientProjectTeamMember {
   role      String?
   source    String
   projectId String
-  project   ClientProject @relation(fields: [projectId], references: [id])
+  project   ClientProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt DateTime      @default(now())
 
   @@index([projectId])
@@ -947,7 +1010,7 @@ model ClientContract {
   startDate  DateTime
   endDate    DateTime
   projectId  String
-  project    ClientProject @relation(fields: [projectId], references: [id])
+  project    ClientProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   uploadedBy String
   uploader   ClientUser    @relation(fields: [uploadedBy], references: [id])
   createdAt  DateTime      @default(now())
@@ -955,6 +1018,23 @@ model ClientContract {
   @@index([projectId])
   @@index([uploadedBy])
   @@map("client_contracts")
+}
+
+model ClientProjectAttachment {
+  id         String        @id @default(uuid())
+  fileName   String
+  fileType   String?
+  fileSize   Int?
+  storageKey String        @unique
+  projectId  String
+  project    ClientProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy String
+  uploader   ClientUser    @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@index([projectId])
+  @@index([uploadedBy])
+  @@map("client_project_attachments")
 }
 
 model ClientRisk {
@@ -966,7 +1046,7 @@ model ClientRisk {
   status          String        @default("ACTIVE")
   responsibleName String?
   projectId       String
-  project         ClientProject @relation(fields: [projectId], references: [id])
+  project         ClientProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -984,7 +1064,7 @@ model ClientRiskAction {
   price            Decimal    @default(0)
   aiMitigationPlan String?
   riskId           String
-  risk             ClientRisk @relation(fields: [riskId], references: [id])
+  risk             ClientRisk @relation(fields: [riskId], references: [id], onDelete: Cascade)
   createdAt        DateTime   @default(now())
 
   @@index([riskId])
@@ -1000,7 +1080,7 @@ model ClientDeliverable {
   status        DeliverableStatus @default(ACTIVE)
   progressPct   Int               @default(0)
   projectId     String
-  project       ClientProject     @relation(fields: [projectId], references: [id])
+  project       ClientProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   responsibleId String?
   responsible   ClientUser?       @relation(fields: [responsibleId], references: [id])
   createdAt     DateTime          @default(now())
@@ -1021,7 +1101,7 @@ model ClientDeliverableAttachment {
   fileType      String?
   fileSize      Int?
   deliverableId String
-  deliverable   ClientDeliverable @relation(fields: [deliverableId], references: [id])
+  deliverable   ClientDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
   uploadedBy    String
   uploader      ClientUser        @relation(fields: [uploadedBy], references: [id])
   createdAt     DateTime          @default(now())
@@ -1035,7 +1115,7 @@ model ClientDeliverableComment {
   id            String            @id @default(uuid())
   content       String
   deliverableId String
-  deliverable   ClientDeliverable @relation(fields: [deliverableId], references: [id])
+  deliverable   ClientDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
   authorId      String
   author        ClientUser        @relation(fields: [authorId], references: [id])
   createdAt     DateTime          @default(now())
@@ -1056,7 +1136,7 @@ model ClientChangeRequest {
   submittedBy      String?
   submittedDate    DateTime?
   projectId        String
-  project          ClientProject @relation(fields: [projectId], references: [id])
+  project          ClientProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   requestedBy      String
   requester        ClientUser    @relation(fields: [requestedBy], references: [id])
   createdAt        DateTime      @default(now())
@@ -1077,7 +1157,7 @@ model ClientChangeRequestAttachment {
   fileType   String?
   fileSize   Int?
   requestId  String
-  request    ClientChangeRequest @relation(fields: [requestId], references: [id])
+  request    ClientChangeRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   uploadedBy String
   uploader   ClientUser          @relation(fields: [uploadedBy], references: [id])
   createdAt  DateTime            @default(now())
@@ -1092,7 +1172,7 @@ model ClientRequestLog {
   action      RequestAction
   comment     String?
   requestId   String
-  request     ClientChangeRequest @relation(fields: [requestId], references: [id])
+  request     ClientChangeRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   performedBy String
   performer   ClientUser          @relation(fields: [performedBy], references: [id])
   createdAt   DateTime            @default(now())
@@ -1105,7 +1185,7 @@ model ClientRequestLog {
 model ClientScenarioAnalysis {
   id                      String        @id @default(uuid())
   clientProjectId         String
-  project                 ClientProject @relation(fields: [clientProjectId], references: [id])
+  project                 ClientProject @relation(fields: [clientProjectId], references: [id], onDelete: Cascade)
   originalDate            DateTime?
   originalCost            Decimal       @default(0)
   originalRiskLevel       RiskLevel?
@@ -1162,7 +1242,7 @@ model ClientStrategicGoal {
   isAiExtracted        Boolean                @default(true)
   aiSummary            String?
   documentId           String
-  document             ClientStrategyDocument @relation(fields: [documentId], references: [id])
+  document             ClientStrategyDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
   clientId             String
   client               ClientAccount          @relation(fields: [clientId], references: [id])
   createdAt            DateTime               @default(now())
@@ -1185,7 +1265,7 @@ model ClientStrategicGoalStage {
   status      GoalStageStatus     @default(NOT_STARTED)
   progressPct Int                 @default(0)
   goalId      String
-  goal        ClientStrategicGoal @relation(fields: [goalId], references: [id])
+  goal        ClientStrategicGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
   createdAt   DateTime            @default(now())
 
   @@index([goalId])
@@ -1195,9 +1275,9 @@ model ClientStrategicGoalStage {
 model ClientGoalProjectLink {
   id             String              @id @default(uuid())
   goalId         String
-  goal           ClientStrategicGoal @relation(fields: [goalId], references: [id])
+  goal           ClientStrategicGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
   projectId      String
-  project        ClientProject       @relation(fields: [projectId], references: [id])
+  project        ClientProject       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   relevanceScore Int                 @default(0)
   aiNotes        String?
   isAiLinked     Boolean             @default(true)
@@ -1222,7 +1302,7 @@ model ClientKpiSnapshot {
   notes                  String?
   aiAnalysis             String?
   goalId                 String
-  goal                   ClientStrategicGoal @relation(fields: [goalId], references: [id])
+  goal                   ClientStrategicGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
   createdAt              DateTime            @default(now())
 
   @@index([goalId])
@@ -1232,14 +1312,6 @@ model ClientKpiSnapshot {
 // ══════════════════════════════════════════
 // SUPER ADMIN
 // ══════════════════════════════════════════
-
-enum PackageName {
-  FREE
-  DEMO
-  BASIC
-  PREMIUM
-  ENTERPRISE
-}
 
 enum SubscriptionStatus {
   ACTIVE
@@ -1272,15 +1344,20 @@ model SuperAdmin {
 }
 
 model Package {
-  id          String      @id @default(uuid())
-  name        PackageName @unique
-  price       Decimal     @default(0)
-  duration    Int         @default(365)
-  maxUsers    Int         @default(10)
-  maxProjects Int         @default(10)
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id           String   @id @default(uuid())
+  name         String   @unique
+  label        String?
+  billingCycle String   @default("YEARLY")
+  storageGb    Int      @default(10)
+  packageType  String?
+  features     Json?
+  price        Decimal  @default(0)
+  duration     Int      @default(365)
+  maxUsers     Int      @default(10)
+  maxProjects  Int      @default(10)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   subscriptions AccountSubscription[]
 
@@ -1288,19 +1365,21 @@ model Package {
 }
 
 model AccountSubscription {
-  id          String             @id @default(uuid())
-  accountType AccountType
-  accountId   String
-  packageId   String
-  package     Package            @relation(fields: [packageId], references: [id])
-  startDate   DateTime
-  endDate     DateTime
-  status      SubscriptionStatus @default(ACTIVE)
-  paidAmount  Decimal            @default(0)
-  createdBy   String
-  superAdmin  SuperAdmin         @relation(fields: [createdBy], references: [id])
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id             String             @id @default(uuid())
+  accountType    AccountType
+  accountId      String
+  packageId      String
+  package        Package            @relation(fields: [packageId], references: [id])
+  startDate      DateTime
+  endDate        DateTime
+  status         SubscriptionStatus @default(ACTIVE)
+  paidAmount     Decimal            @default(0)
+  userLimit      Int?
+  storageLimitGb Int?
+  createdBy      String
+  superAdmin     SuperAdmin         @relation(fields: [createdBy], references: [id])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([packageId])
   @@index([createdBy])
@@ -1322,4 +1401,32 @@ model ActivityLog {
   @@index([userId])
   @@index([superAdminId])
   @@map("activity_logs")
+}
+
+// Per-user dashboard widget arrangement (dashboard customization)
+model DashboardLayout {
+  id        String    @id @default(uuid())
+  userId    String
+  actorType ActorType
+  portal    String
+  widgetIds Json
+  layout    Json
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, actorType, portal])
+  @@map("dashboard_layouts")
+}
+
+/// Requests submitted from the public landing page's demo form.
+model DemoRequest {
+  id            String   @id @default(uuid())
+  fullName      String
+  phone         String
+  companyName   String
+  businessEmail String
+  jobTitle      String
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("demo_requests")
 }

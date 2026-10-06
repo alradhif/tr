@@ -117,3 +117,22 @@ export function createClientGoal(
     body: JSON.stringify(data),
   })
 }
+
+export function updateClientGoal(
+  token: string,
+  id: string,
+  data: { title?: string; description?: string; startDate?: string; endDate?: string; aiSummary?: string },
+) {
+  return apiRequest<{ success: boolean; goal: ClientStrategicGoal }>(`/client/strategy/goals/${id}`, {
+    method: 'PUT',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
+export function deleteClientGoal(token: string, id: string) {
+  return apiRequest<{ success: boolean }>(`/client/strategy/goals/${id}`, {
+    method: 'DELETE',
+    token,
+  })
+}

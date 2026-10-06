@@ -35,3 +35,10 @@ export function formatJoinDate(value?: string | null) {
     .toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
     .toLowerCase()
 }
+
+const STATUS_FILTER_ORDER: Array<StatusClass | 'all'> = ['all', 'track', 'delay', 'blocked', 'done']
+
+/** The project-list filter button cycles through the statuses shown in the table. */
+export function nextStatusFilter(current: StatusClass | 'all'): StatusClass | 'all' {
+  return STATUS_FILTER_ORDER[(STATUS_FILTER_ORDER.indexOf(current) + 1) % STATUS_FILTER_ORDER.length]
+}

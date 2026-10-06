@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { CheckCircle2, Eye, EyeOff, Lock, Mail } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { requestPasswordReset, type ForgotPasswordType } from '../../api/auth'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { requestPasswordReset, startLogin, type AuthUser, type ForgotPasswordType } from '../../api/auth'
 import { ApiError, apiRequest } from '../../api/client'
-import { assertMappedRole, loginWithCredentials, type PortalKind } from '../../auth/resolveLogin'
-import { commitPendingLogin, setPendingLogin } from '../../auth/pendingLogin'
+import { type PortalKind } from '../../auth/resolveLogin'
+import { commitSession, setPendingLogin } from '../../auth/pendingLogin'
 import { beginPostAuthLoading } from '../../auth/postAuthLoading'
 import { AuthBackground } from '../../super-admin-ui/components/auth/AuthBackground'
 import { AuthCardHeader } from '../../super-admin-ui/components/auth/AuthCardHeader'
@@ -24,14 +24,36 @@ const DEMO_LOGINS: Array<{ label: string; role: string; portal: PortalKind }> = 
 
 export function UnifiedLoginPage() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const activatedEmail = params.get('activated') ? params.get('email') : null
+  const notice = activatedEmail
+    ? { tone: 'success', text: 'تم تفعيل حسابك. سجّل الدخول بكلمة المرور الجديدة' }
+    : params.get('expired')
+      ? { tone: 'warning', text: 'انتهت الجلسة. الرجاء تسجيل الدخول مرة أخرى' }
+      : null
   const [step, setStep] = useState<'login' | 'forgot'>('login')
-  const [email, setEmail] = useState(() => localStorage.getItem('trackplus.rememberEmail') || '')
+  const [email, setEmail] = useState(() => activatedEmail || localStorage.getItem('trackplus.rememberEmail') || '')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('trackplus.rememberEmail')))
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [forgotSent, setForgotSent] = useState(false)
+  const [demoEnabled, setDemoEnabled] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    apiRequest<{ enabled: boolean }>('/auth/demo/status')
+      .then((result) => {
+        if (active) setDemoEnabled(Boolean(result.enabled))
+      })
+      .catch(() => {
+        if (active) setDemoEnabled(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -46,12 +68,14 @@ export function UnifiedLoginPage() {
     }
     setIsSubmitting(true)
     try {
-      const result = await loginWithCredentials(email.trim(), password)
-      if (!assertMappedRole(result.portal, result.user)) {
-        setError('هذا الحساب غير مدعوم في النظام')
-        return
-      }
-      setPendingLogin({ portal: result.portal, token: result.token, user: result.user })
+      const challenge = await startLogin(email.trim(), password)
+      setPendingLogin({
+        challengeId: challenge.challengeId,
+        expiresAt: challenge.expiresAt,
+        resendAfterSeconds: challenge.resendAfterSeconds,
+        demoCode: challenge.demoCode,
+        email: email.trim(),
+      })
       if (rememberMe) {
         localStorage.setItem('trackplus.rememberEmail', email.trim())
       } else {
@@ -96,12 +120,11 @@ export function UnifiedLoginPage() {
     setError('')
     setIsSubmitting(true)
     try {
-      const result = await apiRequest<{ token: string; user: { id: string; name: string; email: string; role: string; orgId?: string; clientId?: string } }>(
+      const result = await apiRequest<{ token: string; user: AuthUser }>(
         '/auth/demo/login',
         { method: 'POST', body: JSON.stringify({ role: option.role }) },
       )
-      setPendingLogin({ portal: option.portal, token: result.token, user: result.user })
-      const destination = commitPendingLogin()
+      const destination = commitSession(result.token, result.user, option.portal)
       if (!destination) {
         setError('تعذر الدخول إلى الحساب التجريبي')
         return
@@ -123,6 +146,11 @@ export function UnifiedLoginPage() {
           <>
             <h1 className="auth-card__title">تسجيل الدخول</h1>
             <p className="auth-card__subtitle">أدخل بريدك الإلكتروني وكلمة المرور</p>
+            {notice ? (
+              <p className={`auth-form__notice${notice.tone === 'warning' ? ' auth-form__notice--warning' : ''}`}>
+                {notice.text}
+              </p>
+            ) : null}
             <form className="auth-form" onSubmit={handleLogin} noValidate>
               <label className="auth-form__label" htmlFor="login-email">
                 البريد الإلكتروني
@@ -188,19 +216,21 @@ export function UnifiedLoginPage() {
                 {isSubmitting ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
               </button>
             </form>
-            <div className="auth-quicklogin">
-              {DEMO_LOGINS.map((option) => (
-                <button
-                  key={option.role}
-                  type="button"
-                  className="auth-quicklogin__btn"
-                  disabled={isSubmitting}
-                  onClick={() => void handleDemoLogin(option)}
-                >
-                  <span className="auth-quicklogin__btn-label">{option.label}</span>
-                </button>
-              ))}
-            </div>
+            {demoEnabled ? (
+              <div className="auth-quicklogin">
+                {DEMO_LOGINS.map((option) => (
+                  <button
+                    key={option.role}
+                    type="button"
+                    className="auth-quicklogin__btn"
+                    disabled={isSubmitting}
+                    onClick={() => void handleDemoLogin(option)}
+                  >
+                    <span className="auth-quicklogin__btn-label">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </>
         ) : (
           <>

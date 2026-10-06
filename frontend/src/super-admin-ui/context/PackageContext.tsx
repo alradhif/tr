@@ -8,6 +8,15 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import {
+  createPackage,
+  deletePackage as deletePackageApi,
+  getAllPackages,
+  updatePackage as updatePackageApi,
+  type PackageInput,
+  type PlatformPackage,
+} from '../../api/superAdmin';
+import { getSuperAdminToken } from '../../auth/superAdminAuth';
 
 export interface PackagePermission {
   name: string;
@@ -33,156 +42,93 @@ export interface Package {
   permissions: PackagePermission[];
 }
 
-const SEED_PACKAGES: Package[] = [
-  {
-    id: 'pkg-free',
-    name: 'Free',
-    price: '0 ر.س / سنة',
-    priceValue: 0,
-    duration: 'سنوي',
-    storage: '5 جيجابايت',
-    users: 5,
-    status: 'active',
-    statusLabel: 'مفعلة',
-    tenants: 15,
-    userLimit: 5,
-    packageType: 'Basic',
-    permissions: [
-      { name: 'إدارة الحسابات', granted: true },
-      { name: 'تصدير البيانات', granted: false },
-      { name: 'إدارة الفوترة', granted: false },
-    ],
-  },
-  {
-    id: 'pkg-demo',
-    name: 'Demo',
-    price: '0 ر.س / سنة',
-    priceValue: 0,
-    duration: 'سنوي',
-    storage: '10 جيجابايت',
-    users: 10,
-    status: 'active',
-    statusLabel: 'مفعلة',
-    tenants: 8,
-    userLimit: 10,
-    packageType: 'Basic',
-    permissions: [
-      { name: 'إدارة الحسابات', granted: true },
-      { name: 'تصدير البيانات', granted: true },
-      { name: 'إدارة الفوترة', granted: false },
-    ],
-  },
-  {
-    id: 'pkg-basic',
-    name: 'Basic',
-    price: '999 ر.س / سنة',
-    priceValue: 999,
-    duration: 'سنوي',
-    storage: '50 جيجابايت',
-    users: 20,
-    status: 'active',
-    statusLabel: 'مفعلة',
-    tenants: 6,
-    userLimit: 15,
-    packageType: 'Business',
-    permissions: [
-      { name: 'إدارة الحسابات', granted: true },
-      { name: 'تصدير البيانات', granted: true },
-      { name: 'إدارة الفوترة', granted: false },
-    ],
-  },
-  {
-    id: 'pkg-premium',
-    name: 'Premium',
-    price: '4000 ر.س / شهر',
-    priceValue: 4000,
-    duration: 'شهري',
-    storage: '50 GB',
-    users: 100,
-    status: 'active',
-    statusLabel: 'مفعلة',
-    tenants: 1,
-    userLimit: 6,
-    packageType: 'Enterprise',
-    permissions: [
-      { name: 'إدارة الحسابات', granted: true },
-      { name: 'تصدير البيانات', granted: true },
-      { name: 'إدارة الفوترة', granted: false },
-    ],
-  },
-  {
-    id: 'pkg-enterprise',
-    name: 'Enterprise',
-    price: '7,999 ر.س / سنة',
-    priceValue: 7999,
-    duration: 'سنوي',
-    storage: '1 تيرابايت',
-    users: 250,
-    status: 'inactive',
-    statusLabel: 'غير مفعلة',
-    tenants: 0,
-    userLimit: 250,
-    packageType: 'Enterprise',
-    permissions: [
-      { name: 'إدارة الحسابات', granted: true },
-      { name: 'تصدير البيانات', granted: true },
-      { name: 'إدارة الفوترة', granted: true },
-    ],
-  },
-];
+export const PERMISSION_NAMES = ['إدارة الحسابات', 'تصدير البيانات', 'إدارة الفوترة'];
 
-const STORAGE_KEY = 'trackplus_packages_v1';
-
-function loadFromStorage(): Package[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_PACKAGES;
-    const parsed = JSON.parse(raw) as Package[];
-    
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-  } catch {
-    
-  }
-  return SEED_PACKAGES;
-}
-
-function saveToStorage(packages: Package[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(packages));
-  } catch {
-    
-  }
+function toUiPackage(pkg: PlatformPackage): Package {
+  const duration: PackageDuration = pkg.billingCycle === 'MONTHLY' ? 'شهري' : 'سنوي';
+  const priceValue = Number(pkg.price) || 0;
+  const features = Array.isArray(pkg.features) ? pkg.features : [];
+  const active = pkg.isActive !== false;
+  return {
+    id: pkg.id,
+    name: pkg.label || pkg.name,
+    price: `${priceValue.toLocaleString('en-US')} ر.س / ${duration === 'شهري' ? 'شهر' : 'سنة'}`,
+    priceValue,
+    duration,
+    storage: `${pkg.storageGb ?? 0} GB`,
+    users: pkg.maxUsers,
+    status: active ? 'active' : 'inactive',
+    statusLabel: active ? 'مفعلة' : 'غير مفعلة',
+    tenants: pkg.tenants ?? 0,
+    userLimit: pkg.maxUsers,
+    packageType: pkg.packageType || '—',
+    permissions: PERMISSION_NAMES.map((name) => ({ name, granted: features.includes(name) })),
+  };
 }
 
 interface PackageContextValue {
   packages: Package[];
-  addPackage: (pkg: Package) => void;
-  updatePackage: (id: string, updates: Partial<Package>) => void;
-  deletePackage: (id: string) => void;
+  loading: boolean;
+  error: string | null;
+  refreshPackages: () => Promise<void>;
+  addPackage: (data: PackageInput) => Promise<Package>;
+  updatePackage: (id: string, data: PackageInput) => Promise<Package>;
+  deletePackage: (id: string) => Promise<void>;
   getPackageById: (id: string) => Package | undefined;
 }
 
 const PackageContext = createContext<PackageContextValue | null>(null);
 
+function requireToken() {
+  const token = getSuperAdminToken();
+  if (!token) throw new Error('يجب تسجيل الدخول أولاً');
+  return token;
+}
+
 export function PackageProvider({ children }: { children: ReactNode }) {
-  const [packages, setPackages] = useState<Package[]>(loadFromStorage);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  
+  const refreshPackages = useCallback(async () => {
+    const token = getSuperAdminToken();
+    if (!token) {
+      setPackages([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await getAllPackages(token);
+      setPackages(data.packages.map(toUiPackage));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذر تحميل الباقات');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    saveToStorage(packages);
-  }, [packages]);
+    void refreshPackages();
+  }, [refreshPackages]);
 
-  const addPackage = useCallback((pkg: Package) => {
+  const addPackage = useCallback(async (data: PackageInput) => {
+    const result = await createPackage(requireToken(), data);
+    const pkg = toUiPackage(result.package);
     setPackages((prev) => [...prev, pkg]);
+    return pkg;
   }, []);
 
-  const updatePackage = useCallback((id: string, updates: Partial<Package>) => {
-    setPackages((prev) =>
-      prev.map((pkg) => (pkg.id === id ? { ...pkg, ...updates } : pkg)),
-    );
+  const updatePackage = useCallback(async (id: string, data: PackageInput) => {
+    const result = await updatePackageApi(requireToken(), id, data);
+    const pkg = toUiPackage(result.package);
+    setPackages((prev) => prev.map((item) => (item.id === id ? pkg : item)));
+    return pkg;
   }, []);
 
-  const deletePackage = useCallback((id: string) => {
+  const deletePackage = useCallback(async (id: string) => {
+    await deletePackageApi(requireToken(), id);
     setPackages((prev) => prev.filter((pkg) => pkg.id !== id));
   }, []);
 
@@ -193,7 +139,7 @@ export function PackageProvider({ children }: { children: ReactNode }) {
 
   return (
     <PackageContext.Provider
-      value={{ packages, addPackage, updatePackage, deletePackage, getPackageById }}
+      value={{ packages, loading, error, refreshPackages, addPackage, updatePackage, deletePackage, getPackageById }}
     >
       {children}
     </PackageContext.Provider>
@@ -209,6 +155,6 @@ export function usePackages(): Package[] {
 export function usePackageMutations() {
   const ctx = useContext(PackageContext);
   if (!ctx) throw new Error('usePackageMutations must be used inside <PackageProvider>');
-  const { addPackage, updatePackage, deletePackage, getPackageById } = ctx;
-  return { addPackage, updatePackage, deletePackage, getPackageById };
+  const { addPackage, updatePackage, deletePackage, getPackageById, refreshPackages, loading, error } = ctx;
+  return { addPackage, updatePackage, deletePackage, getPackageById, refreshPackages, loading, error };
 }

@@ -6,15 +6,8 @@ import 'react-resizable/css/styles.css';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { PageHeader } from '../layout/PageHeader';
-import {
-  auditFilterTabs,
-  auditLogEntries as FALLBACK_ENTRIES,
-  auditLogSummary as FALLBACK_SUMMARY,
-  type AuditFilterId,
-  type AuditLogEntry,
-  type AuditLogSeverity,
-} from '../../data/auditLog';
-import { getAuditLogs } from '../../../api/superAdmin';
+import { type AuditLogEntry, type AuditLogSeverity } from '../../data/auditLog';
+import { getAuditLogs, getAuditSummary, type AuditSummary } from '../../../api/superAdmin';
 import { getSuperAdminToken } from '../../../auth/superAdminAuth';
 import '../layout/layout.css';
 import '../dashboard/dashboard.css';
@@ -35,6 +28,26 @@ function mapSeverity(action: string): AuditLogSeverity {
   return 'info';
 }
 
+const ACTION_LABEL: Record<string, string> = { CREATE: 'إنشاء', UPDATE: 'تعديل', DELETE: 'حذف' };
+const TABLE_LABEL: Record<string, string> = {
+  org_accounts: 'حساب جهة',
+  client_accounts: 'حساب عميل',
+  org_users: 'مستخدم جهة',
+  client_users: 'مستخدم عميل',
+  jodayn_users: 'مستخدم جودين',
+  packages: 'باقة',
+  credentials: 'بيانات الدخول',
+};
+const ACTOR_LABEL: Record<string, string> = {
+  SUPER_ADMIN: 'سوبر أدمن',
+  JODAYN: 'جودين',
+  ORG: 'جهة',
+  CLIENT: 'عميل',
+};
+
+type AuditFilterId = 'all' | 'CREATE' | 'UPDATE' | 'DELETE';
+type AuditRow = AuditLogEntry & { action: string; createdAt: string; search: string };
+
 function formatTime(value: unknown) {
   if (!value) return '—';
   const d = new Date(String(value));
@@ -54,8 +67,11 @@ const DEFAULT_LOG_LAYOUT: LayoutItem[] = [
 ];
 
 export function AuditLogPage() {
-  const [activeFilter, setActiveFilter] = useState<AuditFilterId | null>(null);
-  const [entries, setEntries] = useState<AuditLogEntry[]>(FALLBACK_ENTRIES);
+  const [activeFilter, setActiveFilter] = useState<AuditFilterId>('all');
+  const [entries, setEntries] = useState<AuditRow[]>([]);
+  const [summary, setSummary] = useState<AuditSummary | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const isEditMode = false;
   const [statsLayout, setStatsLayout] = useState<LayoutItem[]>(DEFAULT_STATS_LAYOUT);
   const [logLayout, setLogLayout] = useState<LayoutItem[]>(DEFAULT_LOG_LAYOUT);
@@ -64,43 +80,67 @@ export function AuditLogPage() {
     const token = getSuperAdminToken();
     if (!token) return;
     let cancelled = false;
-    void getAuditLogs(token)
-      .then((res) => {
+    Promise.all([getAuditLogs(token), getAuditSummary(token)])
+      .then(([res, sum]) => {
         if (cancelled) return;
-        const logs = res.logs ?? [];
-        if (!logs.length) return;
+        setSummary(sum);
         setEntries(
-          logs.map((log, index) => {
+          (res.logs ?? []).map((log, index) => {
             const action = String(log.action ?? 'UPDATE');
             const tableName = String(log.tableName ?? '—');
-            const recordId = String(log.recordId ?? '');
+            const performer = String(log.performerName ?? '—');
+            const actor = ACTOR_LABEL[String(log.actorType ?? '')] ?? String(log.actorType ?? '');
+            const newData = (log.newData ?? {}) as Record<string, unknown>;
+            const oldData = (log.oldData ?? {}) as Record<string, unknown>;
+            const subject = String(newData.name ?? oldData.name ?? newData.email ?? log.recordId ?? '');
+            const title = `${ACTION_LABEL[action] ?? action} ${TABLE_LABEL[tableName] ?? tableName}${subject ? ` «${subject}»` : ''}`;
+            const meta = `${tableName} · ${performer} · ${actor}`;
             return {
               id: String(log.id ?? index),
-              title: `${action} · ${tableName}`,
-              meta: `${tableName} · ${recordId} · ${String(log.actorType ?? 'SUPER_ADMIN')}`,
+              title,
+              meta,
               time: formatTime(log.createdAt),
               severity: mapSeverity(action),
+              action,
+              createdAt: String(log.createdAt ?? ''),
+              search: `${title} ${meta}`.toLowerCase(),
             };
           }),
         );
       })
-      .catch(() => undefined);
+      .catch((err) => {
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : 'تعذر تحميل سجل التدقيق');
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
   const auditLogSummary = useMemo(() => {
-    const deletions = entries.filter((e) => e.severity === 'warning').length;
+    const today = new Date().toDateString();
     return {
-      actionsToday: entries.length,
-      deletions,
-      suspiciousAttempts: FALLBACK_SUMMARY.suspiciousAttempts,
-      mostActiveEntity: FALLBACK_SUMMARY.mostActiveEntity,
+      actionsToday: entries.filter((e) => new Date(e.createdAt).toDateString() === today).length,
+      deletions: entries.filter((e) => e.action === 'DELETE').length,
+      suspiciousAttempts: summary?.failedLogins ?? 0,
+      mostActiveEntity: {
+        name: summary?.mostActive?.name ?? '—',
+        actionsCount: summary?.mostActive?.count ?? 0,
+        role: summary ? `آخر ${summary.periodDays} أيام` : '',
+      },
     };
-  }, [entries]);
+  }, [entries, summary]);
 
-  const auditLogEntries = entries;
+  const auditFilterTabs: Array<{ id: AuditFilterId; label: string; count: number }> = [
+    { id: 'all', label: 'كل الإجراءات', count: entries.length },
+    { id: 'CREATE', label: 'إنشاء', count: entries.filter((e) => e.action === 'CREATE').length },
+    { id: 'UPDATE', label: 'تعديل', count: entries.filter((e) => e.action === 'UPDATE').length },
+    { id: 'DELETE', label: 'حذف', count: entries.filter((e) => e.action === 'DELETE').length },
+  ];
+
+  const query = search.trim().toLowerCase();
+  const auditLogEntries = entries
+    .filter((e) => activeFilter === 'all' || e.action === activeFilter)
+    .filter((e) => !query || e.search.includes(query));
 
   const handleStatsLayoutChange = useCallback(
     (newLayout: Layout) => {
@@ -209,7 +249,13 @@ export function AuditLogPage() {
         <div className="tenants-toolbar-row">
           <div className="tenants-search">
             <Search size={16} strokeWidth={2.5} className="tenants-search__icon" />
-            <input type="search" placeholder="البحث" aria-label="بحث" />
+            <input
+              type="search"
+              placeholder="البحث"
+              aria-label="بحث"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
           </div>
           <div className="tenants-filter-tabs">
             {auditFilterTabs.map((tab) => (
@@ -253,6 +299,10 @@ export function AuditLogPage() {
                     <h2 className="audit-log-card__title">سجل الإجراءات</h2>
                   </div>
                   <div className="audit-log-list">
+                    {loadError ? <p style={{ color: '#b91c1c', padding: 16 }}>{loadError}</p> : null}
+                    {!loadError && auditLogEntries.length === 0 ? (
+                      <p style={{ color: '#a1a1aa', padding: 16, textAlign: 'center' }}>لا توجد إجراءات مسجلة</p>
+                    ) : null}
                     {auditLogEntries.map((entry) => {
                       const Icon = severityIcon[entry.severity];
                       return (

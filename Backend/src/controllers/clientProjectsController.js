@@ -1,7 +1,13 @@
 const prisma = require('../lib/prisma')
+const { attachmentsForProject, deleteProjectFiles } = require('./projectAttachmentsController')
 const { writeAuditLog } = require('../lib/audit')
-const { notifyClientUsers } = require('../lib/notify')
-const { stripUiFields, saveClientProjectDetails } = require('../lib/projectExtras')
+const {
+  buildProjectUpdate,
+  notifyProjectDecision,
+  notifyProjectSubmitted,
+  projectFinancials,
+} = require('../lib/projectWorkflow')
+const { saveClientProjectDetails } = require('../lib/projectExtras')
 
 function isSystemManager(role) {
   return role === 'CLIENT_UPPER_MGMT' || role === 'SUPER_ADMIN'
@@ -85,6 +91,12 @@ exports.createProject = async (req, res) => {
       return res.status(400).json({
         message: 'Required fields: name, startDate, endDate, managerId',
       })
+    }
+    if (Number.isNaN(new Date(startDate).getTime()) || Number.isNaN(new Date(endDate).getTime())) {
+      return res.status(400).json({ message: 'Invalid startDate or endDate' })
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+      return res.status(400).json({ message: 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية' })
     }
     if (!clientId && userRole !== 'SUPER_ADMIN') {
       return res.status(403).json({ message: 'Client scope required' })
@@ -188,7 +200,12 @@ exports.getProjectById = async (req, res) => {
     if (!sameClientOrSuperAdmin(req, project.clientId)) {
       return res.status(403).json({ message: 'Access denied' })
     }
-    res.json({ project: await withApproverName(project) })
+    const [attachments, financials, contracts] = await Promise.all([
+      attachmentsForProject('client', id),
+      projectFinancials('CLIENT', id, project.budget),
+      prisma.clientContract.findMany({ where: { projectId: id }, orderBy: { createdAt: 'desc' } }),
+    ])
+    res.json({ project: { ...(await withApproverName(project)), attachments, financials, contracts } })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
@@ -215,29 +232,14 @@ exports.updateProject = async (req, res) => {
       }
     }
 
-    const data = stripUiFields(req.body)
-    if (data.startDate) data.startDate = new Date(data.startDate)
-    if (data.endDate) data.endDate = new Date(data.endDate)
-    delete data.clientId
-    delete data.approvalStatus
-    delete data.approvedBy
-    delete data.approvedAt
-    delete data.rejectionReason
-    delete data.id
-
-    if (data.managerId) {
-      const manager = await prisma.clientUser.findUnique({ where: { id: data.managerId } })
-      if (!manager || manager.clientId !== existing.clientId) {
-        return res.status(400).json({ message: 'Invalid manager: must belong to same client' })
-      }
-    }
+    const data = await buildProjectUpdate('CLIENT', req.body, existing, userRole)
 
     const updated = await prisma.clientProject.update({ where: { id }, data })
     await saveClientProjectDetails(id, req.body)
     await auditProject(req, 'UPDATE', id, { approvalStatus: existing.approvalStatus }, data)
     res.json({ success: true, project: updated })
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(err.status || 500).json({ message: err.message })
   }
 }
 
@@ -265,17 +267,14 @@ exports.submitProject = async (req, res) => {
         rejectionReason: null,
         approvedBy: null,
         approvedAt: null,
+        submittedById: req.user.userId,
+        submittedAt: new Date(),
       },
     })
     await auditProject(req, 'UPDATE', id, { approvalStatus: existing.approvalStatus }, { approvalStatus: 'PENDING' })
     try {
-      await notifyClientUsers({
-        clientId: existing.clientId,
-        roles: ['CLIENT_UPPER_MGMT'],
-        title: 'مشروع بانتظار الموافقة',
-        message: `تم إرسال المشروع «${existing.name}» للموافقة`,
-        type: 'APPROVAL',
-      })
+      const submitter = await prisma.clientUser.findUnique({ where: { id: req.user.userId }, select: { name: true } })
+      await notifyProjectSubmitted('CLIENT', existing, submitter?.name)
     } catch {
       // Status is already persisted.
     }
@@ -308,13 +307,7 @@ exports.approveProject = async (req, res) => {
     })
     await auditProject(req, 'UPDATE', id, { approvalStatus: existing.approvalStatus }, { approvalStatus: 'APPROVED' })
     try {
-      await notifyClientUsers({
-        clientId: existing.clientId,
-        roles: ['CLIENT_DATA_ENTRY'],
-        title: 'تم اعتماد المشروع',
-        message: `تم اعتماد المشروع «${existing.name}»`,
-        type: 'APPROVAL',
-      })
+      await notifyProjectDecision('CLIENT', existing, 'APPROVED')
     } catch {
       // Approval is already persisted.
     }
@@ -354,17 +347,45 @@ exports.rejectProject = async (req, res) => {
       rejectionReason: updated.rejectionReason,
     })
     try {
-      await notifyClientUsers({
-        clientId: existing.clientId,
-        roles: ['CLIENT_DATA_ENTRY'],
-        title: 'تم رفض المشروع',
-        message: `تم رفض المشروع «${existing.name}»: ${updated.rejectionReason}`,
-        type: 'REJECTION',
-      })
+      await notifyProjectDecision('CLIENT', existing, 'REJECTED', updated.rejectionReason)
     } catch {
       // Rejection is already persisted.
     }
     res.json({ success: true, project: updated, message: 'Project rejected' })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+/** Return for changes: back to DRAFT with the manager's notes, so Data Entry edits and resubmits. */
+exports.returnProject = async (req, res) => {
+  try {
+    const { id } = req.params
+    const reason = String(req.body?.reason || '').trim()
+    if (!reason) return res.status(400).json({ message: 'اكتب التعديلات المطلوبة' })
+    const existing = await prisma.clientProject.findUnique({ where: { id } })
+    if (!existing) return res.status(404).json({ message: 'Project not found' })
+    if (!sameClientOrSuperAdmin(req, existing.clientId)) {
+      return res.status(403).json({ message: 'Access denied' })
+    }
+    if (existing.approvalStatus !== 'PENDING') {
+      return res.status(400).json({ message: 'Only pending projects can be returned for changes' })
+    }
+
+    const updated = await prisma.clientProject.update({
+      where: { id },
+      data: { approvalStatus: 'DRAFT', rejectionReason: reason, approvedBy: req.user.userId, approvedAt: null },
+    })
+    await auditProject(req, 'UPDATE', id, { approvalStatus: existing.approvalStatus }, {
+      approvalStatus: 'DRAFT',
+      returnedForChanges: reason,
+    })
+    try {
+      await notifyProjectDecision('CLIENT', existing, 'RETURNED', reason)
+    } catch {
+      // The return is already persisted.
+    }
+    res.json({ success: true, project: updated, message: 'Project returned for changes' })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
@@ -379,6 +400,7 @@ exports.deleteProject = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
     await prisma.clientProject.delete({ where: { id } })
+    await deleteProjectFiles('client', id).catch(() => {})
     res.json({ success: true, message: 'Project deleted' })
   } catch (err) {
     res.status(500).json({ message: err.message })

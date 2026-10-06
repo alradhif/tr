@@ -51,6 +51,7 @@ router.put('/:id', ...isOrgAny, updateProject)
 router.patch('/:id/approve', ...isUpperMgmt, approveProject)
 
 router.patch('/:id/reject', ...isUpperMgmt, rejectProject)
+router.patch('/:id/return', ...isUpperMgmt, require('../controllers/orgProjectsController').returnProject)
 
 // حذف مشروع — Upper Mgmt فقط
 router.delete('/:id', ...isUpperMgmt, deleteProject)

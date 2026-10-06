@@ -21,6 +21,8 @@ function parseDate(value) {
 
 // ============ INVOICES ============
 
+const INVOICE_STATUSES = ['PENDING', 'PAID', 'OVERDUE', 'CANCELLED']
+
 exports.createInvoice = async (req, res) => {
   try {
     const {
@@ -144,7 +146,11 @@ exports.updateInvoice = async (req, res) => {
     if (issueDate !== undefined) data.issueDate = new Date(issueDate)
     if (dueDate !== undefined) data.dueDate = new Date(dueDate)
     if (nextInvoiceDate !== undefined) data.nextInvoiceDate = nextInvoiceDate ? new Date(nextInvoiceDate) : null
-    if (status !== undefined) data.status = status
+    if (status !== undefined) {
+      if (!INVOICE_STATUSES.includes(status)) return res.status(400).json({ message: 'Invalid invoice status' })
+      data.status = status
+      if (status === 'PAID' && remainingAmount === undefined) data.remainingAmount = 0
+    }
     if (orgId !== undefined) data.orgId = orgId || null
     if (clientId !== undefined) data.clientId = clientId || null
     if (remainingAmount !== undefined) data.remainingAmount = toNumber(remainingAmount)

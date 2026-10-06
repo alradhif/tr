@@ -7,6 +7,7 @@ export type AuthUser = {
   role: string
   orgId?: string
   clientId?: string
+  type?: 'SUPER_ADMIN' | 'JODAYN' | 'ORG' | 'CLIENT'
   orgName?: string | null
   clientName?: string | null
 }
@@ -14,6 +15,57 @@ export type AuthUser = {
 export type LoginResponse = {
   token: string
   user: AuthUser
+}
+
+export type LoginChallenge = {
+  otpRequired: true
+  challengeId: string
+  expiresAt: string
+  resendAfterSeconds: number
+  /** Only returned by demo / non-production servers, which have no mail delivery. */
+  demoCode?: string
+}
+
+export function startLogin(email: string, password: string) {
+  return apiRequest<LoginChallenge>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+}
+
+export function verifyLoginCode(challengeId: string, code: string) {
+  return apiRequest<LoginResponse>('/auth/login/verify', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId, code }),
+  })
+}
+
+export function resendLoginCode(challengeId: string) {
+  return apiRequest<LoginChallenge>('/auth/login/resend', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId }),
+  })
+}
+
+export type InvitePreview = {
+  name: string
+  email: string
+  role: string
+  type: 'JODAYN' | 'ORG' | 'CLIENT'
+  orgName?: string | null
+  clientName?: string | null
+  expiresAt: string
+}
+
+export function getInvite(token: string) {
+  return apiRequest<InvitePreview>(`/auth/invite/${encodeURIComponent(token)}`, { method: 'GET' })
+}
+
+export function activateAccount(token: string, password: string) {
+  return apiRequest<{ success: boolean; email: string }>('/auth/activate', {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  })
 }
 
 export function loginSuperAdmin(email: string, password: string) {

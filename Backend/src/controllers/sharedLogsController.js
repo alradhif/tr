@@ -11,12 +11,18 @@ exports.getNotifications = async (req, res) => {
     }
     if (req.query.type) where.type = req.query.type
 
-    const notifications = await prisma.notification.findMany({
-      where,
-      orderBy: { createdAt: 'desc' }
-    })
+    const [notifications, unreadCount] = await Promise.all([
+      prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: Math.min(Number(req.query.limit) || 100, 200)
+      }),
+      prisma.notification.count({
+        where: { userId: req.user.userId, actorType: req.user.type, isRead: false }
+      })
+    ])
 
-    res.json({ count: notifications.length, notifications })
+    res.json({ count: notifications.length, unreadCount, notifications })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
@@ -47,6 +53,18 @@ exports.markNotificationRead = async (req, res) => {
   }
 }
 
+exports.markAllNotificationsRead = async (req, res) => {
+  try {
+    const result = await prisma.notification.updateMany({
+      where: { userId: req.user.userId, actorType: req.user.type, isRead: false },
+      data: { isRead: true }
+    })
+    res.json({ success: true, updated: result.count })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
 // ============ AUDIT LOGS (SUPER_ADMIN) ============
 
 exports.getAuditLogs = async (req, res) => {
@@ -63,10 +81,14 @@ exports.getAuditLogs = async (req, res) => {
     if (performedBy) where.performedBy = performedBy
     if (actorType) where.actorType = actorType
 
-    const logs = await prisma.auditLog.findMany({
+    const rows = await prisma.auditLog.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Number(req.query.limit) || 500, 1000)
     })
+    const { performerNames } = require('./superAdminPlatformController')
+    const names = await performerNames(rows.map((row) => row.performedBy))
+    const logs = rows.map((row) => ({ ...row, performerName: names.get(row.performedBy) || null }))
 
     res.json({ count: logs.length, logs })
   } catch (err) {

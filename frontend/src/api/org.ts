@@ -15,7 +15,9 @@ export type OrgUser = {
   email: string
   role: string
   isActive: boolean
+  pendingActivation?: boolean
   activatedAt?: string | null
+  lastLoginAt?: string | null
   createdAt?: string | null
 }
 
@@ -233,4 +235,20 @@ export function deleteCompanyTeamMember(token: string, id: string, memberId: str
     method: 'DELETE',
     token,
   })
+}
+
+/** New one-time initial password for an invited user who has not signed in yet. */
+export function resetOrgUserCredentials(token: string, id: string) {
+  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string }>(
+    `/org/users/${id}/credentials`,
+    { method: 'POST', token },
+  )
+}
+
+/** Active members of the account, readable by any role (e.g. to choose a project manager). */
+export function getAssignableOrgUsers(token: string) {
+  return apiRequest<{ users: OrgUser[] }>(
+    '/org/users/assignable',
+    { method: 'GET', token },
+  )
 }

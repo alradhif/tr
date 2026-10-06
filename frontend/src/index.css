@@ -1003,6 +1003,8 @@ select {
 
 .app-sidebar--catalog .app-sidebar__search-icon {
   position: absolute;
+  /* Keep the icon above the search box, which sits in its own positioned wrapper. */
+  z-index: 1;
   top: 50%;
   right: 12px;
   transform: translateY(-50%);

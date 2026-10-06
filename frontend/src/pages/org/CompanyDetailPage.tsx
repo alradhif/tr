@@ -31,7 +31,8 @@ import { canCreateDraft, isUpperManagement } from '../../auth/permissions'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { SubpageHeader } from '../../components/ui'
 import { TrendKpiRow } from '../../components/senior/TrendKpiCard'
-import { averageProgress, projectStatusClass, STATUS_META } from './orgEntityUi'
+import { downloadCsv } from '../../api/me'
+import { averageProgress, nextStatusFilter, projectStatusClass, STATUS_META, type StatusClass } from './orgEntityUi'
 import '../../design/senior-companies.css'
 
 const tabs = ['المشاريع', 'التقارير', 'الموظفين'] as const
@@ -107,6 +108,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
   const [touched, setTouched] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<StatusClass | 'all'>('all')
 
   const canEdit = canCreateDraft(role)
   const canDelete = isUpperManagement(role)
@@ -148,6 +150,37 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
   }, [companyId])
 
   const progress = averageProgress(projects)
+  const visibleProjects =
+    statusFilter === 'all' ? projects : projects.filter((project) => projectStatusClass(project.status) === statusFilter)
+
+  function exportTab() {
+    if (!company) return
+    if (tab === 'المشاريع') {
+      downloadCsv(
+        `company-${company.id.slice(0, 8)}-projects.csv`,
+        [
+          ['name', 'اسم المشروع'],
+          ['progress', 'نسبة التقدم'],
+          ['status', 'الحالة'],
+        ],
+        visibleProjects.map((project) => ({
+          name: project.name,
+          progress: `${project.progressPct || 0}%`,
+          status: STATUS_META[projectStatusClass(project.status)],
+        })),
+      )
+    } else if (tab === 'الموظفين') {
+      downloadCsv(
+        `company-${company.id.slice(0, 8)}-team.csv`,
+        [
+          ['name', 'الاسم'],
+          ['role', 'الدور'],
+          ['email', 'البريد الإلكتروني'],
+        ],
+        team.map((member) => ({ name: member.name, role: member.role || '', email: member.email || '' })),
+      )
+    }
+  }
   const outputs = projects.reduce((sum, project) => sum + (project._count?.deliverables ?? 0), 0)
 
   const openEdit = () => {
@@ -309,11 +342,22 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
               </div>
 
               <div className="cd-tab-toolbar">
-                <button type="button" className="sc-btn-outline cd-tool-btn">
+                <button
+                  type="button"
+                  className="sc-btn-outline cd-tool-btn"
+                  disabled={tab !== 'المشاريع'}
+                  title="تصفية المشاريع حسب الحالة"
+                  onClick={() => setStatusFilter(nextStatusFilter(statusFilter))}
+                >
                   <ListFilter size={15} />
-                  تصفية
+                  {statusFilter === 'all' ? 'تصفية' : `تصفية: ${STATUS_META[statusFilter]}`}
                 </button>
-                <button type="button" className="sc-btn-outline cd-tool-btn">
+                <button
+                  type="button"
+                  className="sc-btn-outline cd-tool-btn"
+                  disabled={tab === 'التقارير' || (tab === 'المشاريع' ? visibleProjects.length === 0 : team.length === 0)}
+                  onClick={exportTab}
+                >
                   <Download size={15} />
                   تصدير
                 </button>
@@ -329,8 +373,12 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
                     <span />
                   </div>
                   <ul className="cd-proj-body">
-                    {projects.length === 0 ? <li className="cd-empty-tab">لا توجد مشاريع مرتبطة بهذه الشركة</li> : null}
-                    {projects.map((project) => {
+                    {visibleProjects.length === 0 ? (
+                      <li className="cd-empty-tab">
+                        {projects.length === 0 ? 'لا توجد مشاريع مرتبطة بهذه الشركة' : 'لا توجد مشاريع بهذه الحالة'}
+                      </li>
+                    ) : null}
+                    {visibleProjects.map((project) => {
                       const status = projectStatusClass(project.status)
                       return (
                         <li key={project.id} className="cd-proj-row cd-proj-row--with-trash">

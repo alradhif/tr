@@ -9,6 +9,7 @@ import { getJodaynToken } from '../../auth/jodaynAuth'
 import { Badge, ListCard, ListCardStack, StatCard, StatGrid } from '../../components/ui'
 import { EmptyState } from '../../components/EmptyState'
 import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
+import { contractStatusBadge } from './labels'
 
 type ClientAccountRow = {
   key: string
@@ -40,7 +41,7 @@ export function JodaynClientAccountsPage() {
             key: c.id,
             name: c.name,
             managerName: c.managerName ?? '—',
-            sector: c.sectorId ?? '—',
+            sector: c.sector?.name ?? '—',
             branch: c.branch ?? '—',
             contractStatus: c.contractStatus ?? '—',
           })),
@@ -72,7 +73,7 @@ export function JodaynClientAccountsPage() {
           <ListCard
             key={row.key}
             title={row.name}
-            badge={<Badge variant="neutral">{row.contractStatus}</Badge>}
+            badge={<Badge variant={contractStatusBadge(row.contractStatus).variant}>{contractStatusBadge(row.contractStatus).label}</Badge>}
             metaItems={[row.managerName, row.sector, row.branch]}
           />
         ))}

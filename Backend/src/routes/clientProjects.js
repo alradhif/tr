@@ -31,6 +31,7 @@ router.get('/:id', ...isClientAny, getProjectById)
 router.put('/:id', ...isClientAny, updateProject)
 router.patch('/:id/approve', ...isUpperMgmt, approveProject)
 router.patch('/:id/reject', ...isUpperMgmt, rejectProject)
+router.patch('/:id/return', ...isUpperMgmt, require('../controllers/clientProjectsController').returnProject)
 router.delete('/:id', ...isUpperMgmt, deleteProject)
 
 module.exports = router

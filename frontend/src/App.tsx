@@ -22,7 +22,7 @@ import { ClientAddProjectPage } from './pages/client/AddProjectPage'
 import { ClientEditProjectPage } from './pages/client/EditProjectPage'
 import { ClientProjectDetailPage } from './pages/client/ProjectDetailPage'
 import { ClientGoalsPage } from './pages/client/GoalsPage'
-import { ClientAddGoalPage } from './pages/client/AddGoalPage'
+import { ClientAddGoalPage, ClientEditGoalPage } from './pages/client/AddGoalPage'
 import { ClientGoalDetailPage } from './pages/client/GoalDetailPage'
 import { JodaynDashboardPage } from './pages/jodayn/DashboardPage'
 import { JodaynSectorsPage } from './pages/jodayn/SectorsPage'
@@ -46,6 +46,7 @@ import { SettingsPage } from './pages/shared/SettingsPage'
 import { LandingPage } from './components/landing/LandingPage'
 import { UnifiedLoginPage } from './pages/shared/UnifiedLoginPage'
 import { ResetPasswordPage } from './pages/shared/ResetPasswordPage'
+import { ActivateAccountPage } from './pages/shared/ActivateAccountPage'
 import { PostAuthLoadingPage } from './pages/shared/PostAuthLoadingPage'
 import { OtpPage } from './pages/shared/OtpPage'
 import { RtlProvider } from './rtl/RtlProvider'
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="/otp" element={<OtpPage />} />
           <Route path="/loading" element={<PostAuthLoadingPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/activate" element={<ActivateAccountPage />} />
 
           {/* Common typo / shortcut */}
           <Route path="/superadmin" element={<Navigate to="/login" replace />} />
@@ -134,6 +136,7 @@ export default function App() {
             <Route path="dashboard" element={<ClientDashboardPage />} />
             <Route path="goals" element={<ClientGoalsPage />} />
             <Route path="goals/new" element={<ClientAddGoalPage />} />
+            <Route path="goals/:goalId/edit" element={<ClientEditGoalPage />} />
             <Route path="goals/:goalId" element={<ClientGoalDetailPage />} />
             <Route path="projects" element={<ClientProjectsPage />} />
             <Route path="projects/new" element={<ClientAddProjectPage />} />

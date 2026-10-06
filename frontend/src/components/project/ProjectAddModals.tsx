@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react'
 import { FilePlus2, FileSignature, FileText, Layers, Upload, UserPlus } from 'lucide-react'
 import { ApiError } from '../../api/client'
-import { createClientNested } from '../../api/clientPortal'
+import { createClientNested, uploadClientProjectAttachments } from '../../api/clientPortal'
 import {
   createProjectChangeRequest,
   createProjectDeliverable,
   createProjectPhase,
   createProjectRisk,
   createProjectTeamMember,
+  uploadProjectAttachments,
 } from '../../api/orgProjects'
 import { getClientToken } from '../../auth/clientAuth'
 import { getOrgToken } from '../../auth/orgAuth'
@@ -50,6 +51,7 @@ export function AddDeliverableModal({ projectId, portal, phases = [], onClose, o
   const [outputType, setOutputType] = useState('')
   const [description, setDescription] = useState('')
   const [riskOwner, setRiskOwner] = useState('')
+  const [price, setPrice] = useState('')
   const [email, setEmail] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [error, setError] = useState('')
@@ -61,10 +63,22 @@ export function AddDeliverableModal({ projectId, portal, phases = [], onClose, o
       setError('الرجاء إدخال اسم المخرج وبريد صحيح')
       return
     }
+    if (price && (!Number.isFinite(Number(price)) || Number(price) < 0)) {
+      setError('قيمة المخرج يجب أن تكون رقماً موجباً')
+      return
+    }
     setSubmitting(true)
     setError('')
     try {
       const stage = phases.find((item) => item.id === stageId)
+      const details = [
+        stage ? `المرحلة: ${stage.title}` : '',
+        outputType,
+        description,
+        riskOwner ? `مسؤول المخاطر: ${riskOwner}` : '',
+      ]
+        .filter(Boolean)
+        .join(' — ')
       await postNested(
         portal,
         projectId,
@@ -72,18 +86,29 @@ export function AddDeliverableModal({ projectId, portal, phases = [], onClose, o
         (token) =>
           createProjectDeliverable(token, projectId, {
             name: name.trim(),
-            description: [outputType, description].filter(Boolean).join(' — ') || undefined,
+            description: details || undefined,
             email: email.trim() || undefined,
+            price: price ? Number(price) : undefined,
             status: 'ACTIVE',
-            phase: stage?.title,
           }),
         {
           name: name.trim(),
-          description: [outputType, description].filter(Boolean).join(' — ') || undefined,
+          description: details || undefined,
           email: email.trim() || undefined,
+          price: price ? Number(price) : undefined,
           status: 'ACTIVE',
         },
       )
+      // Files go through the project attachment pipeline so they are stored and downloadable.
+      if (files.length > 0) {
+        if (portal === 'client') {
+          const token = getClientToken()
+          if (token) await uploadClientProjectAttachments(token, projectId, files)
+        } else {
+          const token = getOrgToken()
+          if (token) await uploadProjectAttachments(token, projectId, files)
+        }
+      }
       onSaved()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'تعذر إضافة المخرج')
@@ -129,6 +154,10 @@ export function AddDeliverableModal({ projectId, portal, phases = [], onClose, o
         <label>
           <span>مسؤول المخاطر</span>
           <input value={riskOwner} onChange={(event) => setRiskOwner(event.target.value)} />
+        </label>
+        <label>
+          <span>قيمة المخرج (ر.س)</span>
+          <input inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} />
         </label>
         <label>
           <span>البريد الإلكتروني</span>

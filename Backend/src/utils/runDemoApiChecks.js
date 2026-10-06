@@ -1,6 +1,7 @@
 const path = require('path')
 require('dotenv').config({ path: path.join(__dirname, '../../.env') })
 const { getDatabaseName } = require('../lib/demoSafety')
+const jwt = require('jsonwebtoken')
 const prisma = require('../lib/prisma')
 
 const BASE = 'http://localhost:5001/api'
@@ -21,6 +22,15 @@ async function request(path, options = {}, token) {
   const response = await fetch(`${BASE}${path}`, { ...options, headers })
   const data = await response.json().catch(() => ({}))
   return { status: response.status, data }
+}
+
+async function passwordLogin(email, password) {
+  const started = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+  if (started.status !== 200 || !started.data.challengeId) return started
+  return request('/auth/login/verify', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId: started.data.challengeId, code: started.data.demoCode }),
+  })
 }
 
 async function main() {
@@ -48,11 +58,36 @@ async function main() {
     sessions[role] = result.data
   }
 
-  const normal = await request('/auth/login', {
+  const started = await request('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email: 'seed.orguser.entry@acme.com', password: 'Demo1234' }),
   })
-  expect(normal.status === 200 && normal.data.user.role === 'ORG_DATA_ENTRY', 'normal login org data entry')
+  expect(started.status === 200 && started.data.otpRequired === true && !started.data.token, 'password step issues no session, only a code challenge')
+  const wrongCode = await request('/auth/login/verify', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId: started.data.challengeId, code: started.data.demoCode === '000000' ? '111111' : '000000' }),
+  })
+  expect(wrongCode.status === 400 && !wrongCode.data.token, 'wrong login code rejected')
+  const normal = await request('/auth/login/verify', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId: started.data.challengeId, code: started.data.demoCode }),
+  })
+  expect(normal.status === 200 && Boolean(normal.data.token) && normal.data.user.role === 'ORG_DATA_ENTRY', 'normal login org data entry')
+  const replayed = await request('/auth/login/verify', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId: started.data.challengeId, code: started.data.demoCode }),
+  })
+  expect(replayed.status === 400 && !replayed.data.token, 'login code cannot be reused')
+
+  const legacyLogin = await request('/auth/org/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'seed.orguser.entry@acme.com', password: 'Demo1234' }),
+  })
+  expect(legacyLogin.status === 200 && !legacyLogin.data.token && legacyLogin.data.otpRequired === true, 'per-portal login also requires the code step')
+
+  const staleToken = jwt.sign({ userId: '00000000-0000-0000-0000-000000000000', role: 'ORG_UPPER_MGMT', orgId: sessions.ORG_UPPER_MGMT.user.orgId, type: 'ORG' }, process.env.JWT_SECRET, { expiresIn: '1h' })
+  const stale = await request('/org/dashboard', {}, staleToken)
+  expect(stale.status === 401, 'session for a user removed by the daily reset returns 401')
 
   const draftBody = {
     name: 'مشروع اعتماد تجريبي',
@@ -136,18 +171,25 @@ async function main() {
   const cross = await request('/org/projects', {}, sessions.CLIENT_UPPER_MGMT.token)
   expect(cross.status === 403, 'cross-tenant org access rejected')
 
+  // Invitations: the inviter sees the initial credentials once; the account starts as
+  // "غير نشط" (pendingActivation) and becomes "نشط" on its first successful login.
   const inviteEmail = `invite.${Date.now()}@acme.com`
   const invited = await request('/org/users', {
     method: 'POST',
     body: JSON.stringify({ name: 'مستخدم مدعو', email: inviteEmail, role: 'ORG_DATA_ENTRY' }),
   }, sessions.ORG_UPPER_MGMT.token)
-  expect(invited.status === 200 && Boolean(invited.data.temporaryPassword), 'upper management invites user')
+  const initialPassword = invited.data.temporaryPassword
+  expect(invited.status === 200 && typeof initialPassword === 'string' && initialPassword.length >= 12 && invited.data.user?.pendingActivation === true, 'upper management invites user and receives initial credentials once')
   const invitedRow = await prisma.orgUser.findUnique({ where: { email: inviteEmail } })
-  expect(Boolean(invitedRow) && invitedRow.orgId === sessions.ORG_UPPER_MGMT.user.orgId && invitedRow.role === 'ORG_DATA_ENTRY' && String(invitedRow.password).startsWith('$2') && invitedRow.password !== invited.data.temporaryPassword, 'invited user stored with bcrypt hash and org link')
+  expect(Boolean(invitedRow) && invitedRow.orgId === sessions.ORG_UPPER_MGMT.user.orgId && invitedRow.role === 'ORG_DATA_ENTRY' && invitedRow.pendingActivation === true && invitedRow.activatedAt === null, 'invited user stored as pending (غير نشط) with org link')
+  expect(String(invitedRow?.password).startsWith('$2') && invitedRow?.password !== initialPassword, 'initial password stored only as a bcrypt hash')
+  const listedPending = await request('/org/users', {}, sessions.ORG_UPPER_MGMT.token)
+  const listedRow = listedPending.data.users?.find((user) => user.email === inviteEmail)
+  expect(Boolean(listedRow) && listedRow.pendingActivation === true && listedRow.temporaryPassword === undefined && listedRow.password === undefined, 'users list shows pending status and never the password')
 
   const duplicate = await request('/org/users', {
     method: 'POST',
-    body: JSON.stringify({ name: 'مكرر', email: inviteEmail, role: 'ORG_DATA_ENTRY' }),
+    body: JSON.stringify({ name: 'مكرر', email: inviteEmail.toUpperCase(), role: 'ORG_DATA_ENTRY' }),
   }, sessions.ORG_UPPER_MGMT.token)
   expect(duplicate.status === 400, 'duplicate email rejected')
 
@@ -157,11 +199,32 @@ async function main() {
   }, sessions.ORG_DATA_ENTRY.token)
   expect(deInvite.status === 403, 'data entry cannot invite')
 
-  const invitedLogin = await request('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email: inviteEmail, password: invited.data.temporaryPassword }),
-  })
-  expect(invitedLogin.status === 200 && invitedLogin.data.user.role === 'ORG_DATA_ENTRY', 'invited user can log in')
+  const pendingDemo = await request('/auth/demo/login', { method: 'POST', body: JSON.stringify({ type: 'ORG', userId: invited.data.user?.id }) })
+  expect((pendingDemo.status === 400 || pendingDemo.status === 404) && !pendingDemo.data.token, 'demo login cannot target an arbitrary or pending user')
+  const demoList = await request('/auth/demo/accounts')
+  expect(demoList.status === 200 && !demoList.data.accounts.some((account) => account.email === inviteEmail), 'pending invitee not listed as a demo account')
+
+  const reissued = await request(`/org/users/${invited.data.user?.id}/credentials`, { method: 'POST' }, sessions.ORG_UPPER_MGMT.token)
+  const activationPassword = reissued.data.temporaryPassword
+  expect(reissued.status === 200 && typeof activationPassword === 'string' && activationPassword !== initialPassword, 'upper management can issue new initial credentials before first login')
+  const oldPassword = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email: inviteEmail, password: initialPassword }) })
+  expect(oldPassword.status === 400 && !oldPassword.data.challengeId, 'reissuing invalidates the previous initial password')
+  const deReissue = await request(`/org/users/${invited.data.user?.id}/credentials`, { method: 'POST' }, sessions.ORG_DATA_ENTRY.token)
+  expect(deReissue.status === 403, 'data entry cannot reissue credentials')
+  const crossReissue = await request(`/client/users/${invited.data.user?.id}/credentials`, { method: 'POST' }, sessions.CLIENT_UPPER_MGMT.token)
+  expect(crossReissue.status === 404 || crossReissue.status === 403, 'other tenant cannot reissue credentials')
+
+  const invitedLogin = await passwordLogin(inviteEmail, activationPassword)
+  expect(invitedLogin.status === 200 && invitedLogin.data.user?.role === 'ORG_DATA_ENTRY' && invitedLogin.data.user?.orgId === sessions.ORG_UPPER_MGMT.user.orgId, 'invited user signs in with initial credentials and code')
+  const activatedRow = await prisma.orgUser.findUnique({ where: { email: inviteEmail } })
+  expect(activatedRow?.pendingActivation === false && Boolean(activatedRow?.activatedAt) && Boolean(activatedRow?.lastLoginAt), 'first successful login activates the account (نشط)')
+  const firstLoginLog = await prisma.activityLog.findFirst({ where: { userId: activatedRow?.id, action: 'FIRST_LOGIN' } })
+  expect(Boolean(firstLoginLog), 'first login recorded in the activity log')
+  const reissueAfter = await request(`/org/users/${invited.data.user?.id}/credentials`, { method: 'POST' }, sessions.ORG_UPPER_MGMT.token)
+  expect(reissueAfter.status === 400, 'cannot reissue initial credentials for an active account')
+  const invitedDashboard = await request('/org/dashboard', {}, invitedLogin.data.token)
+  expect(invitedDashboard.status === 200, 'activated user session loads org data')
+  const invitedPassword = activationPassword
 
   const selfToggle = await request(`/org/users/${sessions.ORG_UPPER_MGMT.user.id}/toggle`, { method: 'PATCH' }, sessions.ORG_UPPER_MGMT.token)
   expect(selfToggle.status === 400, 'cannot deactivate own account')
@@ -171,17 +234,34 @@ async function main() {
 
   const inactiveLogin = await request('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email: inviteEmail, password: invited.data.temporaryPassword }),
+    body: JSON.stringify({ email: inviteEmail, password: invitedPassword }),
   })
   expect(inactiveLogin.status === 400 && inactiveLogin.data.message === 'هذا الحساب غير نشط', 'inactive user cannot log in')
+  const inactiveSession = await request('/org/dashboard', {}, invitedLogin.data.token)
+  expect(inactiveSession.status === 401, 'deactivated user session is rejected with 401')
 
   const reactivate = await request(`/org/users/${invited.data.user.id}/toggle`, { method: 'PATCH' }, sessions.ORG_UPPER_MGMT.token)
   expect(reactivate.status === 200 && reactivate.data.isActive === true, 'upper management can reactivate invited user')
-  const reactivatedLogin = await request('/auth/login', {
+  const reactivatedLogin = await passwordLogin(inviteEmail, invitedPassword)
+  expect(reactivatedLogin.status === 200 && reactivatedLogin.data.user?.role === 'ORG_DATA_ENTRY', 'reactivated user can log in')
+
+  const pendingEmail = `pending.${Date.now()}@acme-client.com`
+  const pendingInvite = await request('/client/users', {
     method: 'POST',
-    body: JSON.stringify({ email: inviteEmail, password: invited.data.temporaryPassword }),
+    body: JSON.stringify({ name: 'عميل مدعو', email: pendingEmail, accessLevel: 'UPPER' }),
+  }, sessions.CLIENT_UPPER_MGMT.token)
+  expect(pendingInvite.status === 200 && Boolean(pendingInvite.data.temporaryPassword) && pendingInvite.data.user?.role === 'CLIENT_UPPER_MGMT', 'client upper management invites user')
+  const forgedPending = await request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: pendingEmail, password: 'Guess#12345' }),
   })
-  expect(reactivatedLogin.status === 200 && reactivatedLogin.data.user.role === 'ORG_DATA_ENTRY', 'reactivated user can log in')
+  expect(forgedPending.status === 400 && !forgedPending.data.challengeId, 'pending invitee cannot sign in with a wrong password')
+
+  const jodaynInvite = await request('/jodayn/users', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'موظف جودين', email: `j.invite.${Date.now()}@jodayn.com`, accessLevel: 'DATA_ENTRY' }),
+  }, sessions.JODAYN_UPPER_MGMT.token)
+  expect(jodaynInvite.status === 200 && Boolean(jodaynInvite.data.temporaryPassword) && jodaynInvite.data.user?.pendingActivation === true, 'jodayn upper management invites user')
 
   const users = await request('/org/users', {}, sessions.ORG_UPPER_MGMT.token)
   expect(users.status === 200 && users.data.users.some((user) => user.email === inviteEmail), 'invited user appears in users list')

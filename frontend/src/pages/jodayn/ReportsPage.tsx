@@ -7,11 +7,13 @@ import { navigationAssets } from '@/assets'
 import { AssetIcon } from '../../components/ui/AssetIcon'
 import { ApiError } from '../../api/client'
 import { getReports } from '../../api/jodayn'
-import { getJodaynToken } from '../../auth/jodaynAuth'
+import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
+import { deleteJodaynRecord } from '../../api/jodayn'
 import { CatalogButton, ListCard, ListCardStack, StatCard, StatGrid } from '../../components/ui'
 import { EmptyState } from '../../components/EmptyState'
 import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
 import { PptGeneratorFrame } from '../../features/portal'
+import { reportTypeLabel } from './labels'
 
 type ReportRow = {
   key: string
@@ -30,6 +32,7 @@ export function JodaynReportsPage() {
   const [view, setView] = useState<ViewMode>('list')
   const [rows, setRows] = useState<ReportRow[]>([])
   const [loading, setLoading] = useState(true)
+  const isUpper = getJodaynRole() === 'upper'
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -45,7 +48,7 @@ export function JodaynReportsPage() {
         setRows(
           reports.map((r) => ({
             key: r.id,
-            type: r.type,
+            type: reportTypeLabel(r.type, t),
             period: r.period ?? '—',
             totalContractsValue: Number(r.totalContractsValue ?? 0),
             netProfit: Number(r.netProfit ?? 0),
@@ -125,6 +128,27 @@ export function JodaynReportsPage() {
                   <>
                     <span className="list-card__tag">{`${t('netProfit')}: ${row.netProfit}`}</span>
                     <span className="list-card__tag list-card__tag--muted">{`${t('netCashFlow')}: ${row.netCashFlow}`}</span>
+                {isUpper ? (
+                  <span className="row-actions">
+                    <button
+                      type="button"
+                      className="is-danger"
+                      onClick={async () => {
+                        const token = getJodaynToken()
+                        if (!token || !window.confirm(t('delete') + '؟')) return
+                        try {
+                          await deleteJodaynRecord(token, 'reports', row.key)
+                          setRows((current) => current.filter((item) => item.key !== row.key))
+                          message.success(t('deletedSuccessfully'))
+                        } catch (err) {
+                          message.error(err instanceof ApiError ? err.message : t('loadError'))
+                        }
+                      }}
+                    >
+                      {t('delete')}
+                    </button>
+                  </span>
+                ) : null}
                   </>
                 }
               />

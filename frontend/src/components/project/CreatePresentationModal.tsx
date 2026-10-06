@@ -15,10 +15,12 @@ export function CreatePresentationModal({ open, onClose, data }: CreatePresentat
   const { t } = useTranslation()
   const [showGenerator, setShowGenerator] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [options, setOptions] = useState<{ title?: string; mode?: 'auto' | 'manual'; notes?: string }>({})
 
   const close = () => {
     setShowGenerator(false)
     setStarting(false)
+    setOptions({})
     onClose()
   }
 
@@ -33,7 +35,10 @@ export function CreatePresentationModal({ open, onClose, data }: CreatePresentat
       destroyOnHidden
     >
       {showGenerator ? (
-        <PptGeneratorFrame title={t('generatePresentation')} data={data} />
+        <PptGeneratorFrame
+          title={t('generatePresentation')}
+          data={data ? { ...data, deckTitle: options.title, mode: options.mode, notes: options.notes } : data}
+        />
       ) : (
         <>
           <div className="tp-modal__header">
@@ -47,9 +52,10 @@ export function CreatePresentationModal({ open, onClose, data }: CreatePresentat
             layout="vertical"
             requiredMark={false}
             className="tp-modal__form"
-            onFinish={() => {
+            onFinish={(values: { title?: string; mode?: 'auto' | 'manual'; notes?: string }) => {
               if (starting) return
               setStarting(true)
+              setOptions({ title: values.title?.trim(), mode: values.mode, notes: values.notes?.trim() })
               setShowGenerator(true)
             }}
             initialValues={{ mode: 'auto', title: data?.project?.name }}

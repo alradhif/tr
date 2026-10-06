@@ -73,6 +73,7 @@ export function PortalDashboard({
     widgetIds,
     widgetIds,
     portal === 'jodayn' ? JODAYN_LAYOUT : ADMIN_PORTAL_LAYOUT,
+    portal,
   )
 
   const [live, setLive] = useState<LiveDashboardData | null>(null)
