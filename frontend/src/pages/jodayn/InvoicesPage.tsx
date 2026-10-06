@@ -113,12 +113,14 @@ export function JodaynInvoicesPage() {
 
   return (
     <OrgCatalogShell title={t('invoices')}>
-      <CatalogButton icon={<Plus size={16} strokeWidth={2.5} />} onClick={() => navigate('/jodayn/invoices/new')}>
-        {t('addInvoice')}
-      </CatalogButton>
-      <CatalogButton variant="outline" onClick={exportCsv} disabled={visible.length === 0}>
-        تصدير CSV
-      </CatalogButton>
+      <div className="detail-actions" style={{ justifyContent: 'flex-end' }}>
+        <CatalogButton variant="outline" onClick={exportCsv} disabled={visible.length === 0}>
+          تصدير CSV
+        </CatalogButton>
+        <CatalogButton icon={<Plus size={16} strokeWidth={2.5} />} onClick={() => navigate('/jodayn/invoices/new')}>
+          {t('addInvoice')}
+        </CatalogButton>
+      </div>
       <StatGrid>
         <StatCard
           label={t('totalInvoices')}
