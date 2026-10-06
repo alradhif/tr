@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
 import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { dashboardDataAssets } from '@/assets'
-import { AssetIcon } from '../../components/ui/AssetIcon'
 import { ApiError } from '../../api/client'
-import { getForecasts } from '../../api/jodayn'
+import { deleteJodaynRecord, getForecasts } from '../../api/jodayn'
 import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
-import { deleteJodaynRecord } from '../../api/jodayn'
-import { CatalogButton, ListCard, ListCardStack, StatCard, StatGrid } from '../../components/ui'
-import { EmptyState } from '../../components/EmptyState'
-import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
+import {
+  FinanceAmountStats,
+  FinanceGenerator,
+  FinanceHead,
+  FinancePage,
+  FinanceTable,
+  FinanceTabs,
+  formatAmount,
+  type FinanceView,
+} from '../../features/jodayn-finance/FinanceParts'
 
 type ForecastRow = {
   key: string
@@ -26,6 +29,7 @@ type ForecastRow = {
 export function JodaynForecastsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<ForecastRow[]>([])
   const [loading, setLoading] = useState(true)
   const isUpper = getJodaynRole() === 'upper'
@@ -49,13 +53,11 @@ export function JodaynForecastsPage() {
             optimisticValue: Number(f.optimisticValue ?? 0),
             pessimisticValue: Number(f.pessimisticValue ?? 0),
             conservativeValue: Number(f.conservativeValue ?? 0),
-            branchFilter: f.branchFilter ?? '—',
+            branchFilter: f.branchFilter || 'كل الفروع',
           })),
         )
       } catch (err) {
-        if (!cancelled) {
-          message.error(err instanceof ApiError ? err.message : t('loadError'))
-        }
+        if (!cancelled) message.error(err instanceof ApiError ? err.message : t('loadError'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -65,58 +67,102 @@ export function JodaynForecastsPage() {
     }
   }, [t])
 
+  const remove = async (row: ForecastRow) => {
+    const token = getJodaynToken()
+    if (!token || !window.confirm(`حذف توقع ${row.quarter} ${row.year}؟`)) return
+    try {
+      await deleteJodaynRecord(token, 'forecasts', row.key)
+      setRows((current) => current.filter((item) => item.key !== row.key))
+      message.success(t('deletedSuccessfully'))
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : t('loadError'))
+    }
+  }
+
+  const sum = (pick: (row: ForecastRow) => number) => rows.reduce((total, row) => total + pick(row), 0)
+  const optimistic = sum((r) => r.optimisticValue)
+  const conservative = sum((r) => r.conservativeValue)
+  const pessimistic = sum((r) => r.pessimisticValue)
+
   return (
-    <OrgCatalogShell title={t('revenueForecasts')}>
-      <CatalogButton icon={<Plus size={16} strokeWidth={2.5} />} onClick={() => navigate('/jodayn/forecasts/new')}>
-        {t('addForecast')}
-      </CatalogButton>
-      <StatGrid>
-        <StatCard
-          label={t('revenueForecasts')}
-          value={rows.length}
-          icon={<AssetIcon src={dashboardDataAssets.active} size={16} />}
+    <FinancePage title={t('revenueForecasts')}>
+      <FinanceHead
+        title={t('revenueForecasts')}
+        subtitle="سيناريوهات الإيرادات المتوقعة لكل ربع"
+        createLabel={t('addForecast')}
+        onCreate={() => navigate('/jodayn/forecasts/new')}
+      />
+      <FinanceTabs active={view} onChange={setView} />
+
+      {view === 'generator' ? (
+        <FinanceGenerator
+          title="مولّد العروض التقديمية - توقعات الإيرادات"
+          data={
+            rows[0]
+              ? {
+                  project: {
+                    name: 'توقعات الإيرادات',
+                    code: `${rows[0].quarter}-${rows[0].year}`,
+                    department: 'توقعات الإيرادات — جودين',
+                    projectManager: '—',
+                    sponsor: '—',
+                    statusLabel: `${rows.length} توقع`,
+                    budget: conservative,
+                    budgetCurrency: 'SAR',
+                  },
+                  outputs: rows.slice(0, 4).map((r) => `${r.quarter} ${r.year} — متحفظ ${formatAmount(r.conservativeValue)}`),
+                  scenarios: [
+                    `السيناريو المتفائل: ${formatAmount(optimistic)} ريال`,
+                    `السيناريو المتحفظ: ${formatAmount(conservative)} ريال`,
+                    `السيناريو المتشائم: ${formatAmount(pessimistic)} ريال`,
+                  ],
+                  sourceLabel: `بيانات حية — ${rows.length} توقع`,
+                }
+              : null
+          }
         />
-      </StatGrid>
-      <ListCardStack>
-        {rows.map((row) => (
-          <ListCard
-            key={row.key}
-            title={`${row.quarter} ${row.year}`}
-            metaItems={[row.branchFilter, `${t('optimisticValue')}: ${row.optimisticValue}`]}
-            tags={
-              <>
-                <span className="list-card__tag">{`${t('conservativeValue')}: ${row.conservativeValue}`}</span>
-                <span className="list-card__tag list-card__tag--muted">
-                  {`${t('pessimisticValue')}: ${row.pessimisticValue}`}
-                </span>
-                {isUpper ? (
-                  <span className="row-actions">
-                    <button
-                      type="button"
-                      className="is-danger"
-                      onClick={async () => {
-                        const token = getJodaynToken()
-                        if (!token || !window.confirm(t('delete') + '؟')) return
-                        try {
-                          await deleteJodaynRecord(token, 'forecasts', row.key)
-                          setRows((current) => current.filter((item) => item.key !== row.key))
-                          message.success(t('deletedSuccessfully'))
-                        } catch (err) {
-                          message.error(err instanceof ApiError ? err.message : t('loadError'))
-                        }
-                      }}
-                    >
-                      {t('delete')}
-                    </button>
-                  </span>
-                ) : null}
-              </>
-            }
+      ) : (
+        <>
+          <FinanceAmountStats
+            cards={[
+              { label: 'إجمالي الإيرادات المتوقعة (متحفظ)', value: formatAmount(conservative), unit: 'ريال' },
+              { label: 'السيناريو المتفائل', value: formatAmount(optimistic), unit: 'ريال' },
+              { label: 'السيناريو المتشائم', value: formatAmount(pessimistic), unit: 'ريال' },
+            ]}
           />
-        ))}
-        {loading ? <div className="catalog-loading">{t('loadingList')}</div> : null}
-        {rows.length === 0 && !loading ? <EmptyState /> : null}
-      </ListCardStack>
-    </OrgCatalogShell>
+          <FinanceTable
+            headers={[
+              'الفترة الزمنية',
+              'الفرع',
+              t('optimisticValue'),
+              t('conservativeValue'),
+              t('pessimisticValue'),
+              ...(isUpper ? [''] : []),
+            ]}
+            loading={loading}
+            empty={rows.length === 0}
+          >
+            {rows.map((row) => (
+              <tr key={row.key}>
+                <td>{`${row.quarter} ${row.year}`}</td>
+                <td className="finance-muted">{row.branchFilter}</td>
+                <td>{formatAmount(row.optimisticValue)}</td>
+                <td>{formatAmount(row.conservativeValue)}</td>
+                <td>{formatAmount(row.pessimisticValue)}</td>
+                {isUpper ? (
+                  <td>
+                    <span className="finance-actions">
+                      <button type="button" className="is-danger" onClick={() => void remove(row)}>
+                        {t('delete')}
+                      </button>
+                    </span>
+                  </td>
+                ) : null}
+              </tr>
+            ))}
+          </FinanceTable>
+        </>
+      )}
+    </FinancePage>
   )
 }

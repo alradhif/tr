@@ -89,7 +89,7 @@ export default function App() {
           {/* Jodayn */}
           <Route path="/jodayn/login" element={<Navigate to="/login" replace />} />
           <Route path="/jodayn" element={<JodaynLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route index element={<Navigate to="reports" replace />} />
             <Route path="dashboard" element={<JodaynDashboardPage />} />
             <Route path="sectors" element={<JodaynSectorsPage />} />
             <Route path="sectors/new" element={<JodaynAddSectorPage />} />

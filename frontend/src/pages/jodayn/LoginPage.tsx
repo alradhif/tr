@@ -42,7 +42,7 @@ export function JodaynLoginPage() {
         return
       }
       setJodaynSession(mapped, token, user)
-      beginPostAuthLoading(navigate, '/jodayn/dashboard')
+      beginPostAuthLoading(navigate, '/jodayn/reports')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('loginFailed'))
     } finally {

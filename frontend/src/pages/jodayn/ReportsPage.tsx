@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
 import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { navigationAssets } from '@/assets'
-import { AssetIcon } from '../../components/ui/AssetIcon'
 import { ApiError } from '../../api/client'
-import { getReports } from '../../api/jodayn'
+import { deleteJodaynRecord, getReports } from '../../api/jodayn'
 import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
-import { deleteJodaynRecord } from '../../api/jodayn'
-import { CatalogButton, ListCard, ListCardStack, StatCard, StatGrid } from '../../components/ui'
-import { EmptyState } from '../../components/EmptyState'
-import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
-import { PptGeneratorFrame } from '../../features/portal'
+import {
+  FinanceGenerator,
+  FinanceHead,
+  FinancePage,
+  FinanceStats,
+  FinanceTable,
+  FinanceTabs,
+  formatAmount,
+  type FinanceView,
+} from '../../features/jodayn-finance/FinanceParts'
+import icon1 from '../../features/jodayn-finance/assets/icon1.svg'
+import icon2 from '../../features/jodayn-finance/assets/icon2.svg'
+import icon3 from '../../features/jodayn-finance/assets/icon3.svg'
 import { reportTypeLabel } from './labels'
 
 type ReportRow = {
@@ -24,12 +29,10 @@ type ReportRow = {
   netCashFlow: number
 }
 
-type ViewMode = 'list' | 'ppt'
-
 export function JodaynReportsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [view, setView] = useState<ViewMode>('list')
+  const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<ReportRow[]>([])
   const [loading, setLoading] = useState(true)
   const isUpper = getJodaynRole() === 'upper'
@@ -56,9 +59,7 @@ export function JodaynReportsPage() {
           })),
         )
       } catch (err) {
-        if (!cancelled) {
-          message.error(err instanceof ApiError ? err.message : t('loadError'))
-        }
+        if (!cancelled) message.error(err instanceof ApiError ? err.message : t('loadError'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -68,96 +69,88 @@ export function JodaynReportsPage() {
     }
   }, [t])
 
+  const remove = async (row: ReportRow) => {
+    const token = getJodaynToken()
+    if (!token || !window.confirm(`حذف ${row.type}؟`)) return
+    try {
+      await deleteJodaynRecord(token, 'reports', row.key)
+      setRows((current) => current.filter((item) => item.key !== row.key))
+      message.success(t('deletedSuccessfully'))
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : t('loadError'))
+    }
+  }
+
+  const totalContracts = rows.reduce((sum, row) => sum + row.totalContractsValue, 0)
+  const totalProfit = rows.reduce((sum, row) => sum + row.netProfit, 0)
+
   return (
-    <OrgCatalogShell title={t('financialReports')}>
-      {view === 'list' ? (
-        <CatalogButton icon={<Plus size={16} strokeWidth={2.5} />} onClick={() => navigate('/jodayn/reports/new')}>
-          {t('generateReport')}
-        </CatalogButton>
-      ) : null}
+    <FinancePage title={t('financialReports')}>
+      <FinanceHead
+        title={t('financialReports')}
+        subtitle="متابعة أداء العقود وتوليد التقارير المالية الخاصة بها"
+        createLabel={t('generateReport')}
+        onCreate={() => navigate('/jodayn/reports/new')}
+      />
+      <FinanceTabs active={view} onChange={setView} />
 
-      <div className="catalog-view-switch">
-        <button type="button" className={view === 'list' ? 'is-active' : ''} onClick={() => setView('list')}>
-          {t('listTab')}
-        </button>
-        <button type="button" className={view === 'ppt' ? 'is-active' : ''} onClick={() => setView('ppt')}>
-          {t('pptGeneratorTab')}
-        </button>
-      </div>
-
-      {view === 'ppt' ? (
-        <section className="catalog-card">
-          <PptGeneratorFrame
-            title="مولّد العروض التقديمية - التقارير"
-            data={
-              rows[0]
-                ? {
-                    project: {
-                      name: `تقرير ${rows[0].type}`,
-                      code: rows[0].key.slice(0, 8).toUpperCase(),
-                      department: 'التقارير المالية — جودين',
-                      projectManager: '—',
-                      sponsor: '—',
-                      statusLabel: rows[0].period,
-                      budget: Number(rows[0].totalContractsValue) || 0,
-                      budgetCurrency: 'SAR',
-                    },
-                    outputs: rows.slice(0, 4).map((r) => `${r.type} — ربح ${r.netProfit}`),
-                    sourceLabel: `بيانات حية — ${rows.length} تقرير`,
-                  }
-                : null
-            }
-          />
-        </section>
+      {view === 'generator' ? (
+        <FinanceGenerator
+          title="مولّد العروض التقديمية - التقارير"
+          data={
+            rows[0]
+              ? {
+                  project: {
+                    name: `تقرير ${rows[0].type}`,
+                    code: rows[0].key.slice(0, 8).toUpperCase(),
+                    department: 'التقارير المالية — جودين',
+                    projectManager: '—',
+                    sponsor: '—',
+                    statusLabel: rows[0].period,
+                    budget: rows[0].totalContractsValue,
+                    budgetCurrency: 'SAR',
+                  },
+                  outputs: rows.slice(0, 4).map((r) => `${r.type} — ربح ${formatAmount(r.netProfit)}`),
+                  sourceLabel: `بيانات حية — ${rows.length} تقرير`,
+                }
+              : null
+          }
+        />
       ) : (
         <>
-          <StatGrid>
-            <StatCard
-              label={t('financialReports')}
-              value={rows.length}
-              icon={<AssetIcon src={navigationAssets.goals} size={16} />}
-            />
-          </StatGrid>
-          <ListCardStack>
+          <FinanceStats
+            cards={[
+              { label: 'إجمالي التقارير', value: String(rows.length), icon: icon1 },
+              { label: 'إجمالي قيمة العقود', value: formatAmount(totalContracts), icon: icon2 },
+              { label: 'صافي الربح الإجمالي', value: formatAmount(totalProfit), icon: icon3 },
+            ]}
+          />
+          <FinanceTable
+            headers={['اسم التقرير', 'الفترة / الربع', 'قيمة العقود', 'صافي الربح', 'صافي التدفق النقدي', ...(isUpper ? [''] : [])]}
+            loading={loading}
+            empty={rows.length === 0}
+          >
             {rows.map((row) => (
-              <ListCard
-                key={row.key}
-                title={row.type}
-                metaItems={[row.period, `${t('totalContractsValue')}: ${row.totalContractsValue}`]}
-                tags={
-                  <>
-                    <span className="list-card__tag">{`${t('netProfit')}: ${row.netProfit}`}</span>
-                    <span className="list-card__tag list-card__tag--muted">{`${t('netCashFlow')}: ${row.netCashFlow}`}</span>
+              <tr key={row.key}>
+                <td>{row.type}</td>
+                <td className="finance-muted">{row.period}</td>
+                <td>{formatAmount(row.totalContractsValue)}</td>
+                <td>{formatAmount(row.netProfit)}</td>
+                <td>{formatAmount(row.netCashFlow)}</td>
                 {isUpper ? (
-                  <span className="row-actions">
-                    <button
-                      type="button"
-                      className="is-danger"
-                      onClick={async () => {
-                        const token = getJodaynToken()
-                        if (!token || !window.confirm(t('delete') + '؟')) return
-                        try {
-                          await deleteJodaynRecord(token, 'reports', row.key)
-                          setRows((current) => current.filter((item) => item.key !== row.key))
-                          message.success(t('deletedSuccessfully'))
-                        } catch (err) {
-                          message.error(err instanceof ApiError ? err.message : t('loadError'))
-                        }
-                      }}
-                    >
-                      {t('delete')}
-                    </button>
-                  </span>
+                  <td>
+                    <span className="finance-actions">
+                      <button type="button" className="is-danger" onClick={() => void remove(row)}>
+                        {t('delete')}
+                      </button>
+                    </span>
+                  </td>
                 ) : null}
-                  </>
-                }
-              />
+              </tr>
             ))}
-            {loading ? <div className="catalog-loading">{t('loadingList')}</div> : null}
-            {rows.length === 0 && !loading ? <EmptyState /> : null}
-          </ListCardStack>
+          </FinanceTable>
         </>
       )}
-    </OrgCatalogShell>
+    </FinancePage>
   )
 }

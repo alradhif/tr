@@ -1,0 +1,567 @@
+/* Finance section — matches the track+ financial screens (RTL) */
+
+.finance-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.finance-topbar {
+  display: flex;
+  align-items: center;
+  height: 76px;
+  padding: 0 28px;
+  border-bottom: 1px solid oklch(0.93 0.008 150);
+  background: #fff;
+}
+
+.finance-topbar__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: oklch(0.28 0.015 160);
+}
+
+.finance-body {
+  flex: 1;
+  padding: 26px 28px 40px;
+  background: linear-gradient(180deg, #ffffff 0%, oklch(0.965 0.02 155) 100%);
+}
+
+.finance-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid oklch(0.93 0.008 150);
+}
+
+.finance-head__title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: oklch(0.18 0.015 160);
+}
+
+.finance-head__subtitle {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: oklch(0.6 0.015 160);
+}
+
+.finance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.finance-btn--dark {
+  background: oklch(0.2 0.01 160);
+  color: oklch(0.99 0 0);
+}
+
+.finance-btn--dark:hover {
+  background: oklch(0.28 0.015 160);
+}
+
+.finance-btn--outline {
+  background: #fff;
+  color: oklch(0.2 0.01 160);
+  border-color: oklch(0.86 0.01 150);
+}
+
+.finance-btn--outline:hover {
+  border-color: oklch(0.72 0.16 158);
+  color: oklch(0.6 0.15 160);
+}
+
+/* مولد العروض should always blend into the page background rather than sit
+   as a solid box on top of the finance-body gradient, regardless of tab state. */
+.finance-btn--generator {
+  background: transparent !important;
+  color: oklch(0.2 0.01 160) !important;
+  border-color: oklch(0.86 0.01 150) !important;
+}
+
+.finance-btn--generator:hover {
+  border-color: oklch(0.72 0.16 158);
+  color: oklch(0.6 0.15 160) !important;
+}
+
+.finance-tabs {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 22px 0 24px;
+}
+
+.finance-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.finance-card {
+  background: #fff;
+  border: 1px solid oklch(0.94 0.008 150);
+  border-radius: 18px;
+  padding: 22px 24px 26px;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.04), 0 8px 24px oklch(0 0 0 / 0.04);
+}
+
+.finance-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.finance-card__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: oklch(0.45 0.015 160);
+}
+
+.finance-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.finance-card__icon img {
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+
+.finance-card__value {
+  margin-top: 18px;
+  font-size: 32px;
+  font-weight: 700;
+  color: oklch(0.18 0.015 160);
+  letter-spacing: -0.5px;
+}
+
+.finance-table-wrap {
+  margin-top: 26px;
+  background: #fff;
+  border: 1px solid oklch(0.94 0.008 150);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.04), 0 8px 24px oklch(0 0 0 / 0.04);
+}
+
+.finance-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.finance-table thead th {
+  background: oklch(0.975 0.004 150);
+  padding: 16px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: oklch(0.42 0.015 160);
+  border-bottom: 1px solid oklch(0.94 0.008 150);
+}
+
+.finance-table tbody td {
+  padding: 18px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: oklch(0.2 0.015 160);
+  border-bottom: 1px solid oklch(0.96 0.006 150);
+}
+
+.finance-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.finance-table tbody tr:hover {
+  background: oklch(0.985 0.01 155);
+}
+
+.finance-table .finance-muted {
+  color: oklch(0.7 0.015 160);
+  font-weight: 500;
+}
+
+.finance-chevron {
+  color: oklch(0.45 0.015 160);
+}
+
+.finance-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.finance-status--active {
+  background: oklch(0.94 0.05 158);
+  color: oklch(0.5 0.13 160);
+}
+
+.finance-status--inactive {
+  background: oklch(0.96 0.006 150);
+  color: oklch(0.55 0.015 160);
+}
+
+.finance-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: oklch(0.6 0.015 160);
+  font-size: 15px;
+}
+
+@media (max-width: 1100px) {
+  .finance-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Revenue forecasts / invoices / client accounts --- */
+
+.finance-cards--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.finance-card--plain .finance-card__top {
+  justify-content: flex-start;
+}
+
+.finance-card--plain .finance-card__label {
+  color: oklch(0.68 0.012 160);
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.finance-card__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.finance-card__unit {
+  font-size: 14px;
+  font-weight: 500;
+  color: oklch(0.62 0.015 160);
+}
+
+.finance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.finance-badge--info {
+  background: oklch(0.93 0.045 250);
+  color: oklch(0.52 0.19 260);
+}
+
+.finance-badge--info .finance-badge__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  background: oklch(0.62 0.19 258);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.finance-chip {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: oklch(0.96 0.006 150);
+  color: oklch(0.6 0.015 160);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.finance-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.finance-type__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.finance-type--subscription {
+  color: oklch(0.58 0.19 258);
+}
+
+.finance-type--subscription .finance-type__dot {
+  background: oklch(0.62 0.19 258);
+}
+
+.finance-type--fixed {
+  color: oklch(0.2 0.015 160);
+}
+
+.finance-type--fixed .finance-type__dot {
+  background: oklch(0.2 0.015 160);
+}
+
+.finance-value__suffix {
+  margin-inline-start: 6px;
+  font-weight: 500;
+  color: oklch(0.7 0.015 160);
+}
+
+.finance-card--donut {
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  gap: 18px;
+}
+
+.finance-donut__legend {
+  flex: 1;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.finance-donut__item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.finance-donut__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.finance-donut__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.finance-donut__count {
+  color: oklch(0.4 0.015 160);
+}
+
+@media (max-width: 1400px) {
+  .finance-cards--4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .finance-cards--4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Revenue forecast budget card --- */
+
+.finance-budget__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-direction: row-reverse;
+  gap: 12px;
+}
+
+.finance-budget__row--legend {
+  margin-top: 16px;
+}
+
+.finance-budget__legend-actual {
+  font-size: 15px;
+  font-weight: 700;
+  color: oklch(0.2 0.015 160);
+}
+
+.finance-budget__legend-expected {
+  font-size: 14px;
+  font-weight: 500;
+  color: oklch(0.45 0.015 160);
+}
+
+.finance-budget__track {
+  margin-top: 12px;
+  height: 8px;
+  border-radius: 999px;
+  background: oklch(0.9 0.005 150);
+  overflow: hidden;
+}
+
+.finance-budget__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: oklch(0.74 0.17 62);
+}
+
+.finance-budget__row--values {
+  margin-top: 12px;
+}
+
+.finance-budget__value {
+  font-size: 14px;
+  font-weight: 500;
+  color: oklch(0.35 0.015 160);
+}
+
+/* --- TrackPlus integration: live data, actions and small screens --- */
+
+.finance-table-wrap {
+  overflow-x: auto;
+}
+
+.finance-table {
+  min-width: 720px;
+}
+
+.finance-table .finance-chip,
+.finance-table .finance-status,
+.finance-table .finance-muted,
+.finance-actions button {
+  white-space: nowrap;
+}
+
+.finance-status--warning {
+  background: oklch(0.96 0.05 85);
+  color: oklch(0.55 0.13 70);
+}
+
+.finance-status--danger {
+  background: oklch(0.95 0.04 25);
+  color: oklch(0.55 0.18 27);
+}
+
+.finance-actions {
+  display: inline-flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.finance-actions button {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid oklch(0.9 0.01 150);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: oklch(0.3 0.015 160);
+  cursor: pointer;
+}
+
+.finance-actions button:hover:not(:disabled) {
+  background: oklch(0.97 0.01 155);
+}
+
+.finance-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.finance-actions .is-primary {
+  border-color: oklch(0.6 0.13 158);
+  color: oklch(0.45 0.13 160);
+}
+
+.finance-actions .is-danger {
+  border-color: oklch(0.85 0.06 25);
+  color: oklch(0.55 0.18 27);
+}
+
+.finance-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+.finance-filters button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid oklch(0.92 0.008 150);
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: oklch(0.45 0.015 160);
+  cursor: pointer;
+}
+
+.finance-filters button.is-active {
+  background: oklch(0.18 0.015 160);
+  border-color: oklch(0.18 0.015 160);
+  color: #fff;
+}
+
+.finance-head__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.finance-generator {
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .finance-topbar {
+    padding: 0 16px;
+  }
+
+  .finance-body {
+    padding: 20px 16px 32px;
+  }
+
+  .finance-head {
+    flex-direction: column;
+  }
+
+  .finance-cards--4 {
+    grid-template-columns: 1fr;
+  }
+}

@@ -5,7 +5,7 @@ export type PortalKind = 'super-admin' | 'jodayn' | 'org' | 'client'
 
 export function destinationForPortal(portal: PortalKind) {
   if (portal === 'super-admin') return '/super-admin'
-  if (portal === 'jodayn') return '/jodayn/dashboard'
+  if (portal === 'jodayn') return '/jodayn/reports'
   if (portal === 'org') return '/org/dashboard'
   return '/client/dashboard'
 }
