@@ -41,6 +41,7 @@ import {
 import { CreatePresentationModal } from './CreatePresentationModal'
 import { ProjectAddModal, type ProjectAddKind } from './ProjectAddModals'
 import { CatalogConfirmDialog } from '../../org-catalog/CatalogConfirmDialog'
+import { parsePhaseActivities } from '../../org-catalog/phaseActivities'
 import {
   approvalBadgeVariant,
   approvalLabelKey,
@@ -210,10 +211,9 @@ export function ProjectDetailView({
         startRaw: item.startDate ? String(item.startDate) : undefined,
         endRaw: item.endDate ? String(item.endDate) : undefined,
         scope: String(item.scope ?? '—'),
-        activities: String(item.notes ?? '')
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean),
+        activities: parsePhaseActivities(item.notes).map((activity) =>
+          [activity.name, activity.owner, activity.startDate, activity.endDate].join(' | '),
+        ),
       })),
     [project],
   )

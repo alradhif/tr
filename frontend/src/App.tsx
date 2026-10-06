@@ -22,7 +22,7 @@ import { ClientAddProjectPage } from './pages/client/AddProjectPage'
 import { ClientEditProjectPage } from './pages/client/EditProjectPage'
 import { ClientProjectDetailPage } from './pages/client/ProjectDetailPage'
 import { ClientGoalsPage } from './pages/client/GoalsPage'
-import { ClientAddGoalPage } from './pages/client/AddGoalPage'
+import { ClientAddGoalPage, ClientEditGoalPage } from './pages/client/AddGoalPage'
 import { ClientGoalDetailPage } from './pages/client/GoalDetailPage'
 import { JodaynDashboardPage } from './pages/jodayn/DashboardPage'
 import { JodaynSectorsPage } from './pages/jodayn/SectorsPage'
@@ -136,6 +136,7 @@ export default function App() {
             <Route path="dashboard" element={<ClientDashboardPage />} />
             <Route path="goals" element={<ClientGoalsPage />} />
             <Route path="goals/new" element={<ClientAddGoalPage />} />
+            <Route path="goals/:goalId/edit" element={<ClientEditGoalPage />} />
             <Route path="goals/:goalId" element={<ClientGoalDetailPage />} />
             <Route path="projects" element={<ClientProjectsPage />} />
             <Route path="projects/new" element={<ClientAddProjectPage />} />

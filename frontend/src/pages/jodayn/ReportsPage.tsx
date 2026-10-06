@@ -13,6 +13,7 @@ import { CatalogButton, ListCard, ListCardStack, StatCard, StatGrid } from '../.
 import { EmptyState } from '../../components/EmptyState'
 import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
 import { PptGeneratorFrame } from '../../features/portal'
+import { reportTypeLabel } from './labels'
 
 type ReportRow = {
   key: string
@@ -47,7 +48,7 @@ export function JodaynReportsPage() {
         setRows(
           reports.map((r) => ({
             key: r.id,
-            type: r.type,
+            type: reportTypeLabel(r.type, t),
             period: r.period ?? '—',
             totalContractsValue: Number(r.totalContractsValue ?? 0),
             netProfit: Number(r.netProfit ?? 0),

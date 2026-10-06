@@ -46,6 +46,7 @@ import { getClientRole, getClientToken } from '../auth/clientAuth'
 import { getOrgRole, getOrgToken } from '../auth/orgAuth'
 import { isDataEntry } from '../auth/permissions'
 import { isPendingApproval } from './approvalStatus'
+import { parsePhaseActivities } from './phaseActivities'
 import { SubpageHeader } from '../components/ui'
 
 type ProjectPortal = 'org' | 'client'
@@ -332,7 +333,10 @@ function fromProject(project: OrgProject): ProjectFormState {
               status: String(rec.scope ?? ''),
               startDate: toInputDate(typeof rec.startDate === 'string' ? rec.startDate : null),
               endDate: toInputDate(typeof rec.endDate === 'string' ? rec.endDate : null),
-              activities: [],
+              activities: parsePhaseActivities(rec.notes).map((activity, activityIndex) => ({
+                id: activityIndex + 1,
+                ...activity,
+              })),
             }
           })
         : [emptyStage(1)],

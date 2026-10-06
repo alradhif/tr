@@ -257,13 +257,20 @@
 .catalog-ant-form .ant-input,
 .catalog-ant-form .ant-input-affix-wrapper,
 .catalog-ant-form .ant-input-number,
-.catalog-ant-form .ant-input-number-input,
 .catalog-ant-form .ant-select-selector,
 .catalog-ant-form .ant-picker {
   min-height: 38px !important;
   border: 1px solid #e1e3e6 !important;
   border-radius: 8px !important;
   background: #fff !important;
+  font-family: inherit !important;
+}
+
+/* The number field's inner input sits inside the bordered wrapper above; a second border doubled it. */
+.catalog-ant-form .ant-input-number-input {
+  min-height: 36px !important;
+  border: 0 !important;
+  background: transparent !important;
   font-family: inherit !important;
 }
 

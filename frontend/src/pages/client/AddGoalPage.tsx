@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import dayjs from 'dayjs'
 import { DatePicker, Form, Input, Select, message } from 'antd'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../../api/client'
 import {
@@ -9,6 +9,8 @@ import {
   createClientGoal,
   createClientGoalLink,
   getClientDocuments,
+  getClientGoalById,
+  updateClientGoal,
   type ClientStrategyDocument,
 } from '../../api/clientStrategy'
 import { getClientProjects, type ClientProject } from '../../api/clientPortal'
@@ -47,8 +49,19 @@ function goalFormValues(fields: Record<string, unknown>) {
 }
 
 export function ClientAddGoalPage() {
+  return <ClientGoalFormPage mode="create" />
+}
+
+export function ClientEditGoalPage() {
+  return <ClientGoalFormPage mode="edit" />
+}
+
+function ClientGoalFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { goalId } = useParams()
+  const [form] = Form.useForm<FormValues>()
+  const isEdit = mode === 'edit' && Boolean(goalId)
   const [submitting, setSubmitting] = useState(false)
   const [documents, setDocuments] = useState<ClientStrategyDocument[]>([])
   const [projects, setProjects] = useState<ClientProject[]>([])
@@ -84,6 +97,35 @@ export function ClientAddGoalPage() {
     }
   }, [t])
 
+  useEffect(() => {
+    const token = getClientToken()
+    if (!isEdit || !token || !goalId) return
+    let cancelled = false
+    getClientGoalById(token, goalId)
+      .then(({ goal }) => {
+        if (cancelled) return
+        const [kpiDescription, targetValue, currentValue] = String(goal.aiSummary ?? '')
+          .split('|')
+          .map((part) => part.trim() || undefined)
+        const start = goal.startDate ? dayjs(goal.startDate) : null
+        const end = goal.endDate ? dayjs(goal.endDate) : null
+        form.setFieldsValue({
+          title: goal.title,
+          description: goal.description ?? undefined,
+          period: start?.isValid() && end?.isValid() ? ([start, end] as unknown as FormValues['period']) : undefined,
+          kpiDescription,
+          targetValue,
+          currentValue,
+        })
+      })
+      .catch((err) => {
+        if (!cancelled) message.error(err instanceof ApiError ? err.message : t('loadError'))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [form, goalId, isEdit, t])
+
   const onFinish = async (values: FormValues) => {
     const token = getClientToken()
     if (!token) {
@@ -91,6 +133,26 @@ export function ClientAddGoalPage() {
       return
     }
     setSubmitting(true)
+    if (isEdit && goalId) {
+      try {
+        const [start, end] = values.period ?? []
+        const aiSummary = [values.kpiDescription, values.targetValue, values.currentValue].filter(Boolean).join(' | ')
+        await updateClientGoal(token, goalId, {
+          title: values.title,
+          description: values.description,
+          startDate: toDateString(start),
+          endDate: toDateString(end),
+          aiSummary: aiSummary || undefined,
+        })
+        message.success(t('saveGoal'))
+        navigate(`/client/goals/${goalId}`)
+      } catch (err) {
+        message.error(err instanceof ApiError ? err.message : t('loadError'))
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
     try {
       let documentId = values.documentId
       if (!documentId) {
@@ -131,11 +193,12 @@ export function ClientAddGoalPage() {
   return (
     <FormPageHeader
       parentLabel={t('strategicGoals')}
-      currentLabel={t('addGoalFull')}
-      backTo="/client/goals"
-      title={t('addGoalFull')}
+      currentLabel={isEdit ? t('editGoal') : t('addGoalFull')}
+      backTo={isEdit ? `/client/goals/${goalId}` : '/client/goals'}
+      title={isEdit ? t('editGoal') : t('addGoalFull')}
     >
       <Form
+        form={form}
         layout="vertical"
         requiredMark={false}
         className="form-page__form"
@@ -150,13 +213,15 @@ export function ClientAddGoalPage() {
           <Form.Item label={t('goalDescription')} name="description">
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Form.Item label={t('strategicGoals')} name="documentId">
-            <Select
-              allowClear
-              placeholder={t('strategicGoals')}
-              options={documents.map((d) => ({ value: d.id, label: d.title }))}
-            />
-          </Form.Item>
+          {isEdit ? null : (
+            <Form.Item label={t('strategicGoals')} name="documentId">
+              <Select
+                allowClear
+                placeholder={t('strategicGoals')}
+                options={documents.map((d) => ({ value: d.id, label: d.title }))}
+              />
+            </Form.Item>
+          )}
           <div className="form-grid-2">
             <Form.Item label={t('goalPeriod')} name="period">
               <DatePicker.RangePicker className="w-full" />
@@ -195,61 +260,63 @@ export function ClientAddGoalPage() {
           </div>
         </FormSection>
 
-        <FormSection title={t('linkedProjects')}>
-          <div className="form-linked-empty">
-            {linkedProjects.length > 0 ? (
-              <div className="add-goal__projects-list">
-                {linkedProjects.map((project) => (
-                  <div className="add-goal__project-row" key={project.id}>
-                    <div className="add-goal__project-actions">
-                      <button
-                        type="button"
-                        className="add-goal__delete-btn"
-                        onClick={() => setLinkedIds((current) => current.filter((id) => id !== project.id))}
-                        aria-label={t('delete')}
-                      >
-                        ×
-                      </button>
+        {isEdit ? null : (
+          <FormSection title={t('linkedProjects')}>
+            <div className="form-linked-empty">
+              {linkedProjects.length > 0 ? (
+                <div className="add-goal__projects-list">
+                  {linkedProjects.map((project) => (
+                    <div className="add-goal__project-row" key={project.id}>
+                      <div className="add-goal__project-actions">
+                        <button
+                          type="button"
+                          className="add-goal__delete-btn"
+                          onClick={() => setLinkedIds((current) => current.filter((id) => id !== project.id))}
+                          aria-label={t('delete')}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div className="add-goal__project-details">
+                        <strong>{project.name}</strong>
+                        <span>{project.client?.name || t('projects')}</span>
+                      </div>
+                      <span className="add-goal__status-dot" />
                     </div>
-                    <div className="add-goal__project-details">
-                      <strong>{project.name}</strong>
-                      <span>{project.client?.name || t('projects')}</span>
-                    </div>
-                    <span className="add-goal__status-dot" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p>{t('noLinkedProjectsYet')}</p>
-            )}
-            {projectsError ? (
-              <p>{t('loadError')}</p>
-            ) : projects.length === 0 ? (
-              <p>{t('noProjectsAvailableToLink')}</p>
-            ) : (
-              <label className="add-goal__field">
-                <span>{t('chooseProject')}</span>
-                <select
-                  className="client-goal-project-select"
-                  value=""
-                  onChange={(event) => {
-                    const id = event.target.value
-                    if (id) setLinkedIds((current) => (current.includes(id) ? current : [...current, id]))
-                  }}
-                >
-                  <option value="">{t('linkProject')}</option>
-                  {availableProjects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
                   ))}
-                </select>
-              </label>
-            )}
-          </div>
-        </FormSection>
+                </div>
+              ) : (
+                <p>{t('noLinkedProjectsYet')}</p>
+              )}
+              {projectsError ? (
+                <p>{t('loadError')}</p>
+              ) : projects.length === 0 ? (
+                <p>{t('noProjectsAvailableToLink')}</p>
+              ) : (
+                <label className="add-goal__field">
+                  <span>{t('chooseProject')}</span>
+                  <select
+                    className="client-goal-project-select"
+                    value=""
+                    onChange={(event) => {
+                      const id = event.target.value
+                      if (id) setLinkedIds((current) => (current.includes(id) ? current : [...current, id]))
+                    }}
+                  >
+                    <option value="">{t('linkProject')}</option>
+                    {availableProjects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          </FormSection>
+        )}
 
-        <FormActions cancelTo="/client/goals" submitLabel={t('saveGoal')} loading={submitting} />
+        <FormActions cancelTo={isEdit ? `/client/goals/${goalId}` : '/client/goals'} submitLabel={t('saveGoal')} loading={submitting} />
       </Form>
     </FormPageHeader>
   )
