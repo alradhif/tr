@@ -20,31 +20,77 @@ async function currentUser(req) {
   return user
 }
 
-function profile(user, type) {
+const PREFERENCE_DEFAULTS = { jobTitle: null, phone: null, notifyEmail: true, notifyInApp: true, notifyProduct: false }
+
+async function preferencesFor(req) {
+  const row = await prisma.userPreference.findUnique({
+    where: { userId_actorType: { userId: req.user.userId, actorType: req.user.type } },
+  })
+  if (!row) return { ...PREFERENCE_DEFAULTS }
+  const { jobTitle, phone, notifyEmail, notifyInApp, notifyProduct } = row
+  return { jobTitle, phone, notifyEmail, notifyInApp, notifyProduct }
+}
+
+async function profile(req, user) {
   return {
-    ...publicSessionUser(user, type),
+    ...publicSessionUser(user, req.user.type),
     createdAt: user.createdAt,
     activatedAt: user.activatedAt || null,
     lastLoginAt: user.lastLoginAt || null,
+    preferences: await preferencesFor(req),
   }
 }
 
 exports.getMe = async (req, res) => {
   try {
-    res.json({ user: profile(await currentUser(req), req.user.type) })
+    res.json({ user: await profile(req, await currentUser(req)) })
   } catch (err) {
     fail(res, err)
   }
 }
 
-/** Users can change their own display name; email and role are managed by their administrators. */
+function optionalText(value, max, label) {
+  if (value === undefined) return undefined
+  const text = String(value ?? '').trim()
+  if (text.length > max) throw Object.assign(new Error(`${label} طويل جداً`), { status: 400 })
+  return text || null
+}
+
+/**
+ * Users can change their own display name, job title, phone and notification choices;
+ * email and role are managed by their administrators.
+ */
 exports.updateMe = async (req, res) => {
   try {
-    const name = String(req.body?.name || '').trim()
-    if (!name) return res.status(400).json({ message: 'الاسم مطلوب' })
-    if (name.length > 120) return res.status(400).json({ message: 'الاسم طويل جداً' })
-    await MODELS[req.user.type]().update({ where: { id: req.user.userId }, data: { name } })
-    res.json({ success: true, user: profile(await currentUser(req), req.user.type) })
+    const body = req.body || {}
+    if (body.name !== undefined) {
+      const name = String(body.name || '').trim()
+      if (!name) return res.status(400).json({ message: 'الاسم مطلوب' })
+      if (name.length > 120) return res.status(400).json({ message: 'الاسم طويل جداً' })
+      await MODELS[req.user.type]().update({ where: { id: req.user.userId }, data: { name } })
+    }
+
+    const phone = optionalText(body.phone, 30, 'رقم الجوال')
+    if (phone && !/^[+\d\s()-]{6,30}$/.test(phone)) {
+      return res.status(400).json({ message: 'رقم الجوال غير صالح' })
+    }
+    const prefs = {
+      jobTitle: optionalText(body.jobTitle, 120, 'المسمى الوظيفي'),
+      phone,
+      ...['notifyEmail', 'notifyInApp', 'notifyProduct'].reduce((acc, key) => {
+        if (body[key] !== undefined) acc[key] = Boolean(body[key])
+        return acc
+      }, {}),
+    }
+    Object.keys(prefs).forEach((key) => prefs[key] === undefined && delete prefs[key])
+    if (Object.keys(prefs).length) {
+      await prisma.userPreference.upsert({
+        where: { userId_actorType: { userId: req.user.userId, actorType: req.user.type } },
+        create: { userId: req.user.userId, actorType: req.user.type, ...prefs },
+        update: prefs,
+      })
+    }
+    res.json({ success: true, user: await profile(req, await currentUser(req)) })
   } catch (err) {
     fail(res, err)
   }

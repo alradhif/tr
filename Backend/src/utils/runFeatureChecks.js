@@ -376,6 +376,27 @@ async function main() {
   const shortPassword = await request('/me/password', json('POST', { currentPassword: 'Demo1234', newPassword: '123' }), entry.token)
   expect(shortPassword.status === 400, 'short new password rejected')
 
+  const prefs = await request('/me', json('PATCH', { jobTitle: 'محلل بيانات', phone: '+966 50 123 4567', notifyProduct: true }), entry.token)
+  const prefsReloaded = await request('/me', {}, entry.token)
+  const saved = prefsReloaded.data.user?.preferences
+  expect(
+    prefs.status === 200 && saved?.jobTitle === 'محلل بيانات' && saved?.phone === '+966 50 123 4567' && saved?.notifyProduct === true,
+    'settings job title, phone and notification choices save and reload',
+    prefsReloaded.data,
+  )
+  const badPhone = await request('/me', json('PATCH', { phone: 'not a phone' }), entry.token)
+  expect(badPhone.status === 400, 'settings reject an invalid phone number')
+
+  // In-app notifications switched off: a submission for review must not reach that manager.
+  const manager = s.ORG_UPPER_MGMT
+  await request('/me', json('PATCH', { notifyInApp: false }), manager.token)
+  const optOutBefore = (await unread(manager.token)).length
+  const quiet = await request('/org/projects', json('POST', { name: `فحص الإشعارات ${stamp}`, startDate: '2026-01-01', endDate: '2026-12-31', budget: 1000, managerId: entry.user.id }), entry.token)
+  await request(`/org/projects/${quiet.data.project?.id}/submit`, { method: 'POST' }, entry.token)
+  const optOutAfter = (await unread(manager.token)).length
+  await request('/me', json('PATCH', { notifyInApp: true }), manager.token)
+  expect(quiet.data.project?.id && optOutAfter === optOutBefore, 'switching off in-app notifications stops new ones for that user')
+
   const layoutBody = { widgetIds: ['kpis', 'projects'], layout: [{ i: 'kpis', x: 0, y: 0, w: 12, h: 3 }] }
   const savedLayout = await request('/me/dashboard-layout/org', json('PUT', layoutBody), entry.token)
   const loadedLayout = await request('/me/dashboard-layout/org', {}, entry.token)

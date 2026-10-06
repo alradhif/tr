@@ -11,13 +11,22 @@ export type Profile = {
   createdAt?: string | null
   activatedAt?: string | null
   lastLoginAt?: string | null
+  preferences?: UserPreferences
+}
+
+export type UserPreferences = {
+  jobTitle: string | null
+  phone: string | null
+  notifyEmail: boolean
+  notifyInApp: boolean
+  notifyProduct: boolean
 }
 
 export function getProfile(token: string) {
   return apiRequest<{ user: Profile }>('/me', { method: 'GET', token })
 }
 
-export function updateProfile(token: string, data: { name: string }) {
+export function updateProfile(token: string, data: { name?: string } & Partial<UserPreferences>) {
   return apiRequest<{ success: boolean; user: Profile }>('/me', { method: 'PATCH', token, body: JSON.stringify(data) })
 }
 

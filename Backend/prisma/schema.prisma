@@ -1404,6 +1404,22 @@ model ActivityLog {
 }
 
 // Per-user dashboard widget arrangement (dashboard customization)
+/// Per-user profile extras and notification choices from the settings page (any portal).
+model UserPreference {
+  id            String    @id @default(uuid())
+  userId        String
+  actorType     ActorType
+  jobTitle      String?
+  phone         String?
+  notifyEmail   Boolean   @default(true)
+  notifyInApp   Boolean   @default(true)
+  notifyProduct Boolean   @default(false)
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, actorType])
+  @@map("user_preferences")
+}
+
 model DashboardLayout {
   id        String    @id @default(uuid())
   userId    String

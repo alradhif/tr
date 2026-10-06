@@ -1,0 +1,215 @@
+/* Projects list — senior-management design (title bar, KPI row, table of name / progress / status). */
+
+.sp-page .sp-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0 16px;
+  flex-wrap: wrap;
+}
+
+.sp-page .sp-toolbar .sc-btn-primary,
+.sp-page .sp-toolbar .sc-btn-outline {
+  height: 36px;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 16px;
+}
+
+.sp-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #e7e8eb;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #585757;
+  cursor: pointer;
+}
+
+.sp-filters button.is-active {
+  background: #111214;
+  border-color: #111214;
+  color: #fff;
+}
+
+.sp-filters__count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 11px;
+  text-align: center;
+}
+
+.sp-filters button.is-active .sp-filters__count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.sp-page .sc-table-wrap {
+  border-radius: 18px;
+}
+
+.sp-table-head,
+.sp-table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px 150px 60px;
+  align-items: center;
+}
+
+.sp-table-head {
+  min-height: 40px;
+  background: #f4f4f5;
+  font-size: 12px;
+  font-weight: 700;
+  color: #585757;
+}
+
+.sp-table-head .sp-col-name {
+  padding: 10px 24px;
+}
+
+.sp-table-head .sp-col-progress,
+.sp-table-head .sp-col-status {
+  text-align: center;
+}
+
+.sp-table-row {
+  min-height: 44px;
+  border-top: 1px solid #f0f0f2;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.sp-table-row:first-child {
+  border-top: none;
+}
+
+.sp-table-row.sc-row-even { background: #fafafa; }
+.sp-table-row.sc-row-odd { background: #fff; }
+.sp-table-row:hover { background: #f0f9f4; }
+
+.sp-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 24px;
+}
+
+.sp-name {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  color: #111214;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-approval {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #f0f0f2;
+  color: #5b5e65;
+  white-space: nowrap;
+}
+
+.sp-approval--pending { background: #fff0db; color: #b54708; }
+.sp-approval--rejected { background: #feedec; color: #d92d20; }
+
+.sp-col-progress,
+.sp-col-status {
+  display: flex;
+  justify-content: center;
+}
+
+.sp-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sp-progress__text {
+  min-width: 32px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #000;
+  text-align: right;
+}
+
+.sp-progress__track {
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  height: 6px;
+  border-radius: 2px;
+  background: #c5c5cc;
+}
+
+.sp-progress__fill {
+  height: 6px;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.sp-tone--ontrack { background: #2e90fa; }
+.sp-tone--delayed { background: #fabc6c; }
+.sp-tone--stalled { background: #f04438; }
+.sp-tone--completed { background: #17b26a; }
+
+.sp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sp-status--ontrack { background: #e2eefb; color: #007aff; }
+.sp-status--delayed { background: #fff0db; color: #f79009; }
+.sp-status--stalled { background: #feedec; color: #f04438; }
+.sp-status--completed { background: #ebfaef; color: #34c759; }
+
+.sp-col-action.sc-btn-action {
+  justify-self: center;
+}
+
+@media (max-width: 640px) {
+  .sp-table-head,
+  .sp-table-row {
+    grid-template-columns: minmax(0, 1fr) 96px 44px;
+  }
+
+  .sp-col-status {
+    display: none;
+  }
+
+  .sp-name-cell,
+  .sp-table-head .sp-col-name {
+    padding: 8px 12px;
+  }
+}

@@ -1,31 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Presentation } from 'lucide-react'
 import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useOutletContext } from 'react-router-dom'
-import { commonAssets, dashboardDataAssets, navigationAssets, projectsAssets } from '@/assets'
-import { AssetIcon } from '../../components/ui/AssetIcon'
 import { ApiError } from '../../api/client'
 import { getClientProjects } from '../../api/clientPortal'
 import type { ClientRole } from '../../auth/clientAuth'
 import { getClientToken } from '../../auth/clientAuth'
 import { canCreateDraft } from '../../auth/permissions'
-import {
-  Badge,
-  CatalogButton,
-  FilterChips,
-  ListCard,
-  ListCardStack,
-  StatCard,
-  StatGrid,
-  type BadgeVariant,
-} from '../../components/ui'
-import { EmptyState } from '../../components/EmptyState'
-import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
-import { ProgressBar } from '../../org-catalog/ProgressBar'
+import { ProjectsListView } from '../../components/senior/ProjectsListView'
 import { PptGeneratorFrame } from '../../features/portal'
-
-import { approvalBadgeVariant, approvalLabelKey } from '../../org-catalog/approvalStatus'
 
 type ProjectUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
 type ProjectFilter = 'all' | 'onTrack' | 'delayed' | 'completed' | 'draft' | 'pending' | 'approved' | 'rejected'
@@ -39,10 +23,7 @@ type ProjectRow = {
   status: ProjectUiStatus
   approvalStatus: string
   rawStatus: string
-  startDate: string
   endDate: string
-  type?: string | null
-  classification?: string | null
   outputsCount: number
 }
 
@@ -73,12 +54,6 @@ function matchesFilter(row: ProjectRow, filter: ProjectFilter) {
   return row.status === filter
 }
 
-function statusVariant(status: ProjectUiStatus): BadgeVariant {
-  if (status === 'delayed') return 'warning'
-  if (status === 'stalled') return 'danger'
-  return 'success'
-}
-
 export function ClientProjectsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -87,6 +62,7 @@ export function ClientProjectsPage() {
   const [rows, setRows] = useState<ProjectRow[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   useEffect(() => {
     const token = getClientToken()
@@ -108,10 +84,7 @@ export function ClientProjectsPage() {
             status: mapStatus(p.status, p.endDate),
             approvalStatus: p.approvalStatus ?? 'DRAFT',
             rawStatus: p.status,
-            startDate: formatDate(p.startDate),
             endDate: formatDate(p.endDate),
-            type: p.type,
-            classification: p.classification,
             outputsCount: p._count?.deliverables ?? p.deliverables?.length ?? 0,
           })),
         )
@@ -128,22 +101,17 @@ export function ClientProjectsPage() {
     }
   }, [t])
 
-  const avgProgress =
-    rows.length === 0 ? 0 : Math.round(rows.reduce((sum, row) => sum + row.progress, 0) / rows.length)
-  const delayedCount = rows.filter((row) => row.status === 'delayed' || row.status === 'stalled').length
-  const totalOutputs = rows.reduce((sum, row) => sum + row.outputsCount, 0)
-
   const filterCounts = useMemo(
     () => ({
       all: rows.length,
       onTrack: rows.filter((row) => row.status === 'onTrack').length,
-      delayed: delayedCount,
+      delayed: rows.filter((row) => row.status === 'delayed' || row.status === 'stalled').length,
       completed: rows.filter((row) => row.status === 'completed').length,
       pending: rows.filter((row) => row.approvalStatus === 'PENDING').length,
       draft: rows.filter((row) => row.approvalStatus === 'DRAFT').length,
       rejected: rows.filter((row) => row.approvalStatus === 'REJECTED').length,
     }),
-    [rows, delayedCount],
+    [rows],
   )
 
   const filteredRows = useMemo(
@@ -154,24 +122,45 @@ export function ClientProjectsPage() {
   const first = filteredRows[0] ?? rows[0]
 
   return (
-    <OrgCatalogShell title={t('projects')}>
-      {canCreateDraft(role) ? (
-        <CatalogButton icon={<Plus size={16} strokeWidth={2.5} />} onClick={() => navigate('/client/projects/new')}>
-          {role === 'upper' ? t('addProject') : t('addProjectDraft')}
-        </CatalogButton>
-      ) : null}
-
-      <div className="catalog-view-switch">
-        <button type="button" className={view === 'list' ? 'is-active' : ''} onClick={() => setView('list')}>
-          {t('listTab')}
+    <ProjectsListView
+      rows={filteredRows.map((row) => ({
+        key: row.key,
+        name: row.name,
+        progress: row.progress,
+        status: row.status,
+        approvalStatus: row.approvalStatus,
+      }))}
+      loading={loading}
+      totalOutputs={rows.reduce((sum, row) => sum + row.outputsCount, 0)}
+      createLabel={canCreateDraft(role) ? (role === 'upper' ? t('addProject') : t('addProjectDraft')) : undefined}
+      onCreate={() => navigate('/client/projects/new')}
+      onOpen={(key) => navigate(`/client/projects/${key}`)}
+      filtersOpen={filtersOpen}
+      onToggleFilters={() => setFiltersOpen((open) => !open)}
+      activeFilter={activeFilter}
+      onFilterChange={(key) => setActiveFilter(key as ProjectFilter)}
+      filters={[
+        { key: 'all', label: t('all'), count: filterCounts.all },
+        { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
+        { key: 'delayed', label: t('delayedTab'), count: filterCounts.delayed },
+        { key: 'completed', label: t('completed'), count: filterCounts.completed },
+        { key: 'pending', label: t('approvalStatusPending'), count: filterCounts.pending },
+        { key: 'draft', label: t('approvalStatusDraft'), count: filterCounts.draft },
+        { key: 'rejected', label: t('approvalStatusRejected'), count: filterCounts.rejected },
+      ]}
+      toolbarExtra={
+        <button
+          type="button"
+          className={`sc-btn-outline${view === 'ppt' ? ' sc-btn-outline--active' : ''}`}
+          onClick={() => setView((current) => (current === 'ppt' ? 'list' : 'ppt'))}
+        >
+          <Presentation size={17} />
+          <span>{view === 'ppt' ? t('listTab') : t('pptGeneratorTab')}</span>
         </button>
-        <button type="button" className={view === 'ppt' ? 'is-active' : ''} onClick={() => setView('ppt')}>
-          {t('pptGeneratorTab')}
-        </button>
-      </div>
-
+      }
+    >
       {view === 'ppt' ? (
-        <section className="catalog-card">
+        <section className="sc-table-wrap sp-ppt">
           <PptGeneratorFrame
             title="مولّد العروض التقديمية - المشاريع"
             data={
@@ -195,86 +184,7 @@ export function ClientProjectsPage() {
             }
           />
         </section>
-      ) : (
-        <>
-          <StatGrid>
-            <StatCard
-              label={t('projectsCount')}
-              value={rows.length}
-              suffix={t('projectUnit')}
-              icon={<AssetIcon src={navigationAssets.projects} size={16} />}
-            />
-            <StatCard
-              label={t('avgProgressShort')}
-              value={`${avgProgress}%`}
-              icon={<AssetIcon src={dashboardDataAssets.active} size={16} />}
-              badge={
-                <Badge variant="success" icon={<span className="tenants-status-dot" />}>
-                  {t('onTrack')}
-                </Badge>
-              }
-            >
-              <ProgressBar value={avgProgress} tone="success" className="goals-stat-card__bar" />
-            </StatCard>
-            <StatCard
-              label={t('outputsCount')}
-              value={totalOutputs}
-              suffix={t('outputUnit')}
-              icon={<AssetIcon src={projectsAssets.deliverables} size={16} />}
-            />
-            <StatCard
-              label={t('delayedProjects')}
-              value={delayedCount}
-              suffix={t('projectUnit')}
-              tone="warn"
-              icon={<AssetIcon src={projectsAssets.risks} size={16} />}
-            />
-          </StatGrid>
-
-          <FilterChips
-            value={activeFilter}
-            onChange={(key) => setActiveFilter(key as ProjectFilter)}
-            items={[
-              { key: 'all', label: t('all'), count: filterCounts.all },
-              { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
-              { key: 'delayed', label: t('delayedTab'), count: filterCounts.delayed },
-              { key: 'completed', label: t('completed'), count: filterCounts.completed },
-              { key: 'pending', label: t('approvalStatusPending'), count: filterCounts.pending },
-              { key: 'draft', label: t('approvalStatusDraft'), count: filterCounts.draft },
-              { key: 'rejected', label: t('approvalStatusRejected'), count: filterCounts.rejected },
-            ]}
-          />
-
-          <ListCardStack>
-            {filteredRows.map((project) => {
-              const variant = statusVariant(project.status)
-              const typeLabel = project.type || project.classification
-              return (
-                <ListCard
-                  key={project.key}
-                  title={project.name}
-                  onOpen={() => navigate(`/client/projects/${project.key}`)}
-                  badge={
-                    <Badge variant={approvalBadgeVariant(project.approvalStatus)}>
-                      {t(approvalLabelKey(project.approvalStatus))}
-                    </Badge>
-                  }
-                  metaItems={[
-                    typeLabel,
-                    <>
-                      <AssetIcon src={commonAssets.clock} size={13} />
-                      {project.startDate} – {project.endDate}
-                    </>,
-                  ]}
-                  progress={{ value: project.progress, tone: variant, label: t('progressRate') }}
-                />
-              )
-            })}
-            {loading ? <div className="catalog-loading">{t('loadingList')}</div> : null}
-            {filteredRows.length === 0 && !loading ? <EmptyState description={t('noMatchingFilter')} /> : null}
-          </ListCardStack>
-        </>
-      )}
-    </OrgCatalogShell>
+      ) : undefined}
+    </ProjectsListView>
   )
 }

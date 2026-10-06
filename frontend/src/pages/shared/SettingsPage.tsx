@@ -6,7 +6,7 @@ import { ApiError } from '../../api/client'
 import { createClientUser, getClientUsers, resetClientUserCredentials, toggleClientUser, type ClientUser } from '../../api/clientPortal'
 import { createJodaynUser, getJodaynUsers, resetJodaynUserCredentials, toggleJodaynUser, type JodaynUser } from '../../api/jodayn'
 import { createOrgUser, getOrgUsers, resetOrgUserCredentials, toggleOrgUser, type OrgUser } from '../../api/org'
-import { changePassword, getProfile, updateProfile, type Profile } from '../../api/me'
+import { changePassword, getProfile, updateProfile, type Profile, type UserPreferences } from '../../api/me'
 import { updateStoredUser } from '../../auth/session'
 import { getClientToken, getClientUser } from '../../auth/clientAuth'
 import { getJodaynToken, getJodaynUser } from '../../auth/jodaynAuth'
@@ -16,11 +16,12 @@ import { isUpperManagement, type AppRole } from '../../auth/permissions'
 import { CredentialsModal } from '../../components/settings/CredentialsModal'
 import { InviteUserModal, type InviteUserPayload } from '../../components/settings/InviteUserModal'
 import { PageHeader } from '../../components/ui'
+import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import type { PortalKind } from '../../features/portal/PortalDashboard'
 import '../../design/senior-settings.css'
 import '../../design/settings-users.css'
 
-type SettingsTab = 'profile' | 'users'
+type SettingsTab = 'profile' | 'security' | 'notifications' | 'users'
 type PortalUser = OrgUser | ClientUser | JodaynUser
 type CreatedCredentials = { name: string; email: string; temporaryPassword: string; reissued?: boolean }
 
@@ -47,7 +48,7 @@ function sessionForPortal(portal: SettingsPortal | null) {
     return { user: getClientUser(), token: getClientToken(), entityLabel: getClientUser()?.clientName || '—' }
   }
   if (portal === 'jodayn') {
-    return { user: getJodaynUser(), token: getJodaynToken(), entityLabel: 'جدين' }
+    return { user: getJodaynUser(), token: getJodaynToken(), entityLabel: 'جودين' }
   }
   return { user: null, token: null, entityLabel: '—' }
 }
@@ -91,6 +92,68 @@ function loginStatus(user: PortalUser) {
   return { label: 'نشط', tone: 'active' as const }
 }
 
+type ProfileDraft = { name: string; jobTitle: string; phone: string }
+type NotificationDraft = Pick<UserPreferences, 'notifyEmail' | 'notifyInApp' | 'notifyProduct'>
+
+const EMPTY_PROFILE: ProfileDraft = { name: '', jobTitle: '', phone: '' }
+const DEFAULT_NOTIFICATIONS: NotificationDraft = { notifyEmail: true, notifyInApp: true, notifyProduct: false }
+
+const NOTIFICATION_ROWS: Array<{ key: keyof NotificationDraft; title: string; description: string }> = [
+  { key: 'notifyEmail', title: 'إشعارات البريد الالكتروني', description: 'تحديثات ومهام عبر البريد' },
+  { key: 'notifyInApp', title: 'الإشعارات الفورية', description: 'تنبيهات طلبات المصادقة' },
+  { key: 'notifyProduct', title: 'تحديثات المنتج والميزات الجديدة', description: 'أخبار المنصة والتحسينات' },
+]
+
+function profileDraftFrom(profile: Profile): ProfileDraft {
+  return {
+    name: profile.name || '',
+    jobTitle: profile.preferences?.jobTitle || '',
+    phone: profile.preferences?.phone || '',
+  }
+}
+
+function notificationsFrom(preferences?: UserPreferences | null): NotificationDraft {
+  if (!preferences) return DEFAULT_NOTIFICATIONS
+  return {
+    notifyEmail: preferences.notifyEmail,
+    notifyInApp: preferences.notifyInApp,
+    notifyProduct: preferences.notifyProduct,
+  }
+}
+
+function SettingsField({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  dir,
+  readOnly,
+  autoComplete,
+}: {
+  label: string
+  value: string
+  onChange?: (value: string) => void
+  type?: string
+  dir?: 'ltr' | 'rtl'
+  readOnly?: boolean
+  autoComplete?: string
+}) {
+  return (
+    <label className="senior-settings__field">
+      <span className="senior-settings__field-label">{label}</span>
+      <input
+        type={type}
+        dir={dir}
+        placeholder={label}
+        value={value}
+        readOnly={readOnly}
+        autoComplete={autoComplete}
+        onChange={(event) => onChange?.(event.target.value)}
+      />
+    </label>
+  )
+}
+
 export function SettingsPage() {
   const { t } = useTranslation()
   const location = useLocation()
@@ -111,68 +174,107 @@ export function SettingsPage() {
   const { user: sessionUser, token, entityLabel } = useMemo(() => sessionForPortal(portal), [portal, location.pathname])
   const [profile, setProfile] = useState<Profile | null>(null)
   const user = profile ?? sessionUser
-  const [nameDraft, setNameDraft] = useState('')
-  const [profileSaving, setProfileSaving] = useState(false)
-  const [profileMessage, setProfileMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [profileDraft, setProfileDraft] = useState<ProfileDraft>(EMPTY_PROFILE)
+  const [notificationsDraft, setNotificationsDraft] = useState<NotificationDraft>(DEFAULT_NOTIFICATIONS)
   const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '' })
-  const [passwordSaving, setPasswordSaving] = useState(false)
-  const [passwordMessage, setPasswordMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [banner, setBanner] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const initial = user?.name?.trim()?.charAt(0) || '—'
+
+  const applyProfile = useCallback((fresh: Profile) => {
+    setProfile(fresh)
+    setProfileDraft(profileDraftFrom(fresh))
+    setNotificationsDraft(notificationsFrom(fresh.preferences))
+  }, [])
 
   useEffect(() => {
     if (!token) return
     let cancelled = false
     getProfile(token)
       .then(({ user: fresh }) => {
-        if (cancelled) return
-        setProfile(fresh)
-        setNameDraft(fresh.name)
+        if (!cancelled) applyProfile(fresh)
       })
       .catch(() => {
-        if (!cancelled) setNameDraft(sessionUser?.name || '')
+        if (!cancelled) setProfileDraft((draft) => ({ ...draft, name: sessionUser?.name || '' }))
       })
     return () => {
       cancelled = true
     }
-  }, [token, sessionUser?.name])
+  }, [token, sessionUser?.name, applyProfile])
 
-  async function handleSaveProfile() {
+  useEffect(() => {
+    if (!banner) return
+    const timeoutId = window.setTimeout(() => setBanner(null), 5000)
+    return () => window.clearTimeout(timeoutId)
+  }, [banner])
+
+  /** Saves every changed field across the profile, security and notification tabs. */
+  async function handleSave() {
     if (!token || !portal) return
-    setProfileSaving(true)
-    setProfileMessage(null)
+    const saved = profile ? profileDraftFrom(profile) : EMPTY_PROFILE
+    const savedNotifications = notificationsFrom(profile?.preferences)
+    const changes: Partial<UserPreferences> & { name?: string } = {}
+    if (profileDraft.name.trim() !== saved.name) changes.name = profileDraft.name.trim()
+    if (profileDraft.jobTitle.trim() !== saved.jobTitle) changes.jobTitle = profileDraft.jobTitle.trim()
+    if (profileDraft.phone.trim() !== saved.phone) changes.phone = profileDraft.phone.trim()
+    ;(Object.keys(notificationsDraft) as Array<keyof NotificationDraft>).forEach((key) => {
+      if (notificationsDraft[key] !== savedNotifications[key]) changes[key] = notificationsDraft[key]
+    })
+    const wantsPassword = Boolean(passwordForm.current || passwordForm.next || passwordForm.confirm)
+
+    if (changes.name !== undefined && !changes.name) {
+      setBanner({ tone: 'error', text: 'الاسم مطلوب' })
+      return
+    }
+    if (wantsPassword) {
+      if (!passwordForm.current || !passwordForm.next) {
+        setTab('security')
+        setBanner({ tone: 'error', text: 'أدخل كلمة المرور الحالية والجديدة' })
+        return
+      }
+      if (passwordForm.next !== passwordForm.confirm) {
+        setTab('security')
+        setBanner({ tone: 'error', text: 'كلمتا المرور غير متطابقتين' })
+        return
+      }
+    }
+    if (!Object.keys(changes).length && !wantsPassword) {
+      setBanner({ tone: 'success', text: 'لا توجد تغييرات للحفظ' })
+      return
+    }
+
+    setSaving(true)
     try {
-      const { user: saved } = await updateProfile(token, { name: nameDraft })
-      setProfile(saved)
-      updateStoredUser(portal, { name: saved.name })
-      setProfileMessage({ ok: true, text: 'تم حفظ الملف الشخصي' })
+      if (Object.keys(changes).length) {
+        const { user: fresh } = await updateProfile(token, changes)
+        applyProfile(fresh)
+        if (changes.name) updateStoredUser(portal, { name: fresh.name })
+      }
+      if (wantsPassword) {
+        await changePassword(token, { currentPassword: passwordForm.current, newPassword: passwordForm.next })
+        setPasswordForm({ current: '', next: '', confirm: '' })
+      }
+      setBanner({ tone: 'success', text: 'تم حفظ التغييرات بنجاح' })
     } catch (error) {
-      setProfileMessage({ ok: false, text: error instanceof ApiError ? error.message : 'تعذر حفظ الملف الشخصي' })
+      setBanner({ tone: 'error', text: error instanceof ApiError ? error.message : 'حدث خطأ ما ، يرجى المحاولة مرة أخرى' })
     } finally {
-      setProfileSaving(false)
+      setSaving(false)
     }
   }
 
-  async function handleChangePassword() {
-    if (!token) return
-    if (passwordForm.next !== passwordForm.confirm) {
-      setPasswordMessage({ ok: false, text: 'كلمتا المرور غير متطابقتين' })
-      return
-    }
-    setPasswordSaving(true)
-    setPasswordMessage(null)
-    try {
-      await changePassword(token, { currentPassword: passwordForm.current, newPassword: passwordForm.next })
-      setPasswordForm({ current: '', next: '', confirm: '' })
-      setPasswordMessage({ ok: true, text: 'تم تغيير كلمة المرور' })
-    } catch (error) {
-      setPasswordMessage({ ok: false, text: error instanceof ApiError ? error.message : 'تعذر تغيير كلمة المرور' })
-    } finally {
-      setPasswordSaving(false)
-    }
+  function handleCancel() {
+    setProfileDraft(profile ? profileDraftFrom(profile) : { ...EMPTY_PROFILE, name: sessionUser?.name || '' })
+    setNotificationsDraft(notificationsFrom(profile?.preferences))
+    setPasswordForm({ current: '', next: '', confirm: '' })
+    setBanner({ tone: 'error', text: 'تم إلغاء التغييرات' })
   }
 
   const tabs = useMemo(() => {
-    const items: Array<[SettingsTab, string]> = [['profile', 'الملف الشخصي']]
+    const items: Array<[SettingsTab, string]> = [
+      ['profile', 'الملف الشخصي'],
+      ['security', 'الامان'],
+      ['notifications', 'الاشعارات'],
+    ]
     if (canManageUsers) items.push(['users', 'المستخدمون وإدارة الوصول'])
     return items
   }, [canManageUsers])
@@ -275,6 +377,11 @@ export function SettingsPage() {
   return (
     <div className="dashboard-page senior-settings">
       <PageHeader className="page-header--senior" title={t('settings')} />
+      {banner ? (
+        <FeedbackBanner tone={banner.tone} onClose={() => setBanner(null)}>
+          {banner.text}
+        </FeedbackBanner>
+      ) : null}
       <div className="tenants-body senior-settings__content" dir="rtl">
         <div className="senior-settings__tabs" role="tablist" aria-label={t('settings')}>
           {tabs.map(([id, label], index) => (
@@ -294,8 +401,8 @@ export function SettingsPage() {
         </div>
 
         {tab === 'profile' ? (
-          <section className="senior-settings__card senior-settings__card--profile">
-            <div className="senior-settings__card-title">المعلومات الشخصية</div>
+          <section className="senior-settings__card senior-settings__card--profile" aria-labelledby="profile-heading">
+            <div className="senior-settings__card-title" id="profile-heading">المعلومات الشخصية</div>
             <div className="senior-settings__separator" />
             <div className="senior-settings__identity">
               <div className="senior-settings__avatar-image" aria-hidden>
@@ -303,89 +410,110 @@ export function SettingsPage() {
               </div>
               <div className="senior-settings__identity-copy">
                 <span className="senior-settings__identity-name">{user?.name || '—'}</span>
-                <span className="senior-settings__identity-email">{user?.email || '—'}</span>
+                <span className="senior-settings__identity-email">
+                  {user?.email || '—'} · {roleLabel(user?.role || role || '')} · {entityLabel}
+                </span>
               </div>
             </div>
             <div className="senior-settings__profile-grid">
-              <label className="senior-settings__field">
-                <span className="senior-settings__field-label">الاسم</span>
-                <input value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} />
-              </label>
-              <label className="senior-settings__field">
-                <span className="senior-settings__field-label">البريد الإلكتروني</span>
-                <input dir="ltr" value={user?.email || ''} readOnly />
-              </label>
-              <label className="senior-settings__field">
-                <span className="senior-settings__field-label">الجهة</span>
-                <input value={entityLabel} readOnly />
-              </label>
-              <label className="senior-settings__field">
-                <span className="senior-settings__field-label">الدور</span>
-                <input value={roleLabel(user?.role || role || '')} readOnly />
-              </label>
-            </div>
-            <div className="senior-settings__form-actions">
-              {profileMessage ? (
-                <span className={profileMessage.ok ? 'senior-settings__note--ok' : 'td-add-user-error'}>{profileMessage.text}</span>
-              ) : null}
-              <button
-                type="button"
-                className="td-add-user-submit"
-                disabled={profileSaving || !nameDraft.trim() || nameDraft.trim() === user?.name}
-                onClick={() => void handleSaveProfile()}
-              >
-                {profileSaving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-              </button>
-            </div>
-
-            <div className="senior-settings__card-title senior-settings__card-title--spaced">تغيير كلمة المرور</div>
-            <div className="senior-settings__separator" />
-            <div className="senior-settings__profile-grid">
-              <label className="senior-settings__field">
-                <span className="senior-settings__field-label">كلمة المرور الحالية</span>
-                <input
-                  type="password"
-                  dir="ltr"
-                  autoComplete="current-password"
-                  value={passwordForm.current}
-                  onChange={(event) => setPasswordForm((prev) => ({ ...prev, current: event.target.value }))}
-                />
-              </label>
-              <label className="senior-settings__field">
-                <span className="senior-settings__field-label">كلمة المرور الجديدة</span>
-                <input
-                  type="password"
-                  dir="ltr"
-                  autoComplete="new-password"
-                  value={passwordForm.next}
-                  onChange={(event) => setPasswordForm((prev) => ({ ...prev, next: event.target.value }))}
-                />
-              </label>
-              <label className="senior-settings__field">
-                <span className="senior-settings__field-label">تأكيد كلمة المرور</span>
-                <input
-                  type="password"
-                  dir="ltr"
-                  autoComplete="new-password"
-                  value={passwordForm.confirm}
-                  onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirm: event.target.value }))}
-                />
-              </label>
-            </div>
-            <div className="senior-settings__form-actions">
-              {passwordMessage ? (
-                <span className={passwordMessage.ok ? 'senior-settings__note--ok' : 'td-add-user-error'}>{passwordMessage.text}</span>
-              ) : null}
-              <button
-                type="button"
-                className="td-add-user-submit"
-                disabled={passwordSaving || !passwordForm.current || !passwordForm.next}
-                onClick={() => void handleChangePassword()}
-              >
-                {passwordSaving ? 'جاري الحفظ...' : 'تغيير كلمة المرور'}
-              </button>
+              <SettingsField
+                label="المسمى الوظيفي"
+                value={profileDraft.jobTitle}
+                onChange={(value) => setProfileDraft((draft) => ({ ...draft, jobTitle: value }))}
+              />
+              <SettingsField
+                label="الاسم الكامل"
+                value={profileDraft.name}
+                onChange={(value) => setProfileDraft((draft) => ({ ...draft, name: value }))}
+              />
+              <SettingsField
+                label="رقم الجوال"
+                value={profileDraft.phone}
+                dir="ltr"
+                type="tel"
+                onChange={(value) => setProfileDraft((draft) => ({ ...draft, phone: value }))}
+              />
+              <SettingsField label="البريد الالكتروني" value={user?.email || ''} dir="ltr" readOnly />
             </div>
           </section>
+        ) : null}
+
+        {tab === 'security' ? (
+          <section className="senior-settings__card senior-settings__card--security" aria-labelledby="security-heading">
+            <div className="senior-settings__card-title" id="security-heading">إعادة تعيين كلمة المرور</div>
+            <div className="senior-settings__separator" />
+            <SettingsField
+              label="كلمة المرور الحالية"
+              type="password"
+              dir="ltr"
+              autoComplete="current-password"
+              value={passwordForm.current}
+              onChange={(value) => setPasswordForm((prev) => ({ ...prev, current: value }))}
+            />
+            <SettingsField
+              label="كلمة المرور الجديدة"
+              type="password"
+              dir="ltr"
+              autoComplete="new-password"
+              value={passwordForm.next}
+              onChange={(value) => setPasswordForm((prev) => ({ ...prev, next: value }))}
+            />
+            <SettingsField
+              label="تأكيد كلمة المرور الجديدة"
+              type="password"
+              dir="ltr"
+              autoComplete="new-password"
+              value={passwordForm.confirm}
+              onChange={(value) => setPasswordForm((prev) => ({ ...prev, confirm: value }))}
+            />
+          </section>
+        ) : null}
+
+        {tab === 'notifications' ? (
+          <section className="senior-settings__card" aria-labelledby="notifications-heading">
+            <div className="senior-settings__card-title" id="notifications-heading">الاشعارات</div>
+            <div className="senior-settings__separator" />
+            {NOTIFICATION_ROWS.map(({ key, title, description }) => (
+              <div className="senior-settings__notification-row" key={key}>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={notificationsDraft[key]}
+                  aria-label={title}
+                  className={`senior-settings__toggle ${notificationsDraft[key] ? 'senior-settings__toggle--on' : ''}`}
+                  onClick={() => setNotificationsDraft((draft) => ({ ...draft, [key]: !draft[key] }))}
+                >
+                  <span className="senior-settings__toggle-dot" />
+                </button>
+                <div className="senior-settings__notification-copy">
+                  <span className="senior-settings__field-value senior-settings__field-value--dark">{title}</span>
+                  <span className="senior-settings__field-value senior-settings__field-value--muted">{description}</span>
+                </div>
+              </div>
+            ))}
+            <div className="senior-settings__separator" />
+          </section>
+        ) : null}
+
+        {tab !== 'users' ? (
+          <div className="senior-settings__actions">
+            <button
+              type="button"
+              className="senior-settings__button senior-settings__button--cancel"
+              disabled={saving}
+              onClick={handleCancel}
+            >
+              الغاء
+            </button>
+            <button
+              type="button"
+              className="senior-settings__button senior-settings__button--save"
+              disabled={saving}
+              onClick={() => void handleSave()}
+            >
+              {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+            </button>
+          </div>
         ) : null}
 
         {tab === 'users' && canManageUsers ? (
