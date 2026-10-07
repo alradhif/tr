@@ -6,9 +6,11 @@ import { ApiError } from '../../api/client'
 import { deleteJodaynRecord, getReports } from '../../api/jodayn'
 import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
 import {
+  FinanceDetails,
   FinanceGenerator,
   FinanceHead,
   FinancePage,
+  FinanceRow,
   FinanceStats,
   FinanceTable,
   FinanceTabs,
@@ -18,15 +20,22 @@ import {
 import icon1 from '../../features/jodayn-finance/assets/icon1.svg'
 import icon2 from '../../features/jodayn-finance/assets/icon2.svg'
 import icon3 from '../../features/jodayn-finance/assets/icon3.svg'
-import { reportTypeLabel } from './labels'
+import { periodName, reportTypeLabel } from './labels'
 
 type ReportRow = {
   key: string
+  name: string
   type: string
   period: string
   totalContractsValue: number
   netProfit: number
   netCashFlow: number
+}
+
+/** Report title in the design's style: "تقرير الربع الأول" for quarter periods, otherwise by type. */
+function reportName(period: string | null | undefined, typeLabel: string) {
+  const code = period?.match(/^(Q[1-4]|H[12])\b/)?.[1]
+  return code ? `تقرير ${periodName(code)}` : `تقرير ${typeLabel}`
 }
 
 export function JodaynReportsPage() {
@@ -35,6 +44,7 @@ export function JodaynReportsPage() {
   const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<ReportRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [opened, setOpened] = useState<ReportRow | null>(null)
   const isUpper = getJodaynRole() === 'upper'
 
   useEffect(() => {
@@ -48,9 +58,11 @@ export function JodaynReportsPage() {
       try {
         const { reports } = await getReports(token)
         if (cancelled) return
+        // Oldest first, as in the design (the API returns newest first).
         setRows(
-          reports.map((r) => ({
+          [...reports].reverse().map((r) => ({
             key: r.id,
+            name: reportName(r.period, reportTypeLabel(r.type, t)),
             type: reportTypeLabel(r.type, t),
             period: r.period ?? '—',
             totalContractsValue: Number(r.totalContractsValue ?? 0),
@@ -71,9 +83,10 @@ export function JodaynReportsPage() {
 
   const remove = async (row: ReportRow) => {
     const token = getJodaynToken()
-    if (!token || !window.confirm(`حذف ${row.type}؟`)) return
+    if (!token || !window.confirm(`حذف ${row.name}؟`)) return
     try {
       await deleteJodaynRecord(token, 'reports', row.key)
+      setOpened(null)
       setRows((current) => current.filter((item) => item.key !== row.key))
       message.success(t('deletedSuccessfully'))
     } catch (err) {
@@ -89,10 +102,10 @@ export function JodaynReportsPage() {
       <FinanceHead
         title={t('financialReports')}
         subtitle="متابعة أداء العقود وتوليد التقارير المالية الخاصة بها"
-        createLabel={t('generateReport')}
+        createLabel="إنشاء تقرير"
         onCreate={() => navigate('/jodayn/reports/new')}
       />
-      <FinanceTabs active={view} onChange={setView} />
+      <FinanceTabs active={view} onChange={setView} withList />
 
       {view === 'generator' ? (
         <FinanceGenerator
@@ -101,7 +114,7 @@ export function JodaynReportsPage() {
             rows[0]
               ? {
                   project: {
-                    name: `تقرير ${rows[0].type}`,
+                    name: rows[0].name,
                     code: rows[0].key.slice(0, 8).toUpperCase(),
                     department: 'التقارير المالية — جودين',
                     projectManager: '—',
@@ -110,7 +123,7 @@ export function JodaynReportsPage() {
                     budget: rows[0].totalContractsValue,
                     budgetCurrency: 'SAR',
                   },
-                  outputs: rows.slice(0, 4).map((r) => `${r.type} — ربح ${formatAmount(r.netProfit)}`),
+                  outputs: rows.slice(0, 4).map((r) => `${r.name} — ربح ${formatAmount(r.netProfit)}`),
                   sourceLabel: `بيانات حية — ${rows.length} تقرير`,
                 }
               : null
@@ -126,29 +139,40 @@ export function JodaynReportsPage() {
             ]}
           />
           <FinanceTable
-            headers={['اسم التقرير', 'الفترة / الربع', 'قيمة العقود', 'صافي الربح', 'صافي التدفق النقدي', ...(isUpper ? [''] : [])]}
+            headers={['اسم التقرير', 'الفترة / الربع', 'قيمة العقود', 'صافي الربح', 'صافي التدفق النقدي']}
             loading={loading}
             empty={rows.length === 0}
           >
             {rows.map((row) => (
-              <tr key={row.key}>
-                <td>{row.type}</td>
+              <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
+                <td>{row.name}</td>
                 <td className="finance-muted">{row.period}</td>
                 <td>{formatAmount(row.totalContractsValue)}</td>
                 <td>{formatAmount(row.netProfit)}</td>
                 <td>{formatAmount(row.netCashFlow)}</td>
-                {isUpper ? (
-                  <td>
-                    <span className="finance-actions">
-                      <button type="button" className="is-danger" onClick={() => void remove(row)}>
-                        {t('delete')}
-                      </button>
-                    </span>
-                  </td>
-                ) : null}
-              </tr>
+              </FinanceRow>
             ))}
           </FinanceTable>
+          {opened ? (
+            <FinanceDetails
+              title={opened.name}
+              onClose={() => setOpened(null)}
+              fields={[
+                { label: 'نوع التقرير', value: opened.type },
+                { label: 'الفترة / الربع', value: opened.period },
+                { label: 'قيمة العقود', value: formatAmount(opened.totalContractsValue) },
+                { label: 'صافي الربح', value: formatAmount(opened.netProfit) },
+                { label: 'صافي التدفق النقدي', value: formatAmount(opened.netCashFlow) },
+              ]}
+              actions={
+                isUpper ? (
+                  <button type="button" className="finance-btn finance-btn--danger" onClick={() => void remove(opened)}>
+                    {t('delete')}
+                  </button>
+                ) : null
+              }
+            />
+          ) : null}
         </>
       )}
     </FinancePage>

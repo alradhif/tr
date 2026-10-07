@@ -22,6 +22,12 @@ function parseDate(value) {
 // ============ INVOICES ============
 
 const INVOICE_STATUSES = ['PENDING', 'PAID', 'OVERDUE', 'CANCELLED']
+// MONTHLY / ANNUAL are subscriptions; anything else (null) is a fixed asset.
+const BILLING_CYCLES = ['MONTHLY', 'ANNUAL']
+
+function normalizeBillingCycle(value) {
+  return BILLING_CYCLES.includes(value) ? value : null
+}
 
 exports.createInvoice = async (req, res) => {
   try {
@@ -35,6 +41,8 @@ exports.createInvoice = async (req, res) => {
       clientName,
       contractReference,
       projectName,
+      region,
+      billingCycle,
       issueDate,
       dueDate,
       nextInvoiceDate,
@@ -71,6 +79,8 @@ exports.createInvoice = async (req, res) => {
         clientName,
         contractReference,
         projectName,
+        region: region || null,
+        billingCycle: normalizeBillingCycle(billingCycle),
         issueDate: new Date(issueDate),
         dueDate: new Date(dueDate),
         nextInvoiceDate: nextInvoiceDate ? new Date(nextInvoiceDate) : null,
@@ -130,6 +140,8 @@ exports.updateInvoice = async (req, res) => {
       clientName,
       contractReference,
       projectName,
+      region,
+      billingCycle,
       issueDate,
       dueDate,
       nextInvoiceDate,
@@ -143,6 +155,8 @@ exports.updateInvoice = async (req, res) => {
     if (clientName !== undefined) data.clientName = clientName
     if (contractReference !== undefined) data.contractReference = contractReference
     if (projectName !== undefined) data.projectName = projectName
+    if (region !== undefined) data.region = region || null
+    if (billingCycle !== undefined) data.billingCycle = normalizeBillingCycle(billingCycle)
     if (issueDate !== undefined) data.issueDate = new Date(issueDate)
     if (dueDate !== undefined) data.dueDate = new Date(dueDate)
     if (nextInvoiceDate !== undefined) data.nextInvoiceDate = nextInvoiceDate ? new Date(nextInvoiceDate) : null
@@ -211,6 +225,7 @@ exports.createForecast = async (req, res) => {
       pessimisticProbability,
       conservativeValue,
       conservativeProbability,
+      actualValue,
       branchFilter,
       dateRangeStart,
       dateRangeEnd,
@@ -232,6 +247,7 @@ exports.createForecast = async (req, res) => {
         pessimisticProbability: toNumber(pessimisticProbability),
         conservativeValue: toNumber(conservativeValue),
         conservativeProbability: toNumber(conservativeProbability),
+        actualValue: toNumber(actualValue),
         branchFilter: branchFilter || null,
         dateRangeStart: parseDate(dateRangeStart) || null,
         dateRangeEnd: parseDate(dateRangeEnd) || null,
@@ -290,6 +306,7 @@ exports.updateForecast = async (req, res) => {
       pessimisticProbability,
       conservativeValue,
       conservativeProbability,
+      actualValue,
       branchFilter,
       dateRangeStart,
       dateRangeEnd,
@@ -306,6 +323,7 @@ exports.updateForecast = async (req, res) => {
     if (pessimisticProbability !== undefined) data.pessimisticProbability = toNumber(pessimisticProbability)
     if (conservativeValue !== undefined) data.conservativeValue = toNumber(conservativeValue)
     if (conservativeProbability !== undefined) data.conservativeProbability = toNumber(conservativeProbability)
+    if (actualValue !== undefined) data.actualValue = toNumber(actualValue)
     if (branchFilter !== undefined) data.branchFilter = branchFilter || null
     if (dateRangeStart !== undefined) data.dateRangeStart = dateRangeStart ? new Date(dateRangeStart) : null
     if (dateRangeEnd !== undefined) data.dateRangeEnd = dateRangeEnd ? new Date(dateRangeEnd) : null

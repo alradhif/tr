@@ -6,9 +6,11 @@ import { ApiError } from '../../api/client'
 import { getSectors } from '../../api/superAdmin'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
+  FinanceDetails,
   FinanceGenerator,
   FinanceHead,
   FinancePage,
+  FinanceRow,
   FinanceStats,
   FinanceTable,
   FinanceTabs,
@@ -36,6 +38,7 @@ export function JodaynSectorsPage() {
   const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<SectorRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [opened, setOpened] = useState<SectorRow | null>(null)
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -48,8 +51,9 @@ export function JodaynSectorsPage() {
       try {
         const { sectors } = await getSectors(token)
         if (cancelled) return
+        // Largest budget first, as in the design.
         setRows(
-          sectors.map((s) => ({
+          [...sectors].sort((a, b) => Number(b.budget ?? 0) - Number(a.budget ?? 0)).map((s) => ({
             key: s.id,
             name: s.name,
             managerName: s.managerName || '—',
@@ -76,12 +80,7 @@ export function JodaynSectorsPage() {
 
   return (
     <FinancePage title={t('sectors')}>
-      <FinanceHead
-        title={t('sectors')}
-        subtitle="قطاعات الأعمال وميزانياتها وأداؤها"
-        createLabel={t('addSector')}
-        onCreate={() => navigate('/jodayn/sectors/new')}
-      />
+      <FinanceHead title={t('sectors')} createLabel={t('addSector')} onCreate={() => navigate('/jodayn/sectors/new')} />
       <FinanceTabs active={view} onChange={setView} />
 
       {view === 'generator' ? (
@@ -121,16 +120,30 @@ export function JodaynSectorsPage() {
             empty={rows.length === 0}
           >
             {rows.map((row) => (
-              <tr key={row.key}>
+              <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
                 <td>{row.name}</td>
                 <td>{row.managerName}</td>
                 <td>{formatAmount(row.budget)}</td>
                 <td>{row.employeeCount}</td>
                 <td>{row.departmentCount}</td>
                 <td>{formatAmount(row.profit)}</td>
-              </tr>
+              </FinanceRow>
             ))}
           </FinanceTable>
+          {opened ? (
+            <FinanceDetails
+              title={opened.name}
+              onClose={() => setOpened(null)}
+              fields={[
+                { label: 'المدير المسؤول', value: opened.managerName },
+                { label: 'الميزانية', value: formatAmount(opened.budget) },
+                { label: 'الإيراد السنوي', value: formatAmount(opened.annualRevenue) },
+                { label: 'الربح', value: formatAmount(opened.profit) },
+                { label: 'عدد الموظفين', value: opened.employeeCount },
+                { label: 'عدد الإدارات', value: opened.departmentCount },
+              ]}
+            />
+          ) : null}
         </>
       )}
     </FinancePage>

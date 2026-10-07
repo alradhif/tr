@@ -328,6 +328,8 @@ model Invoice {
   clientName        String
   contractReference String?
   projectName       String?
+  region            String?
+  billingCycle      String?
   issueDate         DateTime
   dueDate           DateTime
   nextInvoiceDate   DateTime?
@@ -354,6 +356,7 @@ model RevenueForecast {
   pessimisticProbability  Decimal        @default(0)
   conservativeValue       Decimal        @default(0)
   conservativeProbability Decimal        @default(0)
+  actualValue             Decimal        @default(0)
   branchFilter            String?
   dateRangeStart          DateTime?
   dateRangeEnd            DateTime?

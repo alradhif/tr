@@ -19,6 +19,7 @@ type FormValues = {
   pessimisticProbability?: number
   conservativeValue?: number
   conservativeProbability?: number
+  actualValue?: number
 }
 
 function toDateString(value?: { toISOString?: () => string } | string) {
@@ -52,6 +53,7 @@ export function JodaynAddForecastPage() {
         pessimisticProbability: values.pessimisticProbability,
         conservativeValue: values.conservativeValue,
         conservativeProbability: values.conservativeProbability,
+        actualValue: values.actualValue,
       })
       message.success(t('saveForecast'))
       navigate('/jodayn/forecasts')
@@ -84,9 +86,14 @@ export function JodaynAddForecastPage() {
               <InputNumber className="w-full" min={2000} />
             </Form.Item>
           </div>
-          <Form.Item label={t('branch')} name="branchFilter">
-            <Input />
-          </Form.Item>
+          <div className="form-grid-2">
+            <Form.Item label="الجهة" name="branchFilter">
+              <Input />
+            </Form.Item>
+            <Form.Item label="الإيراد الفعلي المحقق" name="actualValue">
+              <InputNumber className="w-full" min={0} />
+            </Form.Item>
+          </div>
           <div className="form-grid-2">
             <Form.Item label={t('dateRangeStart')} name="dateRangeStart">
               <DatePicker className="w-full" />

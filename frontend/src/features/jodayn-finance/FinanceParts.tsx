@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { Plus } from 'lucide-react'
+import { Modal } from 'antd'
+import { ChevronLeft, Plus } from 'lucide-react'
 import icon1 from './assets/icon1.svg'
 import icon2 from './assets/icon2.svg'
 import { PptGeneratorFrame, type PptBridgePayload } from '../portal'
@@ -34,7 +35,7 @@ export function FinanceHead({
     <div className="finance-head">
       <div>
         <h1 className="finance-head__title">{title}</h1>
-        {subtitle ? <p className="finance-head__subtitle">{subtitle}</p> : null}
+        <p className="finance-head__subtitle">{subtitle ?? '\u00a0'}</p>
       </div>
       <div className="finance-head__actions">
         {actions}
@@ -51,25 +52,53 @@ export function FinanceHead({
 
 export type FinanceView = 'list' | 'generator'
 
-/** List / presentation-generator switch shown under the page head. */
-export function FinanceTabs({ active, onChange }: { active: FinanceView; onChange: (view: FinanceView) => void }) {
-  const tabs: { id: FinanceView; label: string }[] = [
-    { id: 'list', label: 'القائمة' },
-    { id: 'generator', label: 'مولد العروض' },
-  ]
+/**
+ * Buttons row under the page head. Reports show القائمة + مولد العروض; the other
+ * screens show only مولد العروض, which toggles between the table and the generator.
+ * `extra` holds page actions (e.g. add) placed beside them.
+ */
+export function FinanceTabs({
+  active,
+  onChange,
+  withList = false,
+  extra,
+}: {
+  active: FinanceView
+  onChange: (view: FinanceView) => void
+  withList?: boolean
+  extra?: ReactNode
+}) {
   return (
     <div className="finance-tabs">
-      {tabs.map((tab) => (
+      {extra}
+      {withList ? (
         <button
-          key={tab.id}
           type="button"
-          className={`finance-btn ${tab.id === active ? 'finance-btn--dark' : 'finance-btn--outline'}`}
-          onClick={() => onChange(tab.id)}
+          className={`finance-btn ${active === 'list' ? 'finance-btn--dark' : 'finance-btn--outline'}`}
+          onClick={() => onChange('list')}
         >
-          {tab.label}
+          القائمة
         </button>
-      ))}
+      ) : null}
+      <button
+        type="button"
+        className="finance-btn finance-btn--outline finance-btn--generator"
+        aria-pressed={active === 'generator'}
+        onClick={() => onChange(withList || active !== 'generator' ? 'generator' : 'list')}
+      >
+        مولد العروض
+      </button>
     </div>
+  )
+}
+
+/** Dark "+ label" button used for page create actions. */
+export function FinanceCreateButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="finance-btn finance-btn--dark" onClick={onClick}>
+      <Plus size={18} strokeWidth={2.4} />
+      <span>{label}</span>
+    </button>
   )
 }
 
@@ -117,7 +146,7 @@ export function FinanceAmountStats({ cards }: { cards: AmountStat[] }) {
   )
 }
 
-/** Table wrapper; shows the loading or empty message in place of rows. */
+/** Table wrapper; shows the loading or empty message in place of rows. Adds the design's trailing open column. */
 export function FinanceTable({
   headers,
   loading,
@@ -142,12 +171,61 @@ export function FinanceTable({
               {headers.map((h, i) => (
                 <th key={i}>{h}</th>
               ))}
+              <th aria-label="فتح" />
             </tr>
           </thead>
           <tbody>{children}</tbody>
         </table>
       )}
     </div>
+  )
+}
+
+/** Clickable table row ending with the design's chevron; opens the record's details. */
+export function FinanceRow({ onOpen, children }: { onOpen: () => void; children: ReactNode }) {
+  return (
+    <tr
+      className="finance-row--link"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') onOpen()
+      }}
+    >
+      {children}
+      <td>
+        <ChevronLeft size={20} className="finance-chevron" />
+      </td>
+    </tr>
+  )
+}
+
+export type DetailField = { label: string; value: ReactNode }
+
+/** Details panel opened from a row; holds the record's fields and its actions. */
+export function FinanceDetails({
+  title,
+  fields,
+  actions,
+  onClose,
+}: {
+  title: string
+  fields: DetailField[]
+  actions?: ReactNode
+  onClose: () => void
+}) {
+  return (
+    <Modal open title={title} onCancel={onClose} footer={null} centered width={520}>
+      <dl className="finance-details" dir="rtl">
+        {fields.map((field) => (
+          <div className="finance-details__row" key={field.label}>
+            <dt>{field.label}</dt>
+            <dd>{field.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {actions ? <div className="finance-details__actions">{actions}</div> : null}
+    </Modal>
   )
 }
 

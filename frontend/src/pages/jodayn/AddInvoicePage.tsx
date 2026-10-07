@@ -11,6 +11,9 @@ type FormValues = {
   invoiceNumber: string
   clientName: string
   projectName?: string
+  contractReference?: string
+  region?: string
+  billingCycle?: 'FIXED' | 'MONTHLY' | 'ANNUAL'
   amount: number
   status?: string
   issueDate: { toISOString?: () => string } | string
@@ -40,6 +43,9 @@ export function JodaynAddInvoicePage() {
         invoiceNumber: values.invoiceNumber,
         clientName: values.clientName,
         projectName: values.projectName,
+        contractReference: values.contractReference,
+        region: values.region,
+        billingCycle: values.billingCycle === 'FIXED' ? null : values.billingCycle,
         amount: values.amount,
         status: values.status,
         issueDate: toDateString(values.issueDate),
@@ -76,9 +82,28 @@ export function JodaynAddInvoicePage() {
               <Input />
             </Form.Item>
           </div>
-          <Form.Item label={t('projectName')} name="projectName">
-            <Input />
-          </Form.Item>
+          <div className="form-grid-2">
+            <Form.Item label="الأصل" name="projectName">
+              <Input />
+            </Form.Item>
+            <Form.Item label="الرقم التسلسلي" name="contractReference">
+              <Input placeholder="SRV-2026-001" />
+            </Form.Item>
+          </div>
+          <div className="form-grid-2">
+            <Form.Item label="النوع" name="billingCycle" initialValue="FIXED">
+              <Select
+                options={[
+                  { value: 'FIXED', label: 'أصل ثابت' },
+                  { value: 'MONTHLY', label: 'إشتراك شهري' },
+                  { value: 'ANNUAL', label: 'إشتراك سنوي' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item label="المنطقة" name="region">
+              <Input />
+            </Form.Item>
+          </div>
           <div className="form-grid-2">
             <Form.Item label={t('amount')} name="amount" rules={[{ required: true }]}>
               <InputNumber className="w-full" min={0} />

@@ -6,9 +6,11 @@ import { ApiError } from '../../api/client'
 import { getAccounts } from '../../api/superAdmin'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
+  FinanceDetails,
   FinanceGenerator,
   FinanceHead,
   FinancePage,
+  FinanceRow,
   FinanceTable,
   FinanceTabs,
   shortRef,
@@ -25,6 +27,7 @@ type ClientAccountRow = {
   city: string
   sector: string
   active: boolean
+  reference: string
 }
 
 export function JodaynClientAccountsPage() {
@@ -32,6 +35,7 @@ export function JodaynClientAccountsPage() {
   const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<ClientAccountRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [opened, setOpened] = useState<ClientAccountRow | null>(null)
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -45,13 +49,15 @@ export function JodaynClientAccountsPage() {
         const data = await getAccounts(token)
         if (cancelled) return
         setRows(
-          (data.clients ?? []).map((c) => ({
+          // Oldest first, as in the design (the API returns newest first).
+          [...(data.clients ?? [])].reverse().map((c) => ({
             key: c.id,
             name: c.name,
             managerName: c.managerName || '—',
             city: c.region || c.branch || 'غير محدد',
             sector: c.sector?.name ?? '—',
             active: c.isActive,
+            reference: c.crNumber || shortRef(c.id),
           })),
         )
       } catch (err) {
@@ -69,7 +75,7 @@ export function JodaynClientAccountsPage() {
 
   return (
     <FinancePage title={t('clientAccounts')}>
-      <FinanceHead title={t('clientAccounts')} subtitle="حسابات العملاء المشتركين في المنصة وحالتها" />
+      <FinanceHead title={t('clientAccounts')} />
       <FinanceTabs active={view} onChange={setView} />
 
       {view === 'generator' ? (
@@ -117,26 +123,38 @@ export function JodaynClientAccountsPage() {
             <CityDonutCard title="توزيع حسب المدينة" items={cityDistribution(rows.map((row) => row.city))} />
           </div>
           <FinanceTable
-            headers={['اسم العميل', 'الشخص المسؤول', 'المدينة', 'القطاع', 'الحالة', 'المعرّف']}
+            headers={['اسم العميل', 'الشخص المسؤول', 'المدينة', 'الحالة', 'المعرّف']}
             loading={loading}
             empty={rows.length === 0}
           >
             {rows.map((row) => (
-              <tr key={row.key}>
+              <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
                 <td>{row.name}</td>
                 <td className="finance-muted">{row.managerName}</td>
                 <td>{row.city}</td>
-                <td className="finance-muted">{row.sector}</td>
                 <td>
                   <span className={`finance-status finance-status--${row.active ? 'active' : 'inactive'}`}>
                     <CheckCircle2 size={14} strokeWidth={2.4} />
-                    {row.active ? 'نشط' : 'غير نشط'}
+                    {row.active ? 'نشطة' : 'غير نشطة'}
                   </span>
                 </td>
-                <td>{shortRef(row.key)}</td>
-              </tr>
+                <td>{row.reference}</td>
+              </FinanceRow>
             ))}
           </FinanceTable>
+          {opened ? (
+            <FinanceDetails
+              title={opened.name}
+              onClose={() => setOpened(null)}
+              fields={[
+                { label: 'الشخص المسؤول', value: opened.managerName },
+                { label: 'المدينة', value: opened.city },
+                { label: 'القطاع', value: opened.sector },
+                { label: 'الحالة', value: opened.active ? 'نشطة' : 'غير نشطة' },
+                { label: 'المعرّف', value: opened.reference },
+              ]}
+            />
+          ) : null}
         </>
       )}
     </FinancePage>

@@ -50,6 +50,8 @@ export type Invoice = {
   clientName: string
   contractReference?: string | null
   projectName?: string | null
+  region?: string | null
+  billingCycle?: 'MONTHLY' | 'ANNUAL' | null
   issueDate: string
   dueDate: string
   status: string
@@ -62,6 +64,7 @@ export type RevenueForecast = {
   optimisticValue: number | string
   pessimisticValue: number | string
   conservativeValue: number | string
+  actualValue?: number | string
   branchFilter?: string | null
 }
 

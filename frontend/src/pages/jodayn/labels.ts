@@ -21,3 +21,22 @@ const REPORT_TYPE_KEY: Record<string, string> = {
 export function reportTypeLabel(type: string, t: (key: string) => string) {
   return REPORT_TYPE_KEY[type] ? t(REPORT_TYPE_KEY[type]) : type
 }
+
+const PERIOD_NAME: Record<string, string> = {
+  Q1: 'الربع الأول',
+  Q2: 'الربع الثاني',
+  Q3: 'الربع الثالث',
+  Q4: 'الربع الرابع',
+  H1: 'النصف الأول',
+  H2: 'النصف الثاني',
+}
+
+/** Arabic name of a quarter / half code (Q1 → الربع الأول), or the code itself. */
+export function periodName(code: string) {
+  return PERIOD_NAME[code] ?? code
+}
+
+/** Period column text: quarters stay as "Q1 2026", halves read "النصف الثاني 2026". */
+export function periodLabel(code: string, year: number | string) {
+  return code.startsWith('H') ? `${periodName(code)} ${year}` : `${code} ${year}`
+}

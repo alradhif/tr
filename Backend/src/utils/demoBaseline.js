@@ -370,10 +370,10 @@ const GOALS = [
 ]
 
 const SECTORS = [
-  { name: 'القطاع الحكومي', managerName: 'عبدالله الحربي', budget: 1200000, employeeCount: 45, departmentCount: 6, profit: 210000 },
-  { name: 'قطاع الرعاية الصحية', managerName: 'هناء القحطاني', budget: 950000, employeeCount: 38, departmentCount: 5, profit: 175500 },
-  { name: 'قطاع التعليم', managerName: 'فيصل الدوسري', budget: 700000, employeeCount: 29, departmentCount: 4, profit: 132300 },
-  { name: 'القطاع الخاص', managerName: 'ريم العنزي', budget: 480000, employeeCount: 21, departmentCount: 3, profit: 98750 },
+  { name: 'القطاع الحكومي', managerName: 'عبدالله الحربي', budget: 1200000, employeeCount: 45, departmentCount: 6, profit: 210000, annualRevenue: 210000 },
+  { name: 'قطاع الرعاية الصحية', managerName: 'هناء القحطاني', budget: 950000, employeeCount: 38, departmentCount: 5, profit: 175500, annualRevenue: 175500 },
+  { name: 'قطاع التعليم', managerName: 'فيصل الدوسري', budget: 700000, employeeCount: 29, departmentCount: 4, profit: 132300, annualRevenue: 132300 },
+  { name: 'القطاع الخاص', managerName: 'ريم العنزي', budget: 480000, employeeCount: 21, departmentCount: 3, profit: 98750, annualRevenue: 98750 },
 ]
 
 const ENTITY_ACCOUNTS = [
@@ -395,16 +395,16 @@ const CLIENT_ACCOUNTS = [
 ]
 
 const INVOICES = [
-  { invoiceNumber: 'INV-4521', amount: 250, remainingAmount: 0, status: 'PAID', clientName: 'شركة نافذ التقنية', projectName: 'خادم Dell PowerEdge R750' },
-  { invoiceNumber: 'INV-4522', amount: 45000, remainingAmount: 0, status: 'PAID', clientName: 'مؤسسة الاتصال الحديث', projectName: 'مبدل شبكة Cisco Catalyst' },
-  { invoiceNumber: 'INV-4530', amount: 18000, remainingAmount: 18000, status: 'PENDING', clientName: 'شركة البيانات الذكية', projectName: 'نظام تخزين NetApp' },
-  { invoiceNumber: 'INV-4538', amount: 3200, remainingAmount: 3200, status: 'OVERDUE', clientName: 'مجموعة المكتب الحديث', projectName: 'طابعة HP LaserJet Enterprise' },
+  { invoiceNumber: 'INV-4521', amount: 250, remainingAmount: 0, status: 'PAID', clientName: 'شركة نافذ التقنية', projectName: 'خادم Dell PowerEdge R750', contractReference: 'SRV-2025-001', region: 'الرياض', billingCycle: 'MONTHLY' },
+  { invoiceNumber: 'INV-4522', amount: 45000, remainingAmount: 0, status: 'PAID', clientName: 'مؤسسة الاتصال الحديث', projectName: 'مبدل شبكة Cisco Catalyst', contractReference: 'SRV-2025-014', region: 'جدة' },
+  { invoiceNumber: 'INV-4530', amount: 18000, remainingAmount: 18000, status: 'PENDING', clientName: 'شركة البيانات الذكية', projectName: 'نظام تخزين NetApp', contractReference: 'SRV-2025-027', region: 'الدمام', billingCycle: 'ANNUAL' },
+  { invoiceNumber: 'INV-4538', amount: 3200, remainingAmount: 3200, status: 'OVERDUE', clientName: 'مجموعة المكتب الحديث', projectName: 'طابعة HP LaserJet Enterprise', contractReference: 'SRV-2025-041', region: 'مكة المكرمة' },
 ]
 
 const FORECASTS = [
-  { quarter: 'Q1', year: 2026, optimisticValue: 250000, conservativeValue: 230000, pessimisticValue: 180000, branchFilter: 'وزارة التعليم' },
-  { quarter: 'Q2', year: 2026, optimisticValue: 300000, conservativeValue: 180000, pessimisticValue: 120000, branchFilter: 'هيئة الصحة العامة' },
-  { quarter: 'H2', year: 2026, optimisticValue: 220000, conservativeValue: 210000, pessimisticValue: 150000, branchFilter: 'جامعة الملك سعود' },
+  { quarter: 'Q1', year: 2026, optimisticValue: 270000, conservativeValue: 250000, pessimisticValue: 180000, actualValue: 230000, branchFilter: 'وزارة التعليم' },
+  { quarter: 'Q2', year: 2026, optimisticValue: 330000, conservativeValue: 300000, pessimisticValue: 120000, actualValue: 180000, branchFilter: 'هيئة الصحة العامة' },
+  { quarter: 'H2', year: 2026, optimisticValue: 240000, conservativeValue: 220000, pessimisticValue: 150000, actualValue: 210000, branchFilter: 'جامعة الملك سعود' },
 ]
 
 const REPORTS = [
