@@ -19,7 +19,7 @@ import buildingIcon from '../features/jodayn-finance/assets/building-2.svg'
 import usersIcon from '../features/jodayn-finance/assets/users.svg'
 import '../design/portal-layout.css'
 import '../org-catalog'
-import '../features/jodayn-finance/jodayn-sidebar.css'
+import '../features/jodayn-finance/jodayn-settings.css'
 
 function NavImg({ src }: { src: string }) {
   return <img src={src} alt="" className="sidebar__nav-icon" width={20} height={20} />

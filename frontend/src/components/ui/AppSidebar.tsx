@@ -8,6 +8,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { TrackLogo } from '../TrackLogo'
 import '../../super-admin-ui/components/layout/sidebar-dropdown.css'
+import './app-sidebar-design.css'
 
 export type AppNavItem = {
   key: string
