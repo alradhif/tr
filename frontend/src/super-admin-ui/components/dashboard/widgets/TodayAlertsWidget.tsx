@@ -46,6 +46,8 @@ export function TodayAlertsWidget() {
   const navigate = useNavigate()
   const location = useLocation()
   const isClientPortal = location.pathname.startsWith('/client')
+  // The Jodayn dashboard frame in Figma titles this section "حالات الطلبات".
+  const title = location.pathname.startsWith('/jodayn') ? 'حالات الطلبات' : 'تنبيهات اليوم'
   const count =
     typeof pendingApprovals === 'number' && pendingApprovals > 0
       ? pendingApprovals
@@ -98,7 +100,7 @@ export function TodayAlertsWidget() {
     <Card className="widget-today-alerts">
       <div className="widget-today-alerts__header">
         <div className="widget-icon-header">
-          <h3 className="widget-header__title">تنبيهات اليوم</h3>
+          <h3 className="widget-header__title">{title}</h3>
         </div>
         <span className="widget-today-alerts__count" aria-label={`${count} تنبيهات`}>
           {count}
