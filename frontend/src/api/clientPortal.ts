@@ -27,7 +27,7 @@ export type ClientProject = {
   progressPct: number
   managerId: string
   manager?: { id: string; name: string; email: string }
-  client?: { id: string; name: string } | null
+  client?: { id: string; name: string; description?: string | null; entityType?: string | null } | null
   orgProjectManagerName?: string | null
   clientProjectManagerName?: string | null
   scopeMain?: string | null

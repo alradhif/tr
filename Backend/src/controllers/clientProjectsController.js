@@ -33,6 +33,7 @@ async function withApproverName(project) {
 
 const PROJECT_INCLUDE = {
   manager: { select: { id: true, name: true, email: true } },
+  client: { select: { id: true, name: true, description: true, entityType: true } },
   phases: true,
   teamMembers: true,
   deliverables: true,

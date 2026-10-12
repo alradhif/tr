@@ -739,10 +739,17 @@ export function ProjectDetailView({
           </span>
           <div>
             <h2>{companyTitle}</h2>
-              <p>{project?.description || t('projectDescription')}</p>
+            {/* Client projects describe the account (Figma 1231:128823); org projects keep the project description. */}
+            <p>
+              {(isClient ? clientProject?.client?.description : null) || project?.description || t('projectDescription')}
+            </p>
           </div>
         </div>
-        <span className="project-detail__company-link">{orgProject?.classification || t('internalDept')}</span>
+        <span className="project-detail__company-link">
+          {isClient
+            ? clientProject?.client?.entityType || 'جهة العميل'
+            : orgProject?.classification || t('internalDept')}
+        </span>
       </div>
       {attachments.length > 0 ? (
         <section className="project-detail__card project-detail__attachments-card">
@@ -767,7 +774,7 @@ export function ProjectDetailView({
           <ProgressBar value={progress} tone="success" />
         </article>
         <article className="project-detail__card project-detail__remaining-card">
-          <h3>{t('daysRemaining')}</h3>
+          <h3>الوقت المتبقي</h3>
           <div className="project-detail__remaining-value">
             <strong>{remainingDays}</strong>
             <span>{t('dayUnit')}</span>
@@ -789,7 +796,7 @@ export function ProjectDetailView({
           </div>
         </article>
         <article className="project-detail__card">
-          <h3>{t('openRisks')}</h3>
+          <h3>المخاطر</h3>
           <div className="project-detail__legend">
             <span>
               {t('high')} <i className="is-high" /> <b>{riskCounts.high}</b>
