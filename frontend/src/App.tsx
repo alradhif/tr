@@ -25,6 +25,8 @@ import { ClientGoalsPage } from './pages/client/GoalsPage'
 import { ClientAddGoalPage, ClientEditGoalPage } from './pages/client/AddGoalPage'
 import { ClientGoalDetailPage } from './pages/client/GoalDetailPage'
 import { JodaynDashboardPage } from './pages/jodayn/DashboardPage'
+import { JodaynGoalsPage } from './pages/jodayn/GoalsPage'
+import { JodaynProjectsPage } from './pages/jodayn/ProjectsPage'
 import { JodaynSectorsPage } from './pages/jodayn/SectorsPage'
 import { JodaynAddSectorPage } from './pages/jodayn/AddSectorPage'
 import { JodaynOrgAccountsPage } from './pages/jodayn/OrgAccountsPage'
@@ -89,8 +91,10 @@ export default function App() {
           {/* Jodayn */}
           <Route path="/jodayn/login" element={<Navigate to="/login" replace />} />
           <Route path="/jodayn" element={<JodaynLayout />}>
-            <Route index element={<Navigate to="reports" replace />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<JodaynDashboardPage />} />
+            <Route path="goals" element={<JodaynGoalsPage />} />
+            <Route path="projects" element={<JodaynProjectsPage />} />
             <Route path="sectors" element={<JodaynSectorsPage />} />
             <Route path="sectors/new" element={<JodaynAddSectorPage />} />
             <Route path="org-accounts" element={<JodaynOrgAccountsPage />} />

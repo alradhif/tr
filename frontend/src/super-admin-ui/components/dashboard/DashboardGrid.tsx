@@ -165,7 +165,9 @@ export function useDashboardState(
     getDashboardLayout(token, persistPortal)
       .then(({ layout: saved }) => {
         if (cancelled || !saved) return;
-        const valid = (saved.widgetIds as string[]).filter((id): id is WidgetId => id in WIDGET_REGISTRY);
+        const valid = (saved.widgetIds as string[]).filter(
+          (id): id is WidgetId => id in WIDGET_REGISTRY && availableWidgetIds.includes(id as WidgetId),
+        );
         if (valid.length === 0) return;
         setActiveWidgetIds(valid);
         setLayout((saved.layout as LayoutItem[]).filter((item) => valid.includes(item.i as WidgetId)));

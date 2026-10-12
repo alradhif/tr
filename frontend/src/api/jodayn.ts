@@ -1,3 +1,4 @@
+import type { StrategicGoal } from './orgStrategy'
 import { apiRequest } from './client'
 import type { LiveDashboardData } from '../features/portal/DashboardLiveContext'
 
@@ -144,4 +145,30 @@ export function updateInvoice(token: string, id: string, data: Record<string, un
 
 export function deleteJodaynRecord(token: string, kind: 'invoices' | 'forecasts' | 'reports', id: string) {
   return apiRequest<{ success: boolean }>(`/jodayn/${kind}/${id}`, { method: 'DELETE', token })
+}
+
+export type JodaynOwner = { ownerType: 'org' | 'client'; ownerName: string | null }
+
+export type JodaynGoal = StrategicGoal & JodaynOwner
+
+export type JodaynProject = JodaynOwner & {
+  id: string
+  name: string
+  status: string
+  approvalStatus: string
+  progressPct: number
+  startDate: string
+  endDate: string
+  budget: number | string
+  _count?: { deliverables?: number }
+}
+
+/** Every organization's and client's strategic goals (read-only). */
+export function getJodaynGoals(token: string) {
+  return apiRequest<{ count: number; goals: JodaynGoal[] }>('/jodayn/goals', { method: 'GET', token })
+}
+
+/** Every organization's and client's projects (read-only). */
+export function getJodaynProjects(token: string) {
+  return apiRequest<{ count: number; projects: JodaynProject[] }>('/jodayn/projects', { method: 'GET', token })
 }

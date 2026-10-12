@@ -3,14 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { PageHeader } from '../../components/ui'
 import { DashboardGrid, useDashboardState } from '../../super-admin-ui/components/dashboard/DashboardGrid'
 import { WidgetLibraryPanel } from '../../super-admin-ui/components/dashboard/WidgetLibraryPanel'
-import {
-  ADMIN_DEFAULT_ACTIVE_WIDGET_IDS,
-  ADMIN_PORTAL_LAYOUT,
-  SUPERADMIN_DEFAULT_ACTIVE_WIDGET_IDS,
-  DEFAULT_LAYOUT,
-  type WidgetId,
-} from '../../super-admin-ui/config/widgets'
-import type { LayoutItem } from 'react-grid-layout/legacy'
+import { ADMIN_DEFAULT_ACTIVE_WIDGET_IDS, ADMIN_PORTAL_LAYOUT } from '../../super-admin-ui/config/widgets'
 import { EditGridIcon } from '../../super-admin-ui/components/layout/EditGridIcon'
 import {
   DashboardLiveProvider,
@@ -40,10 +33,6 @@ type PortalDashboardProps = {
   variant?: 'senior' | 'dataentry'
 }
 
-const JODAYN_LAYOUT: LayoutItem[] = DEFAULT_LAYOUT.filter((item) =>
-  SUPERADMIN_DEFAULT_ACTIVE_WIDGET_IDS.includes(item.i as WidgetId),
-)
-
 function dashboardEndpoint(portal: PortalKind) {
   if (portal === 'org') return '/org/dashboard'
   if (portal === 'client') return '/client/dashboard'
@@ -58,8 +47,8 @@ export function PortalDashboard({
   variant = 'senior',
 }: PortalDashboardProps) {
   const { t } = useTranslation()
-  const widgetIds =
-    portal === 'jodayn' ? SUPERADMIN_DEFAULT_ACTIVE_WIDGET_IDS : ADMIN_DEFAULT_ACTIVE_WIDGET_IDS
+  // Every portal (Jodayn included, per the Figma dashboard frame) shows the project-portfolio widgets.
+  const widgetIds = ADMIN_DEFAULT_ACTIVE_WIDGET_IDS
   const {
     isEditMode,
     setIsEditMode,
@@ -72,7 +61,7 @@ export function PortalDashboard({
   } = useDashboardState(
     widgetIds,
     widgetIds,
-    portal === 'jodayn' ? JODAYN_LAYOUT : ADMIN_PORTAL_LAYOUT,
+    ADMIN_PORTAL_LAYOUT,
     portal,
   )
 
@@ -80,7 +69,7 @@ export function PortalDashboard({
   const [loadState, setLoadState] = useState<DashboardLoadState>('loading')
 
   useEffect(() => {
-    setLayout(portal === 'jodayn' ? JODAYN_LAYOUT : ADMIN_PORTAL_LAYOUT)
+    setLayout(ADMIN_PORTAL_LAYOUT)
   }, [portal, setLayout])
 
   const loadLive = useCallback(async () => {

@@ -153,8 +153,9 @@ async function buildProjectPortalDashboard(kind, accountId, options = {}) {
   const riskModel = isOrg ? prisma.orgRisk : prisma.clientRisk
   const deliverableModel = isOrg ? prisma.orgDeliverable : prisma.clientDeliverable
   const changeModel = isOrg ? prisma.orgChangeRequest : prisma.clientChangeRequest
-  const accountFilter = isOrg ? { orgId: accountId } : { clientId: accountId }
-  const projectScope = { project: accountFilter }
+  // A null accountId covers every account of this kind (used by the Jodayn portal).
+  const accountFilter = accountId == null ? {} : isOrg ? { orgId: accountId } : { clientId: accountId }
+  const projectScope = accountId == null ? {} : { project: accountFilter }
 
   const now = new Date()
   const weekAhead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -377,6 +378,54 @@ async function buildProjectPortalDashboard(kind, accountId, options = {}) {
   }
 }
 
+/** Project-portfolio dashboard across every organization and client account. */
+async function buildPlatformProjectDashboard() {
+  const [org, client] = await Promise.all([
+    buildProjectPortalDashboard('ORG', null),
+    buildProjectPortalDashboard('CLIENT', null),
+  ])
+  const sum = (key) => (org[key] || 0) + (client[key] || 0)
+  const totalProjects = sum('totalProjects')
+  const statusByLabel = new Map()
+  for (const row of [...org.projectStatuses, ...client.projectStatuses]) {
+    const current = statusByLabel.get(row.label)
+    statusByLabel.set(row.label, current ? { ...current, count: (current.count || 0) + (row.count || 0) } : { ...row })
+  }
+  const projectStatuses = [...statusByLabel.values()].map((row) => ({
+    ...row,
+    value: totalProjects ? Math.round(((row.count || 0) / totalProjects) * 1000) / 10 : 0,
+  }))
+
+  return {
+    totalProjects,
+    activeProjects: sum('activeProjects'),
+    completedProjects: sum('completedProjects'),
+    onHoldProjects: sum('onHoldProjects'),
+    pendingRequests: sum('pendingRequests'),
+    pendingProjectApprovals: 0,
+    avgProgress: totalProjects
+      ? Math.round((org.avgProgress * org.totalProjects + client.avgProgress * client.totalProjects) / totalProjects)
+      : 0,
+    upcomingDeliverables: sum('upcomingDeliverables'),
+    deliverablesThisWeek: sum('deliverablesThisWeek'),
+    openRisks: {
+      high: org.openRisks.high + client.openRisks.high,
+      medium: org.openRisks.medium + client.openRisks.medium,
+      low: org.openRisks.low + client.openRisks.low,
+    },
+    risksByMonth: org.risksByMonth.map((month, i) => ({
+      month: month.month,
+      low: month.low + (client.risksByMonth[i]?.low || 0),
+      medium: month.medium + (client.risksByMonth[i]?.medium || 0),
+      high: month.high + (client.risksByMonth[i]?.high || 0),
+    })),
+    projectStatuses,
+    todayAlerts: [...org.todayAlerts, ...client.todayAlerts].slice(0, 8),
+    deliverables: [...org.deliverables, ...client.deliverables].slice(0, 8),
+    projects: [...org.projects, ...client.projects].slice(0, 8),
+  }
+}
+
 async function buildJodaynDashboard() {
   const now = new Date()
   const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
@@ -530,6 +579,7 @@ async function buildJodaynDashboard() {
       { id: 'sec', title: `${sectorCount} قطاع` },
     ],
     ...projectStats,
+    ...(await buildPlatformProjectDashboard()),
   }
 }
 

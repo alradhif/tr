@@ -10,13 +10,17 @@ import {
   jodaynRoleLabel,
 } from '../auth/jodaynAuth'
 import { AIAssistantPanel } from '../features/portal'
-import { SidebarSettingsIcon } from '../super-admin-ui/components/layout/SidebarIcons'
+import {
+  CompaniesIcon,
+  DashboardIcon,
+  DepartmentsIcon,
+  GoalsIcon,
+  ProjectsIcon,
+  SidebarSettingsIcon,
+} from '../super-admin-ui/components/layout/SidebarIcons'
 import fileTextIcon from '../features/jodayn-finance/assets/file-text.svg'
 import walletIcon from '../features/jodayn-finance/assets/wallet.svg'
 import creditCardIcon from '../features/jodayn-finance/assets/credit-card.svg'
-import barChartIcon from '../features/jodayn-finance/assets/bar-chart-3.svg'
-import buildingIcon from '../features/jodayn-finance/assets/building-2.svg'
-import usersIcon from '../features/jodayn-finance/assets/users.svg'
 import '../design/portal-layout.css'
 import '../org-catalog'
 import '../features/jodayn-finance/jodayn-settings.css'
@@ -48,13 +52,16 @@ export function JodaynLayout() {
           clearJodaynSession()
           window.location.assign('/login')
         }}
+        // Order and labels from the Figma Jodayn dashboard frame (2394:69202).
         navItems={[
-          { key: '/jodayn/reports', label: t('financialReports'), icon: <NavImg src={fileTextIcon} /> },
-          { key: '/jodayn/forecasts', label: t('revenueForecasts'), icon: <NavImg src={walletIcon} /> },
+          { key: '/jodayn/dashboard', label: t('dashboard'), icon: <DashboardIcon /> },
+          { key: '/jodayn/goals', label: t('strategicGoals'), icon: <GoalsIcon /> },
+          { key: '/jodayn/projects', label: t('projects'), icon: <ProjectsIcon /> },
+          { key: '/jodayn/client-accounts', label: 'العملاء', icon: <CompaniesIcon /> },
+          { key: '/jodayn/sectors', label: t('sectors'), icon: <DepartmentsIcon /> },
           { key: '/jodayn/invoices', label: t('invoices'), icon: <NavImg src={creditCardIcon} /> },
-          { key: '/jodayn/client-accounts', label: t('clientAccounts'), icon: <NavImg src={barChartIcon} /> },
-          { key: '/jodayn/org-accounts', label: t('orgAccounts'), icon: <NavImg src={buildingIcon} /> },
-          { key: '/jodayn/sectors', label: t('sectors'), icon: <NavImg src={usersIcon} /> },
+          { key: '/jodayn/forecasts', label: t('revenueForecasts'), icon: <NavImg src={walletIcon} /> },
+          { key: '/jodayn/reports', label: t('financialReports'), icon: <NavImg src={fileTextIcon} /> },
         ]}
       />
       <div className="app-shell__main app-shell__content--catalog">
