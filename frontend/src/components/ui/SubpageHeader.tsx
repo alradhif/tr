@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { commonAssets } from '@/assets'
 import { AssetIcon } from './AssetIcon'
+import './subpage-header-figma.css'
 
 export type SubpageHeaderProps = {
   parent: string

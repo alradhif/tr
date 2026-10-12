@@ -1,0 +1,61 @@
+/*
+ * Page header with breadcrumb, from the Figma "Header" component (1231:128936):
+ * 75px bar, 20px medium text, muted parent, full title (wraps instead of truncating).
+ * Doubled class selectors so this wins over the older header stylesheets.
+ */
+.subpage-header.subpage-header {
+  box-sizing: border-box;
+  height: auto;
+  min-height: 75px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 24px 14px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #e7e8eb;
+}
+
+.subpage-header.subpage-header .subpage-header__back {
+  width: 24px;
+  height: 24px;
+}
+
+.subpage-header.subpage-header .subpage-header__nav {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+}
+
+.subpage-header.subpage-header .subpage-header__breadcrumb {
+  display: block;
+  font-size: 20px;
+  line-height: 30px;
+  font-weight: 500;
+  color: #0c0c0d;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.subpage-header.subpage-header .subpage-header__parent,
+.subpage-header.subpage-header .subpage-header__separator {
+  display: inline;
+  font-size: 20px;
+  line-height: 30px;
+  font-weight: 500;
+  color: #a2a2ac;
+}
+
+.subpage-header.subpage-header .subpage-header__separator {
+  margin: 0 6px;
+}
+
+.subpage-header.subpage-header .subpage-header__current {
+  display: inline;
+  font-size: 20px;
+  line-height: 30px;
+  font-weight: 500;
+  color: #0c0c0d;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
