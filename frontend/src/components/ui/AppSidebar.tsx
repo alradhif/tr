@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Input } from 'antd'
 import { MoreOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons'
 import { LogOut, MoreVertical, Search } from 'lucide-react'
@@ -37,7 +38,8 @@ function SignOutModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
     return () => document.removeEventListener('keydown', handleKey)
   }, [onCancel])
 
-  return (
+  // Rendered into <body> so the sidebar's stacking context can't push it behind the page content.
+  return createPortal(
     <div
       className="signout-backdrop"
       role="dialog"
@@ -62,7 +64,8 @@ function SignOutModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

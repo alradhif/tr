@@ -1,4 +1,5 @@
 import { type ReactElement, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { LogOut, MoreVertical, Search } from 'lucide-react';
 import type { UserRole } from '../../types/auth';
 import { PortalSearch } from '../../../components/search/PortalSearch';
@@ -62,8 +63,8 @@ function SignOutModal({ onConfirm, onCancel }: SignOutModalProps) {
     return () => document.removeEventListener('keydown', handleKey);
   }, [onCancel]);
 
-  return (
-    
+  // Rendered into <body> so the sidebar's stacking context can't push it behind the page content.
+  return createPortal(
     <div
       className="signout-backdrop"
       role="dialog"
@@ -108,7 +109,8 @@ function SignOutModal({ onConfirm, onCancel }: SignOutModalProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
