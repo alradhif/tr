@@ -40,3 +40,9 @@ export function periodName(code: string) {
 export function periodLabel(code: string, year: number | string) {
   return code.startsWith('H') ? `${periodName(code)} ${year}` : `${code} ${year}`
 }
+
+/** Report title in the design's style: "تقرير الربع الأول" for quarter periods, otherwise by type. */
+export function reportName(period: string | null | undefined, typeLabel: string) {
+  const code = period?.match(/^(Q[1-4]|H[12])\b/)?.[1]
+  return code ? `تقرير ${periodName(code)}` : `تقرير ${typeLabel}`
+}

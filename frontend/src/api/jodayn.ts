@@ -76,6 +76,12 @@ export type FinancialReport = {
   netProfit: number | string
   netCashFlow?: number | string | null
   period?: string | null
+  budgetVariance?: number | string | null
+  cashFlowIn?: number | string | null
+  cashFlowOut?: number | string | null
+  profitTrend?: string | null
+  revenueTrend?: string | null
+  sectorRevenueComparison?: string | null
 }
 
 export function getInvoices(token: string) {
@@ -110,6 +116,10 @@ export function getReports(token: string) {
     method: 'GET',
     token,
   })
+}
+
+export function getReport(token: string, id: string) {
+  return apiRequest<{ report: FinancialReport }>(`/jodayn/reports/${id}`, { method: 'GET', token })
 }
 
 export function createReport(token: string, data: Record<string, unknown>) {

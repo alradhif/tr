@@ -1,0 +1,217 @@
+/* Jodayn financial report screen from the Figma frame (2293:66744). Uses the .jinv page shell. */
+
+.jrep-body {
+  gap: 14px;
+}
+
+.jrep-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.jrep-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  color: #202022;
+}
+
+.jrep-divider {
+  height: 1px;
+  background: #e7e8eb;
+}
+
+.jrep-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.jrep-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 129px;
+  padding: 24px 20px;
+  border-radius: 20px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.jrep-card__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jrep-card__label {
+  flex: 1;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+  color: #8e8f97;
+}
+
+.jrep-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #d1f0e1;
+}
+
+.jrep-card__icon--down {
+  background: #feedec;
+  transform: scaleY(-1);
+}
+
+.jrep-card__icon--down img {
+  filter: hue-rotate(250deg) saturate(2);
+}
+
+.jrep-card__value {
+  font-size: 30px;
+  line-height: 38px;
+  font-weight: 700;
+  color: #000;
+}
+
+.jrep-card__value-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jrep-card__value-row .jrep-card__value {
+  flex: 1;
+}
+
+.jrep-card__note {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+  color: #8e8f97;
+}
+
+.jrep-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.jrep-info__title {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+  color: #000;
+}
+
+.jrep-info__content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 24px;
+}
+
+.jrep-info__row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 16px;
+}
+
+.jrep-flows {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 156px;
+}
+
+.jrep-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jrep-flow__label,
+.jrep-flow__value {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #000;
+}
+
+.jrep-flow__value {
+  direction: ltr;
+  text-align: end;
+}
+
+.jrep-flow__track {
+  height: 10px;
+  border-radius: 26px;
+  background: #d9d9d9;
+  overflow: hidden;
+}
+
+.jrep-flow__fill {
+  height: 100%;
+  border-radius: 26px;
+  background: #2e90fa;
+}
+
+.jrep-info__sep {
+  align-self: stretch;
+  width: 1px;
+  background: #e7e8eb;
+}
+
+.jrep-net {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 225px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .jrep-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .jrep-info__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .jrep-info__sep {
+    width: auto;
+    height: 1px;
+  }
+
+  .jrep-net {
+    width: auto;
+  }
+}
+
+.jrep-card__value-row .jrep-card__value {
+  text-align: right;
+}
+
+.jrep-card--fixed {
+  height: 129px;
+  min-height: 0;
+  gap: 0;
+}

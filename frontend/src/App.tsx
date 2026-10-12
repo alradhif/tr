@@ -37,6 +37,7 @@ import { JodaynForecastsPage } from './pages/jodayn/ForecastsPage'
 import { JodaynAddForecastPage } from './pages/jodayn/AddForecastPage'
 import { JodaynReportsPage } from './pages/jodayn/ReportsPage'
 import { JodaynAddReportPage } from './pages/jodayn/AddReportPage'
+import { JodaynReportDetailPage } from './pages/jodayn/ReportDetailPage'
 import { AddPhasePage } from './pages/shared/project/AddPhasePage'
 import { AddDeliverablePage } from './pages/shared/project/AddDeliverablePage'
 import { AddRiskPage } from './pages/shared/project/AddRiskPage'
@@ -105,6 +106,7 @@ export default function App() {
             <Route path="forecasts/new" element={<JodaynAddForecastPage />} />
             <Route path="reports" element={<JodaynReportsPage />} />
             <Route path="reports/new" element={<JodaynAddReportPage />} />
+            <Route path="reports/:reportId" element={<JodaynReportDetailPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

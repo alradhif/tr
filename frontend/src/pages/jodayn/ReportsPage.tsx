@@ -3,10 +3,9 @@ import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { deleteJodaynRecord, getReports } from '../../api/jodayn'
-import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
+import { getReports } from '../../api/jodayn'
+import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
-  FinanceDetails,
   FinanceGenerator,
   FinanceHead,
   FinancePage,
@@ -20,7 +19,7 @@ import {
 import icon1 from '../../features/jodayn-finance/assets/icon1.svg'
 import icon2 from '../../features/jodayn-finance/assets/icon2.svg'
 import icon3 from '../../features/jodayn-finance/assets/icon3.svg'
-import { periodName, reportTypeLabel } from './labels'
+import { reportName, reportTypeLabel } from './labels'
 
 type ReportRow = {
   key: string
@@ -32,20 +31,12 @@ type ReportRow = {
   netCashFlow: number
 }
 
-/** Report title in the design's style: "تقرير الربع الأول" for quarter periods, otherwise by type. */
-function reportName(period: string | null | undefined, typeLabel: string) {
-  const code = period?.match(/^(Q[1-4]|H[12])\b/)?.[1]
-  return code ? `تقرير ${periodName(code)}` : `تقرير ${typeLabel}`
-}
-
 export function JodaynReportsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<ReportRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [opened, setOpened] = useState<ReportRow | null>(null)
-  const isUpper = getJodaynRole() === 'upper'
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -80,19 +71,6 @@ export function JodaynReportsPage() {
       cancelled = true
     }
   }, [t])
-
-  const remove = async (row: ReportRow) => {
-    const token = getJodaynToken()
-    if (!token || !window.confirm(`حذف ${row.name}؟`)) return
-    try {
-      await deleteJodaynRecord(token, 'reports', row.key)
-      setOpened(null)
-      setRows((current) => current.filter((item) => item.key !== row.key))
-      message.success(t('deletedSuccessfully'))
-    } catch (err) {
-      message.error(err instanceof ApiError ? err.message : t('loadError'))
-    }
-  }
 
   const totalContracts = rows.reduce((sum, row) => sum + row.totalContractsValue, 0)
   const totalProfit = rows.reduce((sum, row) => sum + row.netProfit, 0)
@@ -144,7 +122,7 @@ export function JodaynReportsPage() {
             empty={rows.length === 0}
           >
             {rows.map((row) => (
-              <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
+              <FinanceRow key={row.key} onOpen={() => navigate(`/jodayn/reports/${row.key}`)}>
                 <td>{row.name}</td>
                 <td className="finance-muted">{row.period}</td>
                 <td>{formatAmount(row.totalContractsValue)}</td>
@@ -153,26 +131,6 @@ export function JodaynReportsPage() {
               </FinanceRow>
             ))}
           </FinanceTable>
-          {opened ? (
-            <FinanceDetails
-              title={opened.name}
-              onClose={() => setOpened(null)}
-              fields={[
-                { label: 'نوع التقرير', value: opened.type },
-                { label: 'الفترة / الربع', value: opened.period },
-                { label: 'قيمة العقود', value: formatAmount(opened.totalContractsValue) },
-                { label: 'صافي الربح', value: formatAmount(opened.netProfit) },
-                { label: 'صافي التدفق النقدي', value: formatAmount(opened.netCashFlow) },
-              ]}
-              actions={
-                isUpper ? (
-                  <button type="button" className="finance-btn finance-btn--danger" onClick={() => void remove(opened)}>
-                    {t('delete')}
-                  </button>
-                ) : null
-              }
-            />
-          ) : null}
         </>
       )}
     </FinancePage>

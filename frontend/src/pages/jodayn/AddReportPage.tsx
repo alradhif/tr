@@ -15,6 +15,10 @@ type FormValues = {
   cashFlowIn?: number
   cashFlowOut?: number
   netCashFlow?: number
+  budgetVariance?: number
+  profitTrend?: string
+  revenueTrend?: string
+  sectorRevenueComparison?: string
   aiInsights?: string
 }
 
@@ -39,6 +43,10 @@ export function JodaynAddReportPage() {
         cashFlowIn: values.cashFlowIn,
         cashFlowOut: values.cashFlowOut,
         netCashFlow: values.netCashFlow,
+        budgetVariance: values.budgetVariance,
+        profitTrend: values.profitTrend,
+        revenueTrend: values.revenueTrend,
+        sectorRevenueComparison: values.sectorRevenueComparison,
         aiInsights: values.aiInsights,
       })
       message.success(t('saveReport'))
@@ -97,8 +105,24 @@ export function JodaynAddReportPage() {
               <InputNumber className="w-full" min={0} />
             </Form.Item>
           </div>
-          <Form.Item label={t('netCashFlow')} name="netCashFlow">
-            <InputNumber className="w-full" />
+          <div className="form-grid-2">
+            <Form.Item label={t('netCashFlow')} name="netCashFlow">
+              <InputNumber className="w-full" />
+            </Form.Item>
+            <Form.Item label="انحراف الميزانية (%)" name="budgetVariance">
+              <InputNumber className="w-full" />
+            </Form.Item>
+          </div>
+          <div className="form-grid-2">
+            <Form.Item label="اتجاه الربح" name="profitTrend">
+              <Input placeholder="+8.6%" />
+            </Form.Item>
+            <Form.Item label="اتجاه الإيرادات" name="revenueTrend">
+              <Input placeholder="-2.6%" />
+            </Form.Item>
+          </div>
+          <Form.Item label="مقارنة إيرادات القطاع" name="sectorRevenueComparison">
+            <Input placeholder="أقل بـ 15%" />
           </Form.Item>
           <Form.Item label={t('aiInsights')} name="aiInsights">
             <Input.TextArea rows={3} />

@@ -408,9 +408,9 @@ const FORECASTS = [
 ]
 
 const REPORTS = [
-  { type: 'EXECUTIVE', period: 'Q1 2026', totalContractsValue: 320000, netProfit: 84500, netCashFlow: 61200 },
-  { type: 'PROFIT_LOSS', period: 'Q2 2026', totalContractsValue: 410000, netProfit: 97300, netCashFlow: 72800 },
-  { type: 'RISK', period: 'النصف الأول 2026', totalContractsValue: 265000, netProfit: 58900, netCashFlow: 40150 },
+  { type: 'EXECUTIVE', period: 'Q1 2026', totalContractsValue: 320000, netProfit: 84500, netCashFlow: 61200, cashFlowIn: 182400, cashFlowOut: 121200, budgetVariance: -8.6, profitTrend: '+8.6%', revenueTrend: '-2.6%', sectorRevenueComparison: 'أقل بـ 15%' },
+  { type: 'PROFIT_LOSS', period: 'Q2 2026', totalContractsValue: 410000, netProfit: 97300, netCashFlow: 72800, cashFlowIn: 214600, cashFlowOut: 141800, budgetVariance: 3.2, profitTrend: '+4.1%', revenueTrend: '+5.3%', sectorRevenueComparison: 'أعلى بـ 6%' },
+  { type: 'RISK', period: 'النصف الأول 2026', totalContractsValue: 265000, netProfit: 58900, netCashFlow: 40150, cashFlowIn: 158350, cashFlowOut: 118200, budgetVariance: -4.1, profitTrend: '-1.8%', revenueTrend: '+1.2%', sectorRevenueComparison: 'أقل بـ 3%' },
 ]
 
 const ALERTS = [
