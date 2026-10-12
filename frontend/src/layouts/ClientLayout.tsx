@@ -12,7 +12,6 @@ import {
 import { AIAssistantPanel } from '../features/portal'
 import {
   DashboardIcon,
-  GoalsIcon,
   ProjectsIcon,
   SidebarSettingsIcon,
 } from '../super-admin-ui/components/layout/SidebarIcons'
@@ -42,9 +41,9 @@ export function ClientLayout() {
           clearClientSession()
           window.location.assign('/login')
         }}
+        // The client portal design (Figma 1231:136496) lists only the dashboard and projects.
         navItems={[
           { key: '/client/dashboard', label: t('dashboard'), icon: <DashboardIcon /> },
-          { key: '/client/goals', label: t('strategicGoals'), icon: <GoalsIcon /> },
           { key: '/client/projects', label: t('projects'), icon: <ProjectsIcon /> },
         ]}
       />
