@@ -3,11 +3,10 @@ import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { deleteJodaynRecord, getInvoices, updateInvoice, type Invoice } from '../../api/jodayn'
-import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
+import { getInvoices, type Invoice } from '../../api/jodayn'
+import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
   FinanceCreateButton,
-  FinanceDetails,
   FinanceGenerator,
   FinanceTabs,
   formatAmount,
@@ -31,22 +30,12 @@ function statusText(inv: Invoice) {
   return inv.billingCycle ? `اشتراك ${status}` : status
 }
 
-/** Type column: monthly / annual subscriptions, otherwise a fixed asset. */
-function invoiceType(inv: Invoice) {
-  if (inv.billingCycle === 'MONTHLY') return { label: 'إشتراك شهري', tone: 'subscription', suffix: 'شهري' }
-  if (inv.billingCycle === 'ANNUAL') return { label: 'إشتراك سنوي', tone: 'subscription', suffix: 'سنوي' }
-  return { label: 'أصل ثابت', tone: 'fixed', suffix: '' }
-}
-
 export function JodaynInvoicesPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [view, setView] = useState<FinanceView>('list')
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
-  const [opened, setOpened] = useState<Invoice | null>(null)
-  const [busy, setBusy] = useState(false)
-  const isUpper = getJodaynRole() === 'upper'
 
   const load = useCallback(async () => {
     const token = getJodaynToken()
@@ -68,22 +57,6 @@ export function JodaynInvoicesPage() {
   useEffect(() => {
     void load()
   }, [load])
-
-  const act = async (action: (token: string) => Promise<unknown>, done: string) => {
-    const token = getJodaynToken()
-    if (!token) return
-    setBusy(true)
-    try {
-      await action(token)
-      message.success(done)
-      setOpened(null)
-      await load()
-    } catch (err) {
-      message.error(err instanceof ApiError ? err.message : t('loadError'))
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const byStatus = (status: string) => invoices.filter((i) => i.status === status)
   const total = (list: Invoice[]) => list.reduce((sum, inv) => sum + Number(inv.amount ?? 0), 0)
@@ -172,9 +145,9 @@ export function JodaynInvoicesPage() {
                       <tr
                         key={inv.id}
                         tabIndex={0}
-                        onClick={() => setOpened(inv)}
+                        onClick={() => navigate(`/jodayn/invoices/${inv.id}`)}
                         onKeyDown={(event) => {
-                          if (event.key === 'Enter') setOpened(inv)
+                          if (event.key === 'Enter') navigate(`/jodayn/invoices/${inv.id}`)
                         }}
                       >
                         <td>
@@ -199,68 +172,6 @@ export function JodaynInvoicesPage() {
                 </table>
               )}
             </div>
-            {opened ? (
-              <FinanceDetails
-                title={`الفاتورة ${opened.invoiceNumber}`}
-                onClose={() => setOpened(null)}
-                fields={[
-                  { label: 'الأصل', value: opened.projectName || '—' },
-                  { label: 'الرقم التسلسلي', value: opened.contractReference || '—' },
-                  { label: 'الجهة المرتبطة', value: opened.clientName },
-                  { label: 'المنطقة', value: opened.region || '—' },
-                  { label: 'النوع', value: invoiceType(opened).label },
-                  { label: 'الحالة', value: STATUS_LABEL[opened.status] ?? opened.status },
-                  { label: 'القيمة', value: `${formatAmount(opened.amount)} ريال` },
-                  { label: 'الإجمالي مع الضريبة', value: `${formatAmount(opened.totalWithVat)} ريال` },
-                  { label: 'تاريخ الإصدار', value: formatDate(opened.issueDate) },
-                  { label: 'تاريخ الاستحقاق', value: formatDate(opened.dueDate) },
-                ]}
-                actions={
-                  <>
-                    {opened.status !== 'PAID' && opened.status !== 'CANCELLED' ? (
-                      <button
-                        type="button"
-                        className="finance-btn finance-btn--dark"
-                        disabled={busy}
-                        onClick={() =>
-                          void act((token) => updateInvoice(token, opened.id, { status: 'PAID' }), 'تم تسجيل السداد')
-                        }
-                      >
-                        تسجيل كمدفوعة
-                      </button>
-                    ) : null}
-                    {opened.status === 'PENDING' ? (
-                      <button
-                        type="button"
-                        className="finance-btn finance-btn--outline"
-                        disabled={busy}
-                        onClick={() =>
-                          void act(
-                            (token) => updateInvoice(token, opened.id, { status: 'OVERDUE' }),
-                            'تم تحديد الفاتورة كمتأخرة',
-                          )
-                        }
-                      >
-                        تحديد كمتأخرة
-                      </button>
-                    ) : null}
-                    {isUpper ? (
-                      <button
-                        type="button"
-                        className="finance-btn finance-btn--danger"
-                        disabled={busy}
-                        onClick={() => {
-                          if (!window.confirm(`حذف الفاتورة ${opened.invoiceNumber}؟`)) return
-                          void act((token) => deleteJodaynRecord(token, 'invoices', opened.id), t('deletedSuccessfully'))
-                        }}
-                      >
-                        {t('delete')}
-                      </button>
-                    ) : null}
-                  </>
-                }
-              />
-            ) : null}
           </>
         )}
       </div>

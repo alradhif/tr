@@ -1,0 +1,302 @@
+/* Jodayn detail screens from Figma (invoice 2314:121570, client company 2352:123200). Uses the .jinv page shell. */
+
+.jdet-crumb {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  font-size: 20px;
+  line-height: 30px;
+  font-weight: 500;
+  color: #0c0c0d;
+}
+
+.jdet-crumb__back {
+  display: inline-flex;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.jdet-crumb__muted {
+  color: #8e8f97;
+}
+
+.jdet-head {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.jdet-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  color: #202022;
+}
+
+.jdet-sub {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  color: #8e8f97;
+}
+
+.jdet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 23px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.jdet-badge--blue {
+  background: #d5e9fe;
+  color: #2e90fa;
+}
+
+.jdet-badge--green {
+  background: #d1f0e1;
+  color: #17b26a;
+}
+
+.jdet-badge--red {
+  background: #feedec;
+  color: #f04438;
+}
+
+.jdet-badge--orange {
+  background: #fef0c7;
+  color: #f79009;
+}
+
+.jdet-divider {
+  height: 1px;
+  background: #e7e8eb;
+}
+
+.jdet-card {
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.jdet-split {
+  display: flex;
+  gap: 40px;
+}
+
+.jdet-split > .jdet-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.jdet-split__sep {
+  align-self: stretch;
+  width: 1px;
+  background: #e7e8eb;
+}
+
+.jdet-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jdet-section__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jdet-section__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #21aa7c, #67bf64);
+}
+
+.jdet-section__title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 30px;
+  font-weight: 500;
+  color: #0c0c0d;
+}
+
+.jdet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+}
+
+.jdet-row + .jdet-row {
+  border-top: 1px solid #e7e8eb;
+  padding-top: 16px;
+}
+
+.jdet-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 185px;
+  padding: 2px 0;
+}
+
+.jdet-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jdet-item__label {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  color: #8e8f97;
+}
+
+.jdet-item__value {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #0c0c0d;
+}
+
+.jdet-table-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  line-height: 30px;
+  font-weight: 500;
+  color: #0c0c0d;
+}
+
+.jdet-table-wrap {
+  border-radius: 14px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.jdet-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.jdet-table th {
+  padding: 10px 12px;
+  background: #f5f5f6;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #404044;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.jdet-table td {
+  height: 76px;
+  padding: 14px 18px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #0c0c0d;
+  box-sizing: border-box;
+}
+
+.jdet-table tbody tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+.jdet-table .jdet-muted {
+  font-size: 12px;
+  line-height: 18px;
+  color: #8e8f97;
+}
+
+.jdet-icon-btn {
+  display: inline-flex;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.jdet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.jdet-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.jdet-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.jdet-btn--dark {
+  min-width: 125px;
+  border: 1px solid #000;
+  background: #000;
+  color: #fff;
+}
+
+.jdet-btn--outline {
+  border: 1px solid #000;
+  background: transparent;
+  color: #0c0c0d;
+}
+
+.jdet-btn--danger {
+  min-width: 90px;
+  border: 1px solid #f04438;
+  background: transparent;
+  color: #f04438;
+}
+
+@media (max-width: 900px) {
+  .jdet-split {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .jdet-split__sep {
+    width: auto;
+    height: 1px;
+  }
+
+  .jdet-row {
+    flex-wrap: wrap;
+  }
+}

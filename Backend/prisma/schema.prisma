@@ -330,6 +330,8 @@ model Invoice {
   projectName       String?
   region            String?
   billingCycle      String?
+  autoRenew         Boolean        @default(false)
+  assetOwner        String?
   issueDate         DateTime
   dueDate           DateTime
   nextInvoiceDate   DateTime?

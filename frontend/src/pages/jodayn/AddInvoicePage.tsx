@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { DatePicker, Form, Input, InputNumber, Select, message } from 'antd'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { DatePicker, Form, Input, InputNumber, Select, Switch, message } from 'antd'
+import dayjs from 'dayjs'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../../api/client'
-import { createInvoice } from '../../api/jodayn'
+import { createInvoice, getInvoice, updateInvoice } from '../../api/jodayn'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import { FormActions, FormPageHeader, FormSection } from '../../components/forms'
 
@@ -14,6 +15,8 @@ type FormValues = {
   contractReference?: string
   region?: string
   billingCycle?: 'FIXED' | 'MONTHLY' | 'ANNUAL'
+  autoRenew?: boolean
+  assetOwner?: string
   amount: number
   status?: string
   issueDate: { toISOString?: () => string } | string
@@ -26,10 +29,39 @@ function toDateString(value: FormValues['issueDate']) {
   return value.toISOString?.()
 }
 
+/** Add an invoice, or edit one when opened at /jodayn/invoices/:invoiceId/edit. */
 export function JodaynAddInvoicePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { invoiceId } = useParams<{ invoiceId: string }>()
+  const [form] = Form.useForm<FormValues>()
   const [submitting, setSubmitting] = useState(false)
+  const editing = Boolean(invoiceId)
+  const backTo = editing ? `/jodayn/invoices/${invoiceId}` : '/jodayn/invoices'
+  const heading = editing ? 'تعديل السجل' : t('addInvoiceFull')
+
+  useEffect(() => {
+    const token = getJodaynToken()
+    if (!token || !invoiceId) return
+    getInvoice(token, invoiceId)
+      .then(({ invoice }) => {
+        form.setFieldsValue({
+          invoiceNumber: invoice.invoiceNumber,
+          clientName: invoice.clientName,
+          projectName: invoice.projectName ?? undefined,
+          contractReference: invoice.contractReference ?? undefined,
+          region: invoice.region ?? undefined,
+          billingCycle: invoice.billingCycle ?? 'FIXED',
+          autoRenew: Boolean(invoice.autoRenew),
+          assetOwner: invoice.assetOwner ?? undefined,
+          amount: Number(invoice.amount),
+          status: invoice.status,
+          issueDate: dayjs(invoice.issueDate) as unknown as FormValues['issueDate'],
+          dueDate: dayjs(invoice.dueDate) as unknown as FormValues['dueDate'],
+        })
+      })
+      .catch((err) => message.error(err instanceof ApiError ? err.message : t('loadError')))
+  }, [form, invoiceId, t])
 
   const onFinish = async (values: FormValues) => {
     const token = getJodaynToken()
@@ -39,20 +71,24 @@ export function JodaynAddInvoicePage() {
     }
     setSubmitting(true)
     try {
-      await createInvoice(token, {
+      const payload = {
         invoiceNumber: values.invoiceNumber,
         clientName: values.clientName,
         projectName: values.projectName,
         contractReference: values.contractReference,
         region: values.region,
         billingCycle: values.billingCycle === 'FIXED' ? null : values.billingCycle,
+        autoRenew: Boolean(values.autoRenew),
+        assetOwner: values.assetOwner,
         amount: values.amount,
         status: values.status,
         issueDate: toDateString(values.issueDate),
         dueDate: toDateString(values.dueDate),
-      })
+      }
+      if (invoiceId) await updateInvoice(token, invoiceId, payload)
+      else await createInvoice(token, payload)
       message.success(t('saveInvoice'))
-      navigate('/jodayn/invoices')
+      navigate(backTo)
     } catch (err) {
       message.error(err instanceof ApiError ? err.message : t('loadError'))
     } finally {
@@ -63,14 +99,15 @@ export function JodaynAddInvoicePage() {
   return (
     <FormPageHeader
       parentLabel={t('invoices')}
-      currentLabel={t('addInvoiceFull')}
-      backTo="/jodayn/invoices"
-      title={t('addInvoiceFull')}
+      currentLabel={heading}
+      backTo={backTo}
+      title={heading}
     >
       <Form
         layout="vertical"
         requiredMark={false}
         className="form-page__form"
+        form={form}
         onFinish={onFinish}
       >
         <FormSection title={t('invoiceBasicInfo')}>
@@ -105,6 +142,14 @@ export function JodaynAddInvoicePage() {
             </Form.Item>
           </div>
           <div className="form-grid-2">
+            <Form.Item label="المسؤول عن الأصل" name="assetOwner">
+              <Input />
+            </Form.Item>
+            <Form.Item label="التجديد التلقائي" name="autoRenew" valuePropName="checked" initialValue={false}>
+              <Switch />
+            </Form.Item>
+          </div>
+          <div className="form-grid-2">
             <Form.Item label={t('amount')} name="amount" rules={[{ required: true }]}>
               <InputNumber className="w-full" min={0} />
             </Form.Item>
@@ -114,6 +159,7 @@ export function JodaynAddInvoicePage() {
                   { value: 'PENDING', label: t('pendingInvoices') },
                   { value: 'PAID', label: t('paidInvoices') },
                   { value: 'OVERDUE', label: t('overdueInvoices') },
+                  ...(editing ? [{ value: 'CANCELLED', label: 'ملغاة' }] : []),
                 ]}
               />
             </Form.Item>
@@ -128,7 +174,7 @@ export function JodaynAddInvoicePage() {
           </div>
         </FormSection>
 
-        <FormActions cancelTo="/jodayn/invoices" submitLabel={t('saveInvoice')} loading={submitting} />
+        <FormActions cancelTo={backTo} submitLabel={t('saveInvoice')} loading={submitting} />
       </Form>
     </FormPageHeader>
   )

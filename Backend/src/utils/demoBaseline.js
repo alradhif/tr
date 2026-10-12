@@ -395,10 +395,10 @@ const CLIENT_ACCOUNTS = [
 ]
 
 const INVOICES = [
-  { invoiceNumber: 'INV-4521', amount: 250, remainingAmount: 0, status: 'PAID', clientName: 'شركة نافذ التقنية', projectName: 'خادم Dell PowerEdge R750', contractReference: 'SRV-2025-001', region: 'الرياض', billingCycle: 'MONTHLY' },
-  { invoiceNumber: 'INV-4522', amount: 45000, remainingAmount: 0, status: 'PAID', clientName: 'مؤسسة الاتصال الحديث', projectName: 'مبدل شبكة Cisco Catalyst', contractReference: 'SRV-2025-014', region: 'جدة' },
-  { invoiceNumber: 'INV-4530', amount: 18000, remainingAmount: 18000, status: 'PENDING', clientName: 'شركة البيانات الذكية', projectName: 'نظام تخزين NetApp', contractReference: 'SRV-2025-027', region: 'الدمام', billingCycle: 'ANNUAL' },
-  { invoiceNumber: 'INV-4538', amount: 3200, remainingAmount: 3200, status: 'OVERDUE', clientName: 'مجموعة المكتب الحديث', projectName: 'طابعة HP LaserJet Enterprise', contractReference: 'SRV-2025-041', region: 'مكة المكرمة' },
+  { invoiceNumber: 'INV-4521', amount: 250, remainingAmount: 0, status: 'PAID', clientName: 'شركة نافذ التقنية', projectName: 'خادم Dell PowerEdge R750', contractReference: 'SRV-2025-001', region: 'الرياض', billingCycle: 'MONTHLY', autoRenew: true, assetOwner: 'فريق البنية التحتية' },
+  { invoiceNumber: 'INV-4522', amount: 45000, remainingAmount: 0, status: 'PAID', clientName: 'مؤسسة الاتصال الحديث', projectName: 'مبدل شبكة Cisco Catalyst', contractReference: 'SRV-2025-014', region: 'جدة', assetOwner: 'فريق الشبكات' },
+  { invoiceNumber: 'INV-4530', amount: 18000, remainingAmount: 18000, status: 'PENDING', clientName: 'شركة البيانات الذكية', projectName: 'نظام تخزين NetApp', contractReference: 'SRV-2025-027', region: 'الدمام', billingCycle: 'ANNUAL', autoRenew: true, assetOwner: 'فريق البيانات' },
+  { invoiceNumber: 'INV-4538', amount: 3200, remainingAmount: 3200, status: 'OVERDUE', clientName: 'مجموعة المكتب الحديث', projectName: 'طابعة HP LaserJet Enterprise', contractReference: 'SRV-2025-041', region: 'مكة المكرمة', assetOwner: 'الشؤون الإدارية' },
 ]
 
 const FORECASTS = [

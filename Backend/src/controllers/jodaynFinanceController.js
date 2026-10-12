@@ -43,6 +43,8 @@ exports.createInvoice = async (req, res) => {
       projectName,
       region,
       billingCycle,
+      autoRenew,
+      assetOwner,
       issueDate,
       dueDate,
       nextInvoiceDate,
@@ -81,6 +83,8 @@ exports.createInvoice = async (req, res) => {
         projectName,
         region: region || null,
         billingCycle: normalizeBillingCycle(billingCycle),
+        autoRenew: Boolean(autoRenew),
+        assetOwner: assetOwner || null,
         issueDate: new Date(issueDate),
         dueDate: new Date(dueDate),
         nextInvoiceDate: nextInvoiceDate ? new Date(nextInvoiceDate) : null,
@@ -142,6 +146,8 @@ exports.updateInvoice = async (req, res) => {
       projectName,
       region,
       billingCycle,
+      autoRenew,
+      assetOwner,
       issueDate,
       dueDate,
       nextInvoiceDate,
@@ -157,6 +163,8 @@ exports.updateInvoice = async (req, res) => {
     if (projectName !== undefined) data.projectName = projectName
     if (region !== undefined) data.region = region || null
     if (billingCycle !== undefined) data.billingCycle = normalizeBillingCycle(billingCycle)
+    if (autoRenew !== undefined) data.autoRenew = Boolean(autoRenew)
+    if (assetOwner !== undefined) data.assetOwner = assetOwner || null
     if (issueDate !== undefined) data.issueDate = new Date(issueDate)
     if (dueDate !== undefined) data.dueDate = new Date(dueDate)
     if (nextInvoiceDate !== undefined) data.nextInvoiceDate = nextInvoiceDate ? new Date(nextInvoiceDate) : null

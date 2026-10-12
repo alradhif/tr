@@ -53,6 +53,8 @@ export type Invoice = {
   projectName?: string | null
   region?: string | null
   billingCycle?: 'MONTHLY' | 'ANNUAL' | null
+  autoRenew?: boolean
+  assetOwner?: string | null
   issueDate: string
   dueDate: string
   status: string
@@ -86,6 +88,10 @@ export type FinancialReport = {
 
 export function getInvoices(token: string) {
   return apiRequest<{ invoices: Invoice[] }>('/jodayn/invoices', { method: 'GET', token })
+}
+
+export function getInvoice(token: string, id: string) {
+  return apiRequest<{ invoice: Invoice }>(`/jodayn/invoices/${id}`, { method: 'GET', token })
 }
 
 export function createInvoice(token: string, data: Record<string, unknown>) {

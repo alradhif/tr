@@ -33,6 +33,7 @@ import { JodaynOrgAccountsPage } from './pages/jodayn/OrgAccountsPage'
 import { JodaynClientAccountsPage } from './pages/jodayn/ClientAccountsPage'
 import { JodaynInvoicesPage } from './pages/jodayn/InvoicesPage'
 import { JodaynAddInvoicePage } from './pages/jodayn/AddInvoicePage'
+import { JodaynInvoiceDetailPage } from './pages/jodayn/InvoiceDetailPage'
 import { JodaynForecastsPage } from './pages/jodayn/ForecastsPage'
 import { JodaynAddForecastPage } from './pages/jodayn/AddForecastPage'
 import { JodaynReportsPage } from './pages/jodayn/ReportsPage'
@@ -102,6 +103,8 @@ export default function App() {
             <Route path="client-accounts" element={<JodaynClientAccountsPage />} />
             <Route path="invoices" element={<JodaynInvoicesPage />} />
             <Route path="invoices/new" element={<JodaynAddInvoicePage />} />
+            <Route path="invoices/:invoiceId" element={<JodaynInvoiceDetailPage />} />
+            <Route path="invoices/:invoiceId/edit" element={<JodaynAddInvoicePage />} />
             <Route path="forecasts" element={<JodaynForecastsPage />} />
             <Route path="forecasts/new" element={<JodaynAddForecastPage />} />
             <Route path="reports" element={<JodaynReportsPage />} />
