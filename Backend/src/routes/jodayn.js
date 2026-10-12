@@ -27,7 +27,7 @@ const {
   resetJodaynUserCredentials,
 } = require('../controllers/jodaynUsersController')
 const { getDashboard } = require('../controllers/jodaynDashboardController')
-const { getGoals, getProjects } = require('../controllers/jodaynPortfolioController')
+const { getGoals, getProjects, getClient } = require('../controllers/jodaynPortfolioController')
 
 const isJodaynUpper = [auth, roles('JODAYN_UPPER_MGMT', 'SUPER_ADMIN')]
 const isJodayn = [
@@ -38,6 +38,7 @@ const isJodayn = [
 router.get('/dashboard', ...isJodayn, getDashboard)
 router.get('/goals', ...isJodayn, getGoals)
 router.get('/projects', ...isJodayn, getProjects)
+router.get('/clients/:id', ...isJodayn, getClient)
 router.post('/users', ...isJodaynUpper, createJodaynPortalUser)
 router.get('/users', ...isJodaynUpper, getJodaynUsers)
 router.patch('/users/:id/toggle', ...isJodaynUpper, toggleJodaynUser)

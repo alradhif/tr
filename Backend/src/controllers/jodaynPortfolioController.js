@@ -72,3 +72,33 @@ exports.getProjects = async (req, res) => {
     res.status(500).json({ message: err.message })
   }
 }
+
+// One client account with its projects, users and financial reports (client detail page).
+exports.getClient = async (req, res) => {
+  try {
+    const client = await prisma.clientAccount.findUnique({
+      where: { id: req.params.id },
+      include: {
+        sector: { select: { name: true } },
+        clientProjects: {
+          orderBy: { createdAt: 'desc' },
+          select: { ...projectSelect },
+        },
+        clientUsers: {
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, name: true, email: true, role: true, isActive: true },
+        },
+        reports: {
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, type: true, period: true, totalContractsValue: true, netProfit: true },
+        },
+      },
+    })
+    if (!client) return res.status(404).json({ message: 'Client not found' })
+
+    const { clientProjects, clientUsers, reports, ...account } = client
+    res.json({ client: account, projects: clientProjects, users: clientUsers, reports })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}

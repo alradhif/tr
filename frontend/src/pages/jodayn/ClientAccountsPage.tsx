@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { getAccounts } from '../../api/superAdmin'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
-  FinanceDetails,
   FinanceGenerator,
   FinanceHead,
   FinancePage,
@@ -32,10 +32,10 @@ type ClientAccountRow = {
 
 export function JodaynClientAccountsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<ClientAccountRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [opened, setOpened] = useState<ClientAccountRow | null>(null)
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -128,7 +128,7 @@ export function JodaynClientAccountsPage() {
             empty={rows.length === 0}
           >
             {rows.map((row) => (
-              <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
+              <FinanceRow key={row.key} onOpen={() => navigate(`/jodayn/client-accounts/${row.key}`)}>
                 <td>{row.name}</td>
                 <td className="finance-muted">{row.managerName}</td>
                 <td>{row.city}</td>
@@ -142,19 +142,6 @@ export function JodaynClientAccountsPage() {
               </FinanceRow>
             ))}
           </FinanceTable>
-          {opened ? (
-            <FinanceDetails
-              title={opened.name}
-              onClose={() => setOpened(null)}
-              fields={[
-                { label: 'الشخص المسؤول', value: opened.managerName },
-                { label: 'المدينة', value: opened.city },
-                { label: 'القطاع', value: opened.sector },
-                { label: 'الحالة', value: opened.active ? 'نشطة' : 'غير نشطة' },
-                { label: 'المعرّف', value: opened.reference },
-              ]}
-            />
-          ) : null}
         </>
       )}
     </FinancePage>

@@ -188,3 +188,26 @@ export function getJodaynGoals(token: string) {
 export function getJodaynProjects(token: string) {
   return apiRequest<{ count: number; projects: JodaynProject[] }>('/jodayn/projects', { method: 'GET', token })
 }
+
+export type JodaynClientDetail = {
+  client: {
+    id: string
+    name: string
+    managerName?: string | null
+    sectorName?: string | null
+    sector?: { name: string } | null
+    region?: string | null
+    phone?: string | null
+    crNumber?: string | null
+    description?: string | null
+    isActive: boolean
+  }
+  projects: Omit<JodaynProject, 'ownerType' | 'ownerName'>[]
+  users: { id: string; name: string; email: string; role: string; isActive: boolean }[]
+  reports: { id: string; type: string; period?: string | null; totalContractsValue: number | string; netProfit: number | string }[]
+}
+
+/** One client account with its projects, users and financial reports. */
+export function getJodaynClient(token: string, id: string) {
+  return apiRequest<JodaynClientDetail>(`/jodayn/clients/${id}`, { method: 'GET', token })
+}
