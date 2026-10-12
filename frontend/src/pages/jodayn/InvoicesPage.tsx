@@ -6,24 +6,29 @@ import { ApiError } from '../../api/client'
 import { deleteJodaynRecord, getInvoices, updateInvoice, type Invoice } from '../../api/jodayn'
 import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
 import {
-  FinanceAmountStats,
   FinanceCreateButton,
   FinanceDetails,
   FinanceGenerator,
-  FinancePage,
-  FinanceRow,
-  FinanceTable,
   FinanceTabs,
   formatAmount,
   formatDate,
   type FinanceView,
 } from '../../features/jodayn-finance/FinanceParts'
+import questionCircleIcon from '../../features/jodayn-finance/assets/question-circle.svg'
+import arrowRightIcon from '../../features/jodayn-finance/assets/arrow-right.svg'
+import '../../features/jodayn-finance/jodayn-invoices.css'
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: 'معلق',
   PAID: 'نشط',
   OVERDUE: 'متأخر',
   CANCELLED: 'ملغى',
+}
+
+/** Status badge text: subscriptions read "اشتراك نشط" etc., as in the Figma invoices frame. */
+function statusText(inv: Invoice) {
+  const status = STATUS_LABEL[inv.status] ?? inv.status
+  return inv.billingCycle ? `اشتراك ${status}` : status
 }
 
 /** Type column: monthly / annual subscriptions, otherwise a fixed asset. */
@@ -86,149 +91,179 @@ export function JodaynInvoicesPage() {
   const paid = byStatus('PAID')
   const overdue = byStatus('OVERDUE')
 
-  return (
-    <FinancePage title={t('invoices')}>
-      <FinanceTabs
-        active={view}
-        onChange={setView}
-        extra={<FinanceCreateButton label={t('addInvoice')} onClick={() => navigate('/jodayn/invoices/new')} />}
-      />
+  const cards = [
+    { label: 'إجمالي الفواتير', value: String(invoices.length), unit: 'وحده' },
+    { label: 'فواتير معلقة', value: formatAmount(total(pending)), unit: 'ريال' },
+    { label: 'فواتير مدفوعة', value: formatAmount(total(paid)), unit: 'ريال' },
+    { label: 'فواتير متأخرة', value: formatAmount(total(overdue)), unit: 'ريال' },
+  ]
 
-      {view === 'generator' ? (
-        <FinanceGenerator
-          title="مولّد العروض التقديمية - الفواتير"
-          data={
-            invoices[0]
-              ? {
-                  project: {
-                    name: 'الفواتير',
-                    code: invoices[0].invoiceNumber,
-                    department: 'الفواتير — جودين',
-                    projectManager: '—',
-                    sponsor: '—',
-                    statusLabel: `${invoices.length} فاتورة`,
-                    budget: total(invoices),
-                    spent: total(paid),
-                    budgetCurrency: 'SAR',
-                  },
-                  outputs: invoices
-                    .slice(0, 4)
-                    .map((inv) => `${inv.invoiceNumber} — ${inv.clientName} — ${STATUS_LABEL[inv.status] ?? inv.status}`),
-                  sourceLabel: `بيانات حية — ${invoices.length} فاتورة`,
-                }
-              : null
-          }
+  return (
+    <div className="finance-page jinv" dir="rtl">
+      <header className="jinv-header">
+        <h1 className="jinv-header__title">{t('invoices')}</h1>
+      </header>
+      <div className="jinv-body">
+        <FinanceTabs
+          active={view}
+          onChange={setView}
+          extra={<FinanceCreateButton label={t('addInvoice')} onClick={() => navigate('/jodayn/invoices/new')} />}
         />
-      ) : (
-        <>
-          <FinanceAmountStats
-            cards={[
-              { label: 'إجمالي الفواتير', value: String(invoices.length), unit: 'فاتورة' },
-              { label: 'فواتير معلقة', value: formatAmount(total(pending)), unit: 'ريال' },
-              { label: 'فواتير مدفوعة', value: formatAmount(total(paid)), unit: 'ريال' },
-              { label: 'فواتير متأخرة', value: formatAmount(total(overdue)), unit: 'ريال' },
-            ]}
+
+        {view === 'generator' ? (
+          <FinanceGenerator
+            title="مولّد العروض التقديمية - الفواتير"
+            data={
+              invoices[0]
+                ? {
+                    project: {
+                      name: 'الفواتير',
+                      code: invoices[0].invoiceNumber,
+                      department: 'الفواتير — جودين',
+                      projectManager: '—',
+                      sponsor: '—',
+                      statusLabel: `${invoices.length} فاتورة`,
+                      budget: total(invoices),
+                      spent: total(paid),
+                      budgetCurrency: 'SAR',
+                    },
+                    outputs: invoices
+                      .slice(0, 4)
+                      .map((inv) => `${inv.invoiceNumber} — ${inv.clientName} — ${STATUS_LABEL[inv.status] ?? inv.status}`),
+                    sourceLabel: `بيانات حية — ${invoices.length} فاتورة`,
+                  }
+                : null
+            }
           />
-          <FinanceTable
-            headers={['الأصل', 'الرقم التسلسلي', 'الفاتورة', 'الحالة', 'النوع', 'الجهة المرتبطة', 'المنطقة', 'القيمة']}
-            loading={loading}
-            empty={invoices.length === 0}
-          >
-            {invoices.map((inv) => {
-              const type = invoiceType(inv)
-              return (
-                <FinanceRow key={inv.id} onOpen={() => setOpened(inv)}>
-                  <td>{inv.projectName || '—'}</td>
-                  <td>
-                    <span className="finance-chip">{inv.contractReference || '—'}</span>
-                  </td>
-                  <td className="finance-muted">{inv.invoiceNumber}</td>
-                  <td>
-                    <span className="finance-badge finance-badge--info">
-                      <span className="finance-badge__dot">i</span>
-                      {STATUS_LABEL[inv.status] ?? inv.status}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`finance-type finance-type--${type.tone}`}>
-                      {type.label}
-                      <span className="finance-type__dot" />
-                    </span>
-                  </td>
-                  <td>{inv.clientName}</td>
-                  <td className="finance-muted">{inv.region || '—'}</td>
-                  <td>
-                    {formatAmount(inv.amount)}
-                    {type.suffix ? <span className="finance-value__suffix">{type.suffix}</span> : null}
-                  </td>
-                </FinanceRow>
-              )
-            })}
-          </FinanceTable>
-          {opened ? (
-            <FinanceDetails
-              title={`الفاتورة ${opened.invoiceNumber}`}
-              onClose={() => setOpened(null)}
-              fields={[
-                { label: 'الأصل', value: opened.projectName || '—' },
-                { label: 'الرقم التسلسلي', value: opened.contractReference || '—' },
-                { label: 'الجهة المرتبطة', value: opened.clientName },
-                { label: 'المنطقة', value: opened.region || '—' },
-                { label: 'النوع', value: invoiceType(opened).label },
-                { label: 'الحالة', value: STATUS_LABEL[opened.status] ?? opened.status },
-                { label: 'القيمة', value: `${formatAmount(opened.amount)} ريال` },
-                { label: 'الإجمالي مع الضريبة', value: `${formatAmount(opened.totalWithVat)} ريال` },
-                { label: 'تاريخ الإصدار', value: formatDate(opened.issueDate) },
-                { label: 'تاريخ الاستحقاق', value: formatDate(opened.dueDate) },
-              ]}
-              actions={
-                <>
-                  {opened.status !== 'PAID' && opened.status !== 'CANCELLED' ? (
-                    <button
-                      type="button"
-                      className="finance-btn finance-btn--dark"
-                      disabled={busy}
-                      onClick={() =>
-                        void act((token) => updateInvoice(token, opened.id, { status: 'PAID' }), 'تم تسجيل السداد')
-                      }
-                    >
-                      تسجيل كمدفوعة
-                    </button>
-                  ) : null}
-                  {opened.status === 'PENDING' ? (
-                    <button
-                      type="button"
-                      className="finance-btn finance-btn--outline"
-                      disabled={busy}
-                      onClick={() =>
-                        void act(
-                          (token) => updateInvoice(token, opened.id, { status: 'OVERDUE' }),
-                          'تم تحديد الفاتورة كمتأخرة',
-                        )
-                      }
-                    >
-                      تحديد كمتأخرة
-                    </button>
-                  ) : null}
-                  {isUpper ? (
-                    <button
-                      type="button"
-                      className="finance-btn finance-btn--danger"
-                      disabled={busy}
-                      onClick={() => {
-                        if (!window.confirm(`حذف الفاتورة ${opened.invoiceNumber}؟`)) return
-                        void act((token) => deleteJodaynRecord(token, 'invoices', opened.id), t('deletedSuccessfully'))
-                      }}
-                    >
-                      {t('delete')}
-                    </button>
-                  ) : null}
-                </>
-              }
-            />
-          ) : null}
-        </>
-      )}
-    </FinancePage>
+        ) : (
+          <>
+            <div className="jinv-cards">
+              {cards.map((card) => (
+                <div className="jinv-card" key={card.label}>
+                  <span className="jinv-card__label">{card.label}</span>
+                  <div>
+                    <span className="jinv-card__value">{card.value}</span>
+                    <span className="jinv-card__unit">{card.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="jinv-table-wrap">
+              {loading ? (
+                <p className="jinv-empty">جاري تحميل البيانات...</p>
+              ) : invoices.length === 0 ? (
+                <p className="jinv-empty">لا توجد بيانات بعد.</p>
+              ) : (
+                <table className="jinv-table">
+                  <thead>
+                    <tr>
+                      <th>رقم الفاتورة</th>
+                      <th>الجهة المرتبطة (المورد)</th>
+                      <th>المبلغ الأساسي</th>
+                      <th>اسم المشروع</th>
+                      <th>تاريخ الإصدار</th>
+                      <th>الحالة</th>
+                      <th className="jinv-col-open" aria-label="فتح" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.map((inv) => (
+                      <tr
+                        key={inv.id}
+                        tabIndex={0}
+                        onClick={() => setOpened(inv)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') setOpened(inv)
+                        }}
+                      >
+                        <td>
+                          <span className="jinv-badge jinv-badge--ref">{inv.contractReference || inv.invoiceNumber}</span>
+                        </td>
+                        <td className="jinv-strong">{inv.clientName}</td>
+                        <td className="jinv-small">{formatAmount(inv.amount)}</td>
+                        <td className="jinv-strong">{inv.projectName || '—'}</td>
+                        <td className="jinv-small jinv-small--muted">{formatDate(inv.issueDate)}</td>
+                        <td>
+                          <span className="jinv-badge jinv-badge--status">
+                            {statusText(inv)}
+                            <img src={questionCircleIcon} alt="" width={16} height={16} />
+                          </span>
+                        </td>
+                        <td className="jinv-col-open">
+                          <img src={arrowRightIcon} alt="" width={24} height={24} className="jinv-arrow" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            {opened ? (
+              <FinanceDetails
+                title={`الفاتورة ${opened.invoiceNumber}`}
+                onClose={() => setOpened(null)}
+                fields={[
+                  { label: 'الأصل', value: opened.projectName || '—' },
+                  { label: 'الرقم التسلسلي', value: opened.contractReference || '—' },
+                  { label: 'الجهة المرتبطة', value: opened.clientName },
+                  { label: 'المنطقة', value: opened.region || '—' },
+                  { label: 'النوع', value: invoiceType(opened).label },
+                  { label: 'الحالة', value: STATUS_LABEL[opened.status] ?? opened.status },
+                  { label: 'القيمة', value: `${formatAmount(opened.amount)} ريال` },
+                  { label: 'الإجمالي مع الضريبة', value: `${formatAmount(opened.totalWithVat)} ريال` },
+                  { label: 'تاريخ الإصدار', value: formatDate(opened.issueDate) },
+                  { label: 'تاريخ الاستحقاق', value: formatDate(opened.dueDate) },
+                ]}
+                actions={
+                  <>
+                    {opened.status !== 'PAID' && opened.status !== 'CANCELLED' ? (
+                      <button
+                        type="button"
+                        className="finance-btn finance-btn--dark"
+                        disabled={busy}
+                        onClick={() =>
+                          void act((token) => updateInvoice(token, opened.id, { status: 'PAID' }), 'تم تسجيل السداد')
+                        }
+                      >
+                        تسجيل كمدفوعة
+                      </button>
+                    ) : null}
+                    {opened.status === 'PENDING' ? (
+                      <button
+                        type="button"
+                        className="finance-btn finance-btn--outline"
+                        disabled={busy}
+                        onClick={() =>
+                          void act(
+                            (token) => updateInvoice(token, opened.id, { status: 'OVERDUE' }),
+                            'تم تحديد الفاتورة كمتأخرة',
+                          )
+                        }
+                      >
+                        تحديد كمتأخرة
+                      </button>
+                    ) : null}
+                    {isUpper ? (
+                      <button
+                        type="button"
+                        className="finance-btn finance-btn--danger"
+                        disabled={busy}
+                        onClick={() => {
+                          if (!window.confirm(`حذف الفاتورة ${opened.invoiceNumber}؟`)) return
+                          void act((token) => deleteJodaynRecord(token, 'invoices', opened.id), t('deletedSuccessfully'))
+                        }}
+                      >
+                        {t('delete')}
+                      </button>
+                    ) : null}
+                  </>
+                }
+              />
+            ) : null}
+          </>
+        )}
+      </div>
+    </div>
   )
 }

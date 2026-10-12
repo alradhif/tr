@@ -18,15 +18,24 @@ import {
   ProjectsIcon,
   SidebarSettingsIcon,
 } from '../super-admin-ui/components/layout/SidebarIcons'
-import fileTextIcon from '../features/jodayn-finance/assets/file-text.svg'
-import walletIcon from '../features/jodayn-finance/assets/wallet.svg'
-import creditCardIcon from '../features/jodayn-finance/assets/credit-card.svg'
+// Finance icons from the Figma Jodayn frames (vuesax moneys / wallet-money / note).
+import moneysIcon from '../features/jodayn-finance/assets/moneys.svg'
+import walletMoneyIcon from '../features/jodayn-finance/assets/wallet-money.svg'
+import noteIcon from '../features/jodayn-finance/assets/note.svg'
 import '../design/portal-layout.css'
 import '../org-catalog'
 import '../features/jodayn-finance/jodayn-settings.css'
 
-function NavImg({ src }: { src: string }) {
-  return <img src={src} alt="" className="sidebar__nav-icon" width={20} height={20} />
+function NavImg({ src, dark = false }: { src: string; dark?: boolean }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      className={`sidebar__nav-icon${dark ? ' sidebar__nav-icon--dark' : ''}`}
+      width={22}
+      height={22}
+    />
+  )
 }
 
 export function JodaynLayout() {
@@ -59,9 +68,9 @@ export function JodaynLayout() {
           { key: '/jodayn/projects', label: t('projects'), icon: <ProjectsIcon /> },
           { key: '/jodayn/client-accounts', label: 'العملاء', icon: <CompaniesIcon /> },
           { key: '/jodayn/sectors', label: t('sectors'), icon: <DepartmentsIcon /> },
-          { key: '/jodayn/invoices', label: t('invoices'), icon: <NavImg src={creditCardIcon} /> },
-          { key: '/jodayn/forecasts', label: t('revenueForecasts'), icon: <NavImg src={walletIcon} /> },
-          { key: '/jodayn/reports', label: t('financialReports'), icon: <NavImg src={fileTextIcon} /> },
+          { key: '/jodayn/invoices', label: t('invoices'), icon: <NavImg src={moneysIcon} dark /> },
+          { key: '/jodayn/forecasts', label: t('revenueForecasts'), icon: <NavImg src={walletMoneyIcon} /> },
+          { key: '/jodayn/reports', label: t('financialReports'), icon: <NavImg src={noteIcon} /> },
         ]}
       />
       <div className="app-shell__main app-shell__content--catalog">

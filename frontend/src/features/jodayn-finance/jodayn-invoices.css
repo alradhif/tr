@@ -1,0 +1,216 @@
+/* Jodayn invoices screen from the Figma frame "الفواتير" (2222:58617). */
+
+.jinv {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f5f5f6 0%, #d4ebd2 134.57%);
+}
+
+.jinv-header {
+  display: flex;
+  align-items: center;
+  height: 75px;
+  padding: 14px 24px 14px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #e7e8eb;
+  box-sizing: border-box;
+}
+
+.jinv-header__title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 30px;
+  font-weight: 700;
+  color: #0c0c0d;
+}
+
+.jinv-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+}
+
+.jinv .finance-tabs {
+  margin: 0;
+  gap: 12px;
+}
+
+.jinv .finance-btn {
+  height: 38px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+}
+
+.jinv .finance-btn--generator {
+  border-color: #000 !important;
+  color: #0c0c0d !important;
+}
+
+.jinv-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.jinv-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 129px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.jinv-card__label {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+  color: #8e8f97;
+}
+
+.jinv-card__value {
+  font-size: 30px;
+  line-height: 38px;
+  font-weight: 700;
+  color: #000;
+}
+
+.jinv-card__unit {
+  margin-inline-start: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #8e8f97;
+}
+
+.jinv-table-wrap {
+  border-radius: 14px;
+  overflow: hidden;
+  overflow-x: auto;
+  background: #fff;
+}
+
+.jinv-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.jinv-table th {
+  padding: 10px 12px;
+  background: #f5f5f6;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #404044;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.jinv-table td {
+  height: 76px;
+  padding: 14px 18px;
+  background: #fff;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.jinv-table tbody tr {
+  cursor: pointer;
+}
+
+.jinv-table tbody tr + tr td {
+  border-top: 1px solid #f5f5f6;
+}
+
+.jinv-table tbody tr:hover td {
+  background: #fafafa;
+}
+
+.jinv-table tbody tr:focus-visible {
+  outline: 2px solid #21aa7c;
+  outline-offset: -2px;
+}
+
+.jinv-table .jinv-col-open {
+  width: 90px;
+}
+
+.jinv-strong {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #0c0c0d;
+}
+
+.jinv-small {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+  color: #0c0c0d;
+  white-space: nowrap;
+}
+
+.jinv-small--muted {
+  color: #8e8f97;
+}
+
+.jinv-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 23px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.jinv-badge--ref {
+  background: #f5f5f6;
+  color: #8e8f97;
+}
+
+.jinv-badge--status {
+  background: #d5e9fe;
+  color: #2e90fa;
+}
+
+.jinv-arrow {
+  display: block;
+  margin: 0 auto;
+  transform: rotate(180deg);
+}
+
+.jinv-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: #8e8f97;
+  font-size: 15px;
+}
+
+@media (max-width: 1100px) {
+  .jinv-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .jinv-body {
+    padding: 16px;
+  }
+
+  .jinv-cards {
+    grid-template-columns: 1fr;
+  }
+}
