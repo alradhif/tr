@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Trash2 } from 'lucide-react'
 import { CatalogButton } from '../components/ui'
 
@@ -35,7 +36,9 @@ export function CatalogConfirmDialog({
 }) {
   if (!open) return null
 
-  return (
+  // Rendered into <body> so the fixed backdrop is not trapped inside a transformed
+  // ancestor (e.g. react-grid-layout dashboard widgets), which hid the dialog behind other cards.
+  return createPortal(
     <div
       className="catalog-dialog-backdrop"
       role="dialog"
@@ -78,6 +81,7 @@ export function CatalogConfirmDialog({
           </CatalogButton>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
