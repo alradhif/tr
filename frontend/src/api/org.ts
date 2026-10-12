@@ -56,6 +56,7 @@ export type ExecutingCompany = {
   id: string
   name: string
   registrationNo?: string | null
+  sector?: string | null
   managerName?: string | null
   email?: string | null
   phone?: string | null
@@ -174,6 +175,7 @@ export type CompanyTeamMember = {
 export type CompanyPayload = {
   name: string
   registrationNo?: string
+  sector?: string
   managerName?: string
   email?: string
   phone?: string

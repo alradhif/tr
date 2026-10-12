@@ -10,7 +10,6 @@ import {
   Phone,
   Trash2,
   User,
-  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
@@ -101,6 +100,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
   const [tab, setTab] = useState<(typeof tabs)[number]>('المشاريع')
   const [draftName, setDraftName] = useState('')
   const [draftRegistration, setDraftRegistration] = useState('')
+  const [draftSector, setDraftSector] = useState('')
   const [draftOwner, setDraftOwner] = useState('')
   const [draftPhone, setDraftPhone] = useState('')
   const [draftEmail, setDraftEmail] = useState('')
@@ -133,6 +133,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
         setProjects((projectsRes.projects ?? []).filter((project) => project.executingCompanyId === companyId))
         setDraftName(data.name)
         setDraftRegistration(data.registrationNo ?? '')
+        setDraftSector(data.sector ?? '')
         setDraftOwner(data.managerName ?? '')
         setDraftPhone(data.phone ?? '')
         setDraftEmail(data.email ?? '')
@@ -187,6 +188,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
     if (!company) return
     setDraftName(company.name)
     setDraftRegistration(company.registrationNo ?? '')
+    setDraftSector(company.sector ?? '')
     setDraftOwner(company.managerName ?? '')
     setDraftPhone(company.phone ?? '')
     setDraftEmail(company.email ?? '')
@@ -211,6 +213,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
       const { company: updated } = await updateCompany(token, companyId, {
         name: draftName.trim(),
         registrationNo: draftRegistration.trim() || undefined,
+        sector: draftSector.trim() || undefined,
         managerName: draftOwner.trim() || undefined,
         phone: draftPhone.trim() || undefined,
         email: draftEmail.trim() || undefined,
@@ -320,7 +323,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
               <div className="cd-info-row">
                 <Field icon={ClipboardList} label="رقم السجل التجاري" value={company.registrationNo || '—'} />
                 <Field icon={ClipboardCheck} label="الأداء" value={company.isActive ? 'نشط' : 'غير نشط'} />
-                <Field icon={Briefcase} label="القطاع" value="—" />
+                <Field icon={Briefcase} label="القطاع" value={company.sector || '—'} />
               </div>
               <div className="cd-info-row">
                 <Field icon={User} label="الشخص المسؤول" value={company.managerName || '—'} />
@@ -444,9 +447,6 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
         <div className="modal-backdrop">
           <form onSubmit={(event) => void save(event)} className="edit-modal">
             <div className="edit-modal__heading">
-              <button type="button" aria-label="إغلاق" onClick={() => setEditOpen(false)} className="sc-btn-action" style={{ marginInlineEnd: 'auto' }}>
-                <X size={16} />
-              </button>
               <h2>تعديل بيانات الشركة</h2>
               <span className="edit-modal__icon">
                 <ClipboardList size={22} />
@@ -455,6 +455,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
             <div className="edit-modal__grid">
               <ModalInput id="edit-name" label="اسم الشركة" value={draftName} onChange={setDraftName} invalid={missing(draftName)} />
               <ModalInput id="edit-registration" label="رقم السجل التجاري" value={draftRegistration} onChange={setDraftRegistration} invalid={false} />
+              <ModalInput id="edit-sector" label="القطاع" value={draftSector} onChange={setDraftSector} invalid={false} />
               <ModalInput id="edit-owner" label="الشخص المسؤول" value={draftOwner} onChange={setDraftOwner} invalid={false} />
               <ModalInput id="edit-phone" label="الهاتف" value={draftPhone} onChange={setDraftPhone} invalid={false} />
               <ModalInput id="edit-email" label="البريد الإلكتروني" value={draftEmail} onChange={setDraftEmail} invalid={false} />
@@ -470,7 +471,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
             </div>
             <div className="edit-modal__actions">
               <button type="submit" className="sc-btn-primary" style={{ minWidth: 'auto', height: 38, fontSize: 13 }} disabled={saving}>
-                {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                {saving ? 'جاري الحفظ...' : 'حفظ الشركة'}
               </button>
               <button type="button" onClick={() => setEditOpen(false)} className="sc-btn-outline" style={{ minWidth: 'auto', height: 38, fontSize: 13 }}>
                 إلغاء

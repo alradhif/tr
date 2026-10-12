@@ -24,6 +24,7 @@ exports.createCompany = async (req, res) => {
     const {
       name,
       registrationNo,
+      sector,
       managerName,
       email,
       phone,
@@ -40,6 +41,7 @@ exports.createCompany = async (req, res) => {
       data: {
         name,
         registrationNo,
+        sector,
         managerName,
         email,
         phone,
