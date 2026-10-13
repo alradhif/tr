@@ -1284,13 +1284,8 @@ export function ProjectForm({
                 {t('addStageNew')} <Plus size={18} />
               </button>
             </section>
-          </>
-        ) : null}
-
-        {step === 4 ? (
-          <>
-          {/* Budget and contract details go with the contract attachment in the last step: the Figma
-              steps 1 and 2 (1231:129840, 1231:129883) have no budget section. */}
+            {/* Budget and contract details: the Figma steps 1, 2 and 4 (1231:129840, 1231:129883,
+                1237:86533) leave them out, so they sit with the schedule here. */}
             <section className="create-project__card">
               <h2>{t('budgetAndContract')}</h2>
               <div className="create-project__divider" />
@@ -1345,6 +1340,10 @@ export function ProjectForm({
               </label>
             </section>
 
+          </>
+        ) : null}
+
+        {step === 4 ? (
           <section className="create-project__card">
             <h2>{t('uploadAttachments')}</h2>
             <div className="create-project__divider" />
@@ -1419,7 +1418,6 @@ export function ProjectForm({
               </div>
             ) : null}
           </section>
-          </>
         ) : null}
 
         {error ? <div className="create-project__error">{error}</div> : null}
@@ -1480,7 +1478,7 @@ export function ProjectForm({
                   onClick={() => void save(false)}
                   disabled={submitting}
                 >
-                  {t('saveProject')}
+                  حفظ
                 </button>
               )}
             </>
