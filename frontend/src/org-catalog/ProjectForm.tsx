@@ -1447,9 +1447,7 @@ export function ProjectForm({
             </>
           ) : (
             <>
-              <button type="button" className="create-project__previous" onClick={() => setStep(step - 1)}>
-                {t('previous')}
-              </button>
+              {/* The last step shows only save / save-as-draft, as in the Figma frame (1237:86533). */}
               <button
                 type="button"
                 className="create-project__draft"
