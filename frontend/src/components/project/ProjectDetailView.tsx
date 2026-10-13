@@ -516,7 +516,6 @@ export function ProjectDetailView({
   const uiStatus = mapProjectUiStatus(project?.status, project?.endDate)
   const statusKey =
     uiStatus === 'onTrack' ? 'onTrack' : uiStatus === 'delayed' ? 'delayed' : uiStatus === 'stalled' ? 'stalled' : 'completed'
-  const statusTone = uiStatus === 'delayed' ? 'warning' : uiStatus === 'stalled' ? 'danger' : 'success'
   const remainingDays = daysUntil(project?.endDate)
   const financials = (project as { financials?: { spent?: number; committed?: number } } | null)?.financials
   const spent = Number(financials?.spent ?? 0)
@@ -955,21 +954,20 @@ export function ProjectDetailView({
           parent={t('projects')}
           title={project?.name ?? t('projectDetails')}
           onBack={() => navigate(backPath)}
+          actions={activeTab === 'overview' ? <div className="project-detail__actions">{heroActions}</div> : undefined}
         />
         <main className="project-detail__body">
           <section className="project-detail__hero">
             <div className="project-detail__hero-title">
               <h1>{project?.name ?? t('projectDetails')}</h1>
               <p>{project?.description || `${project?.type ?? t('projects')} — ${companyTitle}`}</p>
-              {activeTab !== 'whatIf' ? (
+              {/* The Figma project frame (1231:128823) shows only the title and description here;
+                  the progress status lives in the KPI card, so only a not-yet-approved state is flagged. */}
+              {activeTab !== 'whatIf' && approvalStatus !== 'APPROVED' ? (
                 <div className="project-detail__hero-status">
                   <Badge variant={approvalBadgeVariant(approvalStatus)}>
                     {t(approvalLabelKey(approvalStatus))}
                   </Badge>
-                  <Badge variant={statusTone} icon={<span className="tenants-status-dot" />}>
-                    {t(statusKey)}
-                  </Badge>
-                  <span className="project-detail__hero-type">{orgProject?.type || clientProject?.type || t('projects')}</span>
                 </div>
               ) : null}
               {approvalStatus === 'DRAFT' && rejectionReason ? (
@@ -999,7 +997,7 @@ export function ProjectDetailView({
                 </div>
               ) : null}
             </div>
-            <div className="project-detail__actions">{heroActions}</div>
+            {activeTab !== 'overview' ? <div className="project-detail__actions">{heroActions}</div> : null}
           </section>
 
           <div className="project-detail__tabs">
