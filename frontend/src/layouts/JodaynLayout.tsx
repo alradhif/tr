@@ -67,7 +67,7 @@ export function JodaynLayout() {
           { key: '/jodayn/goals', label: t('strategicGoals'), icon: <GoalsIcon /> },
           { key: '/jodayn/projects', label: t('projects'), icon: <ProjectsIcon /> },
           { key: '/jodayn/client-accounts', label: 'العملاء', icon: <CompaniesIcon /> },
-          { key: '/jodayn/sectors', label: t('sectors'), icon: <DepartmentsIcon /> },
+          { key: '/jodayn/sectors', label: 'الإدارات', icon: <DepartmentsIcon /> },
           { key: '/jodayn/invoices', label: t('invoices'), icon: <NavImg src={moneysIcon} dark /> },
           { key: '/jodayn/forecasts', label: t('revenueForecasts'), icon: <NavImg src={walletMoneyIcon} /> },
           { key: '/jodayn/reports', label: t('financialReports'), icon: <NavImg src={noteIcon} /> },
