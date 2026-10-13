@@ -50,7 +50,7 @@ exports.getProjects = async (req, res) => {
     const [orgProjects, clientProjects] = await Promise.all([
       prisma.orgProject.findMany({
         orderBy: { createdAt: 'desc' },
-        select: { ...projectSelect, org: { select: { name: true } } },
+        select: { ...projectSelect, departmentId: true, orgId: true, org: { select: { name: true } } },
       }),
       prisma.clientProject.findMany({
         orderBy: { createdAt: 'desc' },
@@ -98,6 +98,41 @@ exports.getClient = async (req, res) => {
 
     const { clientProjects, clientUsers, reports, ...account } = client
     res.json({ client: account, projects: clientProjects, users: clientUsers, reports })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// ---- Departments across every organization (Jodayn الإدارات) ----
+
+// Every organization's departments, with the organization's name.
+exports.getDepartments = async (req, res) => {
+  try {
+    const departments = await prisma.department.findMany({
+      include: { employees: true, org: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json({ count: departments.length, departments })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// Lets the organization department handlers serve Jodayn: scope the request to the
+// department's organization (or to body.orgId when creating one).
+exports.scopeToDepartmentOrg = async (req, res, next) => {
+  try {
+    let orgId = req.body?.orgId
+    if (req.params.id) {
+      const department = await prisma.department.findUnique({ where: { id: req.params.id }, select: { orgId: true } })
+      if (!department) return res.status(404).json({ message: 'Department not found' })
+      orgId = department.orgId
+    }
+    if (!orgId) return res.status(400).json({ message: 'Required field: orgId' })
+    const org = await prisma.orgAccount.findUnique({ where: { id: orgId }, select: { id: true } })
+    if (!org) return res.status(404).json({ message: 'Organization not found' })
+    req.user = { ...req.user, orgId }
+    next()
   } catch (err) {
     res.status(500).json({ message: err.message })
   }

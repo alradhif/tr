@@ -16,6 +16,7 @@ import { OrgCompanyDetailPage } from './pages/org/CompanyDetailPage'
 import { OrgDepartmentsPage } from './pages/org/DepartmentsPage'
 import { OrgAddDepartmentPage } from './pages/org/AddDepartmentPage'
 import { OrgDepartmentDetailPage } from './pages/org/DepartmentDetailPage'
+import { DepartmentPortalProvider } from './pages/org/departmentPortal'
 import { ClientDashboardPage } from './pages/client/DashboardPage'
 import { ClientProjectsPage } from './pages/client/ProjectsPage'
 import { ClientAddProjectPage } from './pages/client/AddProjectPage'
@@ -99,6 +100,13 @@ export default function App() {
             <Route path="goals" element={<JodaynGoalsPage />} />
             <Route path="projects" element={<JodaynProjectsPage />} />
             <Route path="sectors" element={<JodaynSectorsPage />} />
+            <Route path="departments" element={<DepartmentPortalProvider kind="jodayn"><OrgDepartmentsPage /></DepartmentPortalProvider>} />
+            <Route path="departments/new" element={<DepartmentPortalProvider kind="jodayn"><OrgAddDepartmentPage /></DepartmentPortalProvider>} />
+            <Route
+              path="departments/:departmentId/edit"
+              element={<DepartmentPortalProvider kind="jodayn"><OrgDepartmentDetailPage initialEdit /></DepartmentPortalProvider>}
+            />
+            <Route path="departments/:departmentId" element={<DepartmentPortalProvider kind="jodayn"><OrgDepartmentDetailPage /></DepartmentPortalProvider>} />
             <Route path="sectors/new" element={<JodaynAddSectorPage />} />
             <Route path="org-accounts" element={<JodaynOrgAccountsPage />} />
             <Route path="client-accounts" element={<JodaynClientAccountsPage />} />

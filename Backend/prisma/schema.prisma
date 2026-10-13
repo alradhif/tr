@@ -438,11 +438,12 @@ model OrgUser {
 model Department {
   id            String     @id @default(uuid())
   name          String
-  type          String?
-  managerName   String?
-  email         String?
-  phone         String?
-  employeeCount Int        @default(0)
+  type            String?
+  managerName     String?
+  responsibleName String?
+  email           String?
+  phone           String?
+  employeeCount   Int        @default(0)
   description   String?
   isActive      Boolean    @default(true)
   orgId         String

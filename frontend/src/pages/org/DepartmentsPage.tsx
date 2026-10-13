@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, Filter, Plus } from 'lucide-react'
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { getDepartments, type Department } from '../../api/org'
-import { getProjects, type OrgProject } from '../../api/orgProjects'
+import type { Department } from '../../api/org'
+import type { OrgProject } from '../../api/orgProjects'
 import type { OrgRole } from '../../auth/orgAuth'
-import { getOrgToken } from '../../auth/orgAuth'
+import { useDepartmentPortal } from './departmentPortal'
 import { canCreateDraft } from '../../auth/permissions'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { averageProgress, formatJoinDate, projectStatusClass, STATUS_META } from './orgEntityUi'
@@ -21,6 +21,7 @@ export function OrgDepartmentsPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { role } = useOutletContext<{ role: OrgRole }>()
+  const portal = useDepartmentPortal()
   const [departments, setDepartments] = useState<Department[]>([])
   const [projects, setProjects] = useState<OrgProject[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,7 +36,7 @@ export function OrgDepartmentsPage() {
   }, [location.pathname, location.state, navigate])
 
   useEffect(() => {
-    const token = getOrgToken()
+    const token = portal.token()
     if (!token) {
       setLoading(false)
       return
@@ -43,10 +44,10 @@ export function OrgDepartmentsPage() {
     let cancelled = false
     ;(async () => {
       try {
-        const [departmentsRes, projectsRes] = await Promise.all([getDepartments(token), getProjects(token)])
+        const [departmentsRes, projectList] = await Promise.all([portal.list(token), portal.projects(token)])
         if (cancelled) return
         setDepartments(departmentsRes.departments)
-        setProjects(projectsRes.projects ?? [])
+        setProjects(projectList)
         setError(null)
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : 'تعذر تحميل الإدارات')
@@ -57,7 +58,7 @@ export function OrgDepartmentsPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [portal])
 
   const rows = useMemo(() => {
     return departments.map((department) => {
@@ -97,7 +98,7 @@ export function OrgDepartmentsPage() {
         <div className="departments-list-header departments-list-header--screenshot-one">
           <div className="departments-toolbar departments-toolbar--screenshot-one">
             {canCreateDraft(role) ? (
-              <button className="departments-primary" type="button" onClick={() => navigate('/org/departments/new')}>
+              <button className="departments-primary" type="button" onClick={() => navigate(`${portal.base}/new`)}>
                 <Plus size={19} />
                 <span>إضافة إدارة جديدة</span>
               </button>
@@ -136,7 +137,7 @@ export function OrgDepartmentsPage() {
               ) : null}
               {!loading &&
                 visible.map((row) => (
-                  <tr key={row.department.id} onClick={() => navigate(`/org/departments/${row.department.id}`)}>
+                  <tr key={row.department.id} onClick={() => navigate(`${portal.base}/${row.department.id}`)}>
                     <td>
                       <strong>{row.department.name}</strong>
                       <small>{row.department.description || '—'}</small>

@@ -217,3 +217,34 @@
   border-radius: 0 !important;
   padding: 0 !important;
 }
+
+/* Linked projects ("المشاريع التابعة") on the add-department page. */
+.linked-project-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: #17b26a;
+}
+
+.linked-project-dot--track {
+  background: #2e90fa;
+}
+
+.linked-project-dot--delay {
+  background: #f79009;
+}
+
+.linked-project-dot--blocked {
+  background: #f04438;
+}
+
+.linked-project-dot--done {
+  background: #17b26a;
+}
+
+.linked-project-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

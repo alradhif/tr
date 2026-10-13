@@ -14,17 +14,10 @@ import {
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { departmentsAssets } from '@/assets'
 import { ApiError } from '../../api/client'
-import {
-  deleteDepartment,
-  getDepartmentById,
-  getDepartmentEmployees,
-  updateDepartment,
-  type Department,
-  type DepartmentEmployee,
-} from '../../api/org'
-import { getProjects, type OrgProject } from '../../api/orgProjects'
+import type { Department, DepartmentEmployee } from '../../api/org'
+import type { OrgProject } from '../../api/orgProjects'
 import type { OrgRole } from '../../auth/orgAuth'
-import { getOrgToken } from '../../auth/orgAuth'
+import { useDepartmentPortal } from './departmentPortal'
 import { canCreateDraft, isUpperManagement } from '../../auth/permissions'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { SubpageHeader } from '../../components/ui'
@@ -41,6 +34,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
   const navigate = useNavigate()
   const { departmentId } = useParams()
   const { role } = useOutletContext<{ role: OrgRole }>()
+  const portal = useDepartmentPortal()
   const [department, setDepartment] = useState<Department | null>(null)
   const [employees, setEmployees] = useState<DepartmentEmployee[]>([])
   const [projects, setProjects] = useState<OrgProject[]>([])
@@ -59,7 +53,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
     statusFilter === 'all' ? projects : projects.filter((project) => projectStatusClass(project.status) === statusFilter)
 
   useEffect(() => {
-    const token = getOrgToken()
+    const token = portal.token()
     if (!token || !departmentId) {
       setLoading(false)
       return
@@ -67,15 +61,15 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
     let cancelled = false
     ;(async () => {
       try {
-        const [{ department: data }, employeesRes, projectsRes] = await Promise.all([
-          getDepartmentById(token, departmentId),
-          getDepartmentEmployees(token, departmentId),
-          getProjects(token),
+        const [{ department: data }, employeesRes, projectList] = await Promise.all([
+          portal.get(token, departmentId),
+          portal.employees(token, departmentId),
+          portal.projects(token),
         ])
         if (cancelled) return
         setDepartment(data)
         setEmployees(employeesRes.employees ?? [])
-        setProjects((projectsRes.projects ?? []).filter((project) => project.departmentId === departmentId))
+        setProjects(projectList.filter((project) => project.departmentId === departmentId))
         setError(null)
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : 'تعذر تحميل الإدارة')
@@ -86,7 +80,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
     return () => {
       cancelled = true
     }
-  }, [departmentId])
+  }, [departmentId, portal])
 
   const saveDepartment = async (form: EditForm) => {
     if (!form.name.trim() || !departmentId) {
@@ -94,18 +88,19 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
       setBanner('error')
       return
     }
-    const token = getOrgToken()
+    const token = portal.token()
     if (!token) return
     try {
-      const { department: updated } = await updateDepartment(token, departmentId, {
+      const { department: updated } = await portal.update(token, departmentId, {
         name: form.name.trim(),
         type: form.section.trim() || undefined,
         managerName: form.manager.trim() || undefined,
+        responsibleName: form.responsible.trim() || undefined,
         phone: form.phone.trim() || undefined,
         email: form.email.trim() || undefined,
         description: form.description.trim() || undefined,
       })
-      setDepartment(updated)
+      setDepartment((current) => ({ ...updated, org: current?.org }))
       setEditOpen(false)
       setBanner('success')
     } catch {
@@ -115,12 +110,12 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
   }
 
   const handleDelete = async () => {
-    const token = getOrgToken()
+    const token = portal.token()
     if (!token || !departmentId) return
     setDeleting(true)
     try {
-      await deleteDepartment(token, departmentId)
-      navigate('/org/departments', { state: { notice: 'deleted' } })
+      await portal.remove(token, departmentId)
+      navigate(portal.base, { state: { notice: 'deleted' } })
     } catch (err) {
       setBanner('error')
       if (err instanceof ApiError) setError(err.message)
@@ -137,7 +132,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
           <p style={{ margin: 0, color: 'var(--dd-muted-foreground)', fontWeight: 600 }}>
             {error || 'هذه الإدارة غير موجودة أو تم حذفها.'}
           </p>
-          <button type="button" className="department-detail-edit" onClick={() => navigate('/org/departments')}>
+          <button type="button" className="department-detail-edit" onClick={() => navigate(portal.base)}>
             العودة إلى الإدارات
           </button>
         </div>
@@ -154,7 +149,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
         <SubpageHeader
           parent="الإدارات"
           title={department?.name ?? 'الإدارات'}
-          onBack={() => navigate('/org/departments')}
+          onBack={() => navigate(portal.base)}
           actions={
             <div className="department-detail-header__actions">
               {canEdit ? (
@@ -204,10 +199,10 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
               <div className="department-detail-info-grid department-detail-info-grid--first">
                 <InfoItem icon={<Briefcase />} label="القسم" value={department.type || '—'} />
                 <InfoItem icon={<ClipboardList />} label="الأداء" value={department.isActive ? 'نشط' : 'غير نشط'} />
-                <InfoItem icon={<ClipboardList />} label="القطاع" value="—" />
+                <InfoItem icon={<ClipboardList />} label="القطاع" value={department.org?.sector?.name || '—'} />
               </div>
               <div className="department-detail-info-grid department-detail-info-grid--second">
-                <InfoItem icon={<User />} label="الشخص المسؤول" value={department.managerName || '—'} />
+                <InfoItem icon={<User />} label="الشخص المسؤول" value={department.responsibleName || department.managerName || '—'} />
                 <InfoItem icon={<Phone />} label="الهاتف" value={department.phone || '—'} ltr />
                 <InfoItem icon={<Mail />} label="البريد الإلكتروني" value={department.email || '—'} ltr />
               </div>
@@ -279,7 +274,10 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
                         const status = projectStatusClass(project.status)
                         const meta = { label: STATUS_META[status], barClass: `is-${status === 'delay' ? 'late' : status === 'blocked' ? 'risk' : status === 'done' ? 'done' : 'track'}`, className: status === 'delay' ? 'is-late' : status === 'blocked' ? 'is-risk' : status === 'done' ? 'is-done' : 'is-track' }
                         return (
-                          <tr key={project.id} onClick={() => navigate(`/org/projects/${project.id}`)}>
+                          <tr key={project.id} onClick={() => {
+                            const href = portal.projectHref(project.id)
+                            if (href) navigate(href)
+                          }}>
                             <td>{project.name}</td>
                             <td>
                               <div className="department-detail-progress">
@@ -366,6 +364,7 @@ type EditForm = {
   phone: string
   email: string
   description: string
+  responsible: string
 }
 
 function EditDialog({
@@ -381,6 +380,7 @@ function EditDialog({
     name: initial.name,
     section: initial.type ?? '',
     manager: initial.managerName ?? '',
+    responsible: initial.responsibleName ?? '',
     phone: initial.phone ?? '',
     email: initial.email ?? '',
     description: initial.description ?? '',
@@ -401,6 +401,7 @@ function EditDialog({
           <Field label="اسم الإدارة" value={form.name} onChange={set('name')} />
           <Field label="القسم" value={form.section} onChange={set('section')} />
           <Field label="مدير الإدارة" value={form.manager} onChange={set('manager')} />
+          <Field label="الشخص المسؤول" value={form.responsible} onChange={set('responsible')} />
           <Field label="الهاتف" value={form.phone} onChange={set('phone')} ltr />
           <Field label="البريد الإلكتروني" value={form.email} onChange={set('email')} ltr />
           <div className="department-detail-dialog__full">

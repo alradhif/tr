@@ -43,12 +43,16 @@ export type Department = {
   name: string
   type?: string | null
   managerName?: string | null
+  responsibleName?: string | null
   email?: string | null
   phone?: string | null
   employeeCount: number
   description?: string | null
   isActive: boolean
   createdAt?: string
+  updatedAt?: string
+  orgId?: string
+  org?: { name: string; sector?: { name: string } | null } | null
   employees?: unknown[]
 }
 
@@ -98,6 +102,7 @@ export type DepartmentPayload = {
   name: string
   type?: string
   managerName?: string
+  responsibleName?: string
   email?: string
   phone?: string
   description?: string

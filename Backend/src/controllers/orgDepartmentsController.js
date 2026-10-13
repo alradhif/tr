@@ -25,6 +25,7 @@ exports.createDepartment = async (req, res) => {
       name,
       type,
       managerName,
+      responsibleName,
       email,
       phone,
       employeeCount,
@@ -41,6 +42,7 @@ exports.createDepartment = async (req, res) => {
         name,
         type,
         managerName,
+        responsibleName,
         email,
         phone,
         employeeCount: employeeCount ?? 0,
@@ -63,7 +65,10 @@ exports.getDepartmentById = async (req, res) => {
 
     const department = await prisma.department.findUnique({
       where: { id },
-      include: { employees: true }
+      include: {
+        employees: true,
+        org: { select: { name: true, sector: { select: { name: true } } } }
+      }
     })
 
     if (!department) {
@@ -115,6 +120,28 @@ exports.deleteDepartment = async (req, res) => {
     await prisma.department.delete({ where: { id } })
 
     res.json({ success: true, message: 'Department deleted' })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// Link projects of the same organization to a department (sets project.departmentId).
+exports.linkProjects = async (req, res) => {
+  try {
+    const orgId = req.user.orgId
+    const { id } = req.params
+    const projectIds = Array.isArray(req.body?.projectIds) ? req.body.projectIds : []
+
+    const department = await prisma.department.findUnique({ where: { id } })
+    if (!department) return res.status(404).json({ message: 'Department not found' })
+    if (department.orgId !== orgId) return res.status(403).json({ message: 'Access denied' })
+
+    const result = await prisma.orgProject.updateMany({
+      where: { id: { in: projectIds }, orgId },
+      data: { departmentId: id }
+    })
+
+    res.json({ success: true, linked: result.count })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }

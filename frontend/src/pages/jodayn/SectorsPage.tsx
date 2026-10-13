@@ -79,28 +79,28 @@ export function JodaynSectorsPage() {
   const budgets = rows.reduce((sum, row) => sum + row.budget, 0)
 
   return (
-    <FinancePage title="الإدارات">
-      <FinanceHead title="الإدارات" createLabel="إضافة إدارة" onCreate={() => navigate('/jodayn/sectors/new')} />
+    <FinancePage title={t('sectors')}>
+      <FinanceHead title={t('sectors')} createLabel={t('addSector')} onCreate={() => navigate('/jodayn/sectors/new')} />
       <FinanceTabs active={view} onChange={setView} />
 
       {view === 'generator' ? (
         <FinanceGenerator
-          title="مولّد العروض التقديمية - الإدارات"
+          title="مولّد العروض التقديمية - القطاعات"
           data={
             rows[0]
               ? {
                   project: {
-                    name: 'الإدارات',
+                    name: 'القطاعات',
                     code: `${rows.length}`,
-                    department: 'الإدارات — جودين',
+                    department: 'القطاعات — جودين',
                     projectManager: rows[0].managerName,
                     sponsor: '—',
-                    statusLabel: `${rows.length} إدارة`,
+                    statusLabel: `${rows.length} قطاع`,
                     budget: budgets,
                     budgetCurrency: 'SAR',
                   },
                   outputs: rows.slice(0, 4).map((r) => `${r.name} — إيراد ${formatAmount(r.annualRevenue)}`),
-                  sourceLabel: `بيانات حية — ${rows.length} إدارة`,
+                  sourceLabel: `بيانات حية — ${rows.length} قطاع`,
                 }
               : null
           }
@@ -109,13 +109,13 @@ export function JodaynSectorsPage() {
         <>
           <FinanceStats
             cards={[
-              { label: 'عدد الإدارات', value: String(rows.length), icon: icon1 },
+              { label: 'عدد القطاعات', value: String(rows.length), icon: icon1 },
               { label: 'الإيراد السنوي', value: formatAmount(revenue), icon: icon2 },
               { label: 'إجمالي الميزانيات', value: formatAmount(budgets), icon: icon4 },
             ]}
           />
           <FinanceTable
-            headers={['اسم الإدارة', 'المدير المسؤول', 'الميزانية', 'عدد الموظفين', 'عدد الأقسام', 'الربح']}
+            headers={['اسم القطاع', 'المدير المسؤول', 'الميزانية', 'عدد الموظفين', 'عدد الإدارات', 'الربح']}
             loading={loading}
             empty={rows.length === 0}
           >
@@ -140,7 +140,7 @@ export function JodaynSectorsPage() {
                 { label: 'الإيراد السنوي', value: formatAmount(opened.annualRevenue) },
                 { label: 'الربح', value: formatAmount(opened.profit) },
                 { label: 'عدد الموظفين', value: opened.employeeCount },
-                { label: 'عدد الأقسام', value: opened.departmentCount },
+                { label: 'عدد الإدارات', value: opened.departmentCount },
               ]}
             />
           ) : null}

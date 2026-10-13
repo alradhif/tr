@@ -44,10 +44,10 @@ export function JodaynAddSectorPage() {
 
   return (
     <FormPageHeader
-      parentLabel="الإدارات"
-      currentLabel="إضافة إدارة جديدة"
+      parentLabel={t('sectors')}
+      currentLabel={t('addSectorFull')}
       backTo="/jodayn/sectors"
-      title="إضافة إدارة جديدة"
+      title={t('addSectorFull')}
     >
       <Form
         layout="vertical"
@@ -55,8 +55,8 @@ export function JodaynAddSectorPage() {
         className="form-page__form"
         onFinish={onFinish}
       >
-        <FormSection title="بيانات الإدارة">
-          <Form.Item label="اسم الإدارة" name="name" rules={[{ required: true }]}>
+        <FormSection title={t('sectorBasicInfo')}>
+          <Form.Item label={t('sectorName')} name="name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           <Form.Item label={t('manager')} name="managerName" rules={[{ required: true }]}>

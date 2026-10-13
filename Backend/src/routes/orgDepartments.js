@@ -11,7 +11,8 @@ const {
   getEmployees,
   createEmployee,
   updateEmployee,
-  deleteEmployee
+  deleteEmployee,
+  linkProjects
 } = require('../controllers/orgDepartmentsController')
 
 const isUpperMgmt = [auth, roles('ORG_UPPER_MGMT', 'SUPER_ADMIN')]
@@ -20,6 +21,7 @@ const isOrgAny = [auth, roles('ORG_UPPER_MGMT', 'ORG_DATA_ENTRY', 'SUPER_ADMIN')
 router.get('/', ...isOrgAny, getDepartments)
 router.post('/', ...isOrgAny, createDepartment)
 
+router.post('/:id/projects', ...isOrgAny, linkProjects)
 router.get('/:id/employees', ...isOrgAny, getEmployees)
 router.post('/:id/employees', ...isOrgAny, createEmployee)
 router.patch('/:id/employees/:empId', ...isOrgAny, updateEmployee)

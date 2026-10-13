@@ -27,7 +27,14 @@ const {
   resetJodaynUserCredentials,
 } = require('../controllers/jodaynUsersController')
 const { getDashboard } = require('../controllers/jodaynDashboardController')
-const { getGoals, getProjects, getClient } = require('../controllers/jodaynPortfolioController')
+const {
+  getGoals,
+  getProjects,
+  getClient,
+  getDepartments: getAllDepartments,
+  scopeToDepartmentOrg,
+} = require('../controllers/jodaynPortfolioController')
+const departments = require('../controllers/orgDepartmentsController')
 
 const isJodaynUpper = [auth, roles('JODAYN_UPPER_MGMT', 'SUPER_ADMIN')]
 const isJodayn = [
@@ -39,6 +46,17 @@ router.get('/dashboard', ...isJodayn, getDashboard)
 router.get('/goals', ...isJodayn, getGoals)
 router.get('/projects', ...isJodayn, getProjects)
 router.get('/clients/:id', ...isJodayn, getClient)
+
+// Departments of every organization; per-department handlers reuse the organization ones.
+router.get('/departments', ...isJodayn, getAllDepartments)
+router.post('/departments', ...isJodayn, scopeToDepartmentOrg, departments.createDepartment)
+router.get('/departments/:id', ...isJodayn, scopeToDepartmentOrg, departments.getDepartmentById)
+router.patch('/departments/:id', ...isJodayn, scopeToDepartmentOrg, departments.updateDepartment)
+router.delete('/departments/:id', ...isJodaynUpper, scopeToDepartmentOrg, departments.deleteDepartment)
+router.post('/departments/:id/projects', ...isJodayn, scopeToDepartmentOrg, departments.linkProjects)
+router.get('/departments/:id/employees', ...isJodayn, scopeToDepartmentOrg, departments.getEmployees)
+router.post('/departments/:id/employees', ...isJodayn, scopeToDepartmentOrg, departments.createEmployee)
+router.delete('/departments/:id/employees/:empId', ...isJodaynUpper, scopeToDepartmentOrg, departments.deleteEmployee)
 router.post('/users', ...isJodaynUpper, createJodaynPortalUser)
 router.get('/users', ...isJodaynUpper, getJodaynUsers)
 router.patch('/users/:id/toggle', ...isJodaynUpper, toggleJodaynUser)
