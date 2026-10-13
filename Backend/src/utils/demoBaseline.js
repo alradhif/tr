@@ -402,9 +402,9 @@ const INVOICES = [
 ]
 
 const FORECASTS = [
-  { quarter: 'Q1', year: 2026, optimisticValue: 270000, conservativeValue: 250000, pessimisticValue: 180000, actualValue: 230000, branchFilter: 'وزارة التعليم' },
-  { quarter: 'Q2', year: 2026, optimisticValue: 330000, conservativeValue: 300000, pessimisticValue: 120000, actualValue: 180000, branchFilter: 'هيئة الصحة العامة' },
-  { quarter: 'H2', year: 2026, optimisticValue: 240000, conservativeValue: 220000, pessimisticValue: 150000, actualValue: 210000, branchFilter: 'جامعة الملك سعود' },
+  { quarter: 'Q1', year: 2026, optimisticValue: 270000, conservativeValue: 250000, pessimisticValue: 180000, actualValue: 230000, optimisticProbability: 30, conservativeProbability: 55, pessimisticProbability: 15, dateRangeStart: new Date('2026-01-01'), dateRangeEnd: new Date('2026-03-31'), branchFilter: 'وزارة التعليم' },
+  { quarter: 'Q2', year: 2026, optimisticValue: 330000, conservativeValue: 300000, pessimisticValue: 120000, actualValue: 180000, optimisticProbability: 25, conservativeProbability: 50, pessimisticProbability: 25, dateRangeStart: new Date('2026-04-01'), dateRangeEnd: new Date('2026-06-30'), branchFilter: 'هيئة الصحة العامة' },
+  { quarter: 'H2', year: 2026, optimisticValue: 240000, conservativeValue: 220000, pessimisticValue: 150000, actualValue: 210000, optimisticProbability: 35, conservativeProbability: 50, pessimisticProbability: 15, dateRangeStart: new Date('2026-07-01'), dateRangeEnd: new Date('2026-12-31'), branchFilter: 'جامعة الملك سعود' },
 ]
 
 const REPORTS = [

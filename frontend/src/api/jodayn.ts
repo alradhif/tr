@@ -68,6 +68,11 @@ export type RevenueForecast = {
   pessimisticValue: number | string
   conservativeValue: number | string
   actualValue?: number | string
+  optimisticProbability?: number | string
+  conservativeProbability?: number | string
+  pessimisticProbability?: number | string
+  dateRangeStart?: string | null
+  dateRangeEnd?: string | null
   branchFilter?: string | null
 }
 
@@ -100,6 +105,10 @@ export function createInvoice(token: string, data: Record<string, unknown>) {
     token,
     body: JSON.stringify(data),
   })
+}
+
+export function getForecast(token: string, id: string) {
+  return apiRequest<{ forecast: RevenueForecast }>(`/jodayn/forecasts/${id}`, { method: 'GET', token })
 }
 
 export function getForecasts(token: string) {

@@ -215,3 +215,136 @@
   min-height: 0;
   gap: 0;
 }
+
+/* Forecast page (Figma 2311:67616): info strip and scenario cards. */
+.jfc-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.jfc-info__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 195px;
+  padding: 2px 0;
+}
+
+.jfc-info__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jfc-info__label {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  color: #8e8f97;
+}
+
+.jfc-info__value {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #0c0c0d;
+}
+
+.jfc-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 129px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.jfc-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.jfc-card__row--top {
+  align-items: flex-start;
+}
+
+.jfc-card__label {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+  color: #8e8f97;
+}
+
+.jfc-card__value {
+  font-size: 30px;
+  line-height: 38px;
+  font-weight: 700;
+  color: #000;
+  white-space: nowrap;
+}
+
+.jfc-trend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 28px;
+  border-radius: 17px;
+}
+
+.jfc-trend img {
+  transform: scaleX(-1);
+}
+
+.jfc-trend--down img {
+  transform: rotate(180deg);
+}
+
+.jfc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 23px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.jfc--green {
+  background: #d1f0e1;
+  color: #17b26a;
+}
+
+.jfc--orange {
+  background: #fde9ce;
+  color: #f79009;
+}
+
+.jfc--red {
+  background: #feedec;
+  color: #f04438;
+}
+
+@media (max-width: 900px) {
+  .jfc-info {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .jfc-info__item {
+    width: auto;
+  }
+}

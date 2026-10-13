@@ -4,11 +4,10 @@ import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { deleteJodaynRecord, getForecasts } from '../../api/jodayn'
-import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
+import { getForecasts } from '../../api/jodayn'
+import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
   FinanceCreateButton,
-  FinanceDetails,
   FinanceGenerator,
   FinancePage,
   FinanceRow,
@@ -47,8 +46,6 @@ export function JodaynForecastsPage() {
   const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<ForecastRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [opened, setOpened] = useState<ForecastRow | null>(null)
-  const isUpper = getJodaynRole() === 'upper'
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -88,19 +85,6 @@ export function JodaynForecastsPage() {
       cancelled = true
     }
   }, [t])
-
-  const remove = async (row: ForecastRow) => {
-    const token = getJodaynToken()
-    if (!token || !window.confirm(`حذف ${row.name}؟`)) return
-    try {
-      await deleteJodaynRecord(token, 'forecasts', row.key)
-      setOpened(null)
-      setRows((current) => current.filter((item) => item.key !== row.key))
-      message.success(t('deletedSuccessfully'))
-    } catch (err) {
-      message.error(err instanceof ApiError ? err.message : t('loadError'))
-    }
-  }
 
   const expected = rows.reduce((sum, row) => sum + row.expected, 0)
   const actual = rows.reduce((sum, row) => sum + row.actual, 0)
@@ -188,7 +172,7 @@ export function JodaynForecastsPage() {
             empty={rows.length === 0}
           >
             {rows.map((row) => (
-              <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
+              <FinanceRow key={row.key} onOpen={() => navigate(`/jodayn/forecasts/${row.key}`)}>
                 <td>{row.name}</td>
                 <td className="finance-muted">{row.period}</td>
                 <td>{row.entity}</td>
@@ -203,28 +187,6 @@ export function JodaynForecastsPage() {
               </FinanceRow>
             ))}
           </FinanceTable>
-          {opened ? (
-            <FinanceDetails
-              title={opened.name}
-              onClose={() => setOpened(null)}
-              fields={[
-                { label: 'الفترة الزمنية', value: opened.period },
-                { label: 'الجهة', value: opened.entity },
-                { label: 'الإيراد المتوقع (متحفظ)', value: formatAmount(opened.expected) },
-                { label: 'الإيراد الفعلي المحقق', value: formatAmount(opened.actual) },
-                { label: t('optimisticValue'), value: formatAmount(opened.optimistic) },
-                { label: t('pessimisticValue'), value: formatAmount(opened.pessimistic) },
-                { label: 'الحالة', value: opened.achieved ? 'محقق' : 'قيد التحقيق' },
-              ]}
-              actions={
-                isUpper ? (
-                  <button type="button" className="finance-btn finance-btn--danger" onClick={() => void remove(opened)}>
-                    {t('delete')}
-                  </button>
-                ) : null
-              }
-            />
-          ) : null}
         </>
       )}
     </FinancePage>
