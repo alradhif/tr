@@ -42,11 +42,14 @@ function ScenarioCard({
   value,
   probability,
   tone,
+  badgeText,
 }: {
   label: string
   value: number | string
   probability: number | string | undefined
   tone: 'green' | 'orange' | 'red'
+  /** Overrides the probability badge (the Figma optimistic card reads "على المسار"). */
+  badgeText?: string
 }) {
   const icons = {
     green: { rise: riseGreen, check: checkGreen },
@@ -64,7 +67,7 @@ function ScenarioCard({
       <div className="jfc-card__row">
         <span className="jfc-card__value">{formatAmount(value)}</span>
         <span className={`jfc-badge jfc--${tone}`}>
-          {`احتمالية ${formatAmount(probability ?? 0)}%`}
+          {badgeText ?? `احتمالية ${formatAmount(probability ?? 0)}%`}
           <img src={icons.check} alt="" width={16} height={16} />
         </span>
       </div>
@@ -165,6 +168,7 @@ export function JodaynForecastDetailPage() {
                 value={forecast.optimisticValue}
                 probability={forecast.optimisticProbability}
                 tone="green"
+                badgeText="على المسار"
               />
             </div>
           </>
