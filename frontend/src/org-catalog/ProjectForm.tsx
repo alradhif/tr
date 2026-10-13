@@ -907,71 +907,16 @@ export function ProjectForm({
 
         {step === 2 ? (
           <>
-            {/* Budget and contract sit in step 2: step 1 in Figma holds only project info and parties. */}
-            <section className="create-project__card">
-              <h2>{t('budgetAndContract')}</h2>
-              <div className="create-project__divider" />
-              <div className="create-project__grid">
-                <Field
-                  label={t('contractNumber')}
-                  value={form.contractNumber}
-                  onChange={(value) => update('contractNumber', value)}
-                />
-                <Field
-                  label={t('contractingParty')}
-                  value={form.contractingEntity}
-                  onChange={(value) => update('contractingEntity', value)}
-                />
-                <Field
-                  label={t('signDate')}
-                  value={form.contractDate}
-                  onChange={(value) => update('contractDate', value)}
-                  type="date"
-                />
-                <Field
-                  label={t('contractStatusLabel')}
-                  value={form.contractStatus}
-                  onChange={(value) => update('contractStatus', value)}
-                  placeholder={t('choose')}
-                  options={[
-                    { value: 'active', label: t('contractActive') },
-                    { value: 'expired', label: t('contractExpired') },
-                    { value: 'onHold', label: t('onHold') },
-                  ]}
-                />
-                <Field
-                  label={t('contractStart')}
-                  value={form.contractStartDate}
-                  onChange={(value) => update('contractStartDate', value)}
-                  type="date"
-                />
-                <Field
-                  label={t('contractEnd')}
-                  value={form.contractEndDate}
-                  onChange={(value) => update('contractEndDate', value)}
-                  type="date"
-                />
-              </div>
-              <label className="create-project__field create-project__field--full">
-                <span>{t('totalBudgetSar')}</span>
-                <input
-                  type="number"
-                  value={form.budget}
-                  onChange={(event) => update('budget', event.target.value)}
-                />
-              </label>
-            </section>
-
             <section className="create-project__card">
               <h2>{t('workScope')}</h2>
               <div className="create-project__divider" />
               <label className="create-project__field">
                 <span>{t('scopeMainLabel')}</span>
-                <textarea value={form.scopeMain} onChange={(event) => update('scopeMain', event.target.value)} />
+                <input value={form.scopeMain} onChange={(event) => update('scopeMain', event.target.value)} />
               </label>
               <label className="create-project__field create-project__field--full">
                 <span>{t('scopeExcludedLabel')}</span>
-                <textarea value={form.scopeExcluded} onChange={(event) => update('scopeExcluded', event.target.value)} />
+                <input value={form.scopeExcluded} onChange={(event) => update('scopeExcluded', event.target.value)} />
               </label>
             </section>
 
@@ -1343,6 +1288,63 @@ export function ProjectForm({
         ) : null}
 
         {step === 4 ? (
+          <>
+          {/* Budget and contract details go with the contract attachment in the last step: the Figma
+              steps 1 and 2 (1231:129840, 1231:129883) have no budget section. */}
+            <section className="create-project__card">
+              <h2>{t('budgetAndContract')}</h2>
+              <div className="create-project__divider" />
+              <div className="create-project__grid">
+                <Field
+                  label={t('contractNumber')}
+                  value={form.contractNumber}
+                  onChange={(value) => update('contractNumber', value)}
+                />
+                <Field
+                  label={t('contractingParty')}
+                  value={form.contractingEntity}
+                  onChange={(value) => update('contractingEntity', value)}
+                />
+                <Field
+                  label={t('signDate')}
+                  value={form.contractDate}
+                  onChange={(value) => update('contractDate', value)}
+                  type="date"
+                />
+                <Field
+                  label={t('contractStatusLabel')}
+                  value={form.contractStatus}
+                  onChange={(value) => update('contractStatus', value)}
+                  placeholder={t('choose')}
+                  options={[
+                    { value: 'active', label: t('contractActive') },
+                    { value: 'expired', label: t('contractExpired') },
+                    { value: 'onHold', label: t('onHold') },
+                  ]}
+                />
+                <Field
+                  label={t('contractStart')}
+                  value={form.contractStartDate}
+                  onChange={(value) => update('contractStartDate', value)}
+                  type="date"
+                />
+                <Field
+                  label={t('contractEnd')}
+                  value={form.contractEndDate}
+                  onChange={(value) => update('contractEndDate', value)}
+                  type="date"
+                />
+              </div>
+              <label className="create-project__field create-project__field--full">
+                <span>{t('totalBudgetSar')}</span>
+                <input
+                  type="number"
+                  value={form.budget}
+                  onChange={(event) => update('budget', event.target.value)}
+                />
+              </label>
+            </section>
+
           <section className="create-project__card">
             <h2>{t('uploadAttachments')}</h2>
             <div className="create-project__divider" />
@@ -1417,6 +1419,7 @@ export function ProjectForm({
               </div>
             ) : null}
           </section>
+          </>
         ) : null}
 
         {error ? <div className="create-project__error">{error}</div> : null}
