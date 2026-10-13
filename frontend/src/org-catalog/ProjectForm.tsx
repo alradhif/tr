@@ -222,15 +222,6 @@ function Field({
   )
 }
 
-function ReviewField({ label, value, full = false }: { label: string; value: string; full?: boolean }) {
-  return (
-    <div className={`create-project__review-field ${full ? 'create-project__review-field--full' : ''}`}>
-      <span>{label}</span>
-      <div>{value || '—'}</div>
-    </div>
-  )
-}
-
 function monthPosition(date: string) {
   if (!date) return null
   const parsed = new Date(`${date}T00:00:00`)
@@ -373,8 +364,10 @@ export function ProjectForm({
   const [rejectionReason, setRejectionReason] = useState('')
   const role = isClient ? getClientRole() : getOrgRole()
   const entryUser = role ? isDataEntry(role) : false
-  const maxStep = entryUser ? 4 : 3
-  const phasesStep = entryUser ? 3 : 2
+  // Every role gets the four-step wizard from the Figma create-project frame (1231:129840);
+  // the role only changes whether the last step submits for approval or saves directly.
+  const maxStep = 4
+  const phasesStep = 3
   const [form, setForm] = useState<ProjectFormState>({
     name: '',
     type: '',
@@ -742,28 +735,26 @@ export function ProjectForm({
     setAttachments((current) => current.filter((entry) => entry.key !== item.key))
   }
 
-  const companyLabel =
-    companies.find((company) => company.id === form.executingCompanyId)?.name || form.contractingEntity || '—'
-  const steps = entryUser
-    ? [t('basicInfoStep'), t('stepScopeDeliverables'), t('stagesScheduleStep'), t('stepAttachmentsSubmit')]
-    : [t('basicInfoStep'), t('stagesScheduleStep'), t('reviewFinalStep')]
+  const pageTitle = mode === 'edit' ? t('editProject') : 'إنشاء مشروع جديد'
+  const steps = [t('basicInfoStep'), t('stepScopeDeliverables'), t('stagesScheduleStep'), t('stepAttachmentsSubmit')]
   const progressWidth = steps.length > 1 ? `${((step - 1) / (steps.length - 1)) * 100}%` : '0%'
 
   return (
     <div className="dashboard-page create-project" dir="rtl">
       <SubpageHeader
         parent={t('projects')}
-        title={mode === 'edit' ? t('editProject') : t('addProjectFull')}
-        subtitle={t('createProjectSubtitle')}
+        title={pageTitle}
         onBack={() => navigate(listPath)}
       />
       <div className="create-project__body">
-        <div className={`create-project__steps ${entryUser ? 'create-project__steps--four' : ''}`}>
-          {entryUser ? (
-            <div className="create-project__steps-track">
-              <div className="create-project__steps-progress" style={{ width: progressWidth }} />
-            </div>
-          ) : null}
+        <div className="create-project__hero">
+          <h1>{pageTitle}</h1>
+          <p>{t('createProjectSubtitle')}</p>
+        </div>
+        <div className="create-project__steps create-project__steps--four">
+          <div className="create-project__steps-track">
+            <div className="create-project__steps-progress" style={{ width: progressWidth }} />
+          </div>
           {steps.map((label, index) => {
             const number = index + 1
             return (
@@ -799,8 +790,12 @@ export function ProjectForm({
             }}
           />
           <div className="create-project__upload-copy">
-            <strong>{t('aiUploadProjectTitle')}</strong>
-            <span>{extracting ? 'جاري قراءة الملف...' : t('aiUploadProjectSubtitle')}</span>
+            <strong>ارفع ملف العقد وسيُعبئ النظام الحقول تلقائياً</strong>
+            <span>
+              {extracting
+                ? 'جاري قراءة الملف...'
+                : 'يدعم PDF وWord — سيستخلص الاسم، الجهات، التواريخ، القيمة، وأطراف المشروع'}
+            </span>
             {contractFile ? (
               <small>
                 <AssetIcon src={projectsAssets.contract} size={14} /> {contractFile.name}
@@ -815,19 +810,19 @@ export function ProjectForm({
         {step === 1 ? (
           <>
             <section className="create-project__card">
-              <h2>{t('projectBasicInfo')}</h2>
+              <h2>معلومات المشروع</h2>
               <div className="create-project__divider" />
               <div className="create-project__grid">
                 <Field label={t('projectName')} value={form.name} onChange={(value) => update('name', value)} />
                 <Field label={t('projectType')} value={form.type} onChange={(value) => update('type', value)} />
                 <Field
-                  label={t('classification')}
+                  label="تصنيف المشروع"
                   value={form.classification}
                   onChange={(value) => update('classification', value)}
                 />
                 {!isClient ? (
                   <Field
-                    label={t('company')}
+                    label="الجهة المنفذة"
                     value={form.executingCompanyId}
                     onChange={(value) => update('executingCompanyId', value)}
                     placeholder={t('chooseCompany')}
@@ -835,15 +830,15 @@ export function ProjectForm({
                   />
                 ) : (
                   <Field
-                    label={t('contractingParty')}
+                    label="الجهة المنفذة"
                     value={form.contractingEntity}
                     onChange={(value) => update('contractingEntity', value)}
                   />
                 )}
               </div>
               <label className="create-project__field create-project__field--full">
-                <span>{t('description')}</span>
-                <textarea value={form.description} onChange={(event) => update('description', event.target.value)} />
+                <span>وصف مختصر</span>
+                <input value={form.description} onChange={(event) => update('description', event.target.value)} />
               </label>
               <div className="create-project__grid">
                 <Field
@@ -853,7 +848,7 @@ export function ProjectForm({
                   type="date"
                 />
                 <Field
-                  label={t('endDate')}
+                  label="تاريخ النهاية"
                   value={form.endDate}
                   onChange={(value) => update('endDate', value)}
                   type="date"
@@ -861,6 +856,58 @@ export function ProjectForm({
               </div>
             </section>
 
+            <section className="create-project__card create-project__parties">
+              <h2>{t('projectParties')}</h2>
+              <div className="create-project__divider" />
+              <div className="create-project__grid">
+                <Field
+                  label={t('manager')}
+                  value={form.managerId}
+                  onChange={(value) => update('managerId', value)}
+                  placeholder={t('manager')}
+                  options={users.map((user) => ({ value: user.id, label: `${user.name} (${user.email})` }))}
+                />
+                {!isClient ? (
+                  <Field
+                    label={t('department')}
+                    value={form.departmentId}
+                    onChange={(value) => update('departmentId', value)}
+                    placeholder={t('chooseDepartment')}
+                    options={departments.map((department) => ({ value: department.id, label: department.name }))}
+                  />
+                ) : null}
+              </div>
+              <div className="create-project__party-list" style={{ marginTop: 12 }}>
+                <div className="create-project__party">
+                  <div className="create-project__party-avatar">ج</div>
+                  <div className="create-project__party-copy">
+                    <strong>{t('orgProjectManager')}</strong>
+                    <input
+                      value={form.orgProjectManagerName}
+                      onChange={(event) => update('orgProjectManagerName', event.target.value)}
+                      style={{ border: 0, background: 'transparent', textAlign: 'right' }}
+                    />
+                  </div>
+                </div>
+                <div className="create-project__party">
+                  <div className="create-project__party-avatar">ع</div>
+                  <div className="create-project__party-copy">
+                    <strong>{t('clientProjectManager')}</strong>
+                    <input
+                      value={form.clientProjectManagerName}
+                      onChange={(event) => update('clientProjectManagerName', event.target.value)}
+                      style={{ border: 0, background: 'transparent', textAlign: 'right' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+          </>
+        ) : null}
+
+        {step === 2 ? (
+          <>
+            {/* Budget and contract sit in step 2: step 1 in Figma holds only project info and parties. */}
             <section className="create-project__card">
               <h2>{t('budgetAndContract')}</h2>
               <div className="create-project__divider" />
@@ -915,57 +962,6 @@ export function ProjectForm({
               </label>
             </section>
 
-            <section className="create-project__card create-project__parties">
-              <h2>{t('projectParties')}</h2>
-              <div className="create-project__divider" />
-              <div className="create-project__grid">
-                <Field
-                  label={t('manager')}
-                  value={form.managerId}
-                  onChange={(value) => update('managerId', value)}
-                  placeholder={t('manager')}
-                  options={users.map((user) => ({ value: user.id, label: `${user.name} (${user.email})` }))}
-                />
-                {!isClient ? (
-                  <Field
-                    label={t('department')}
-                    value={form.departmentId}
-                    onChange={(value) => update('departmentId', value)}
-                    placeholder={t('chooseDepartment')}
-                    options={departments.map((department) => ({ value: department.id, label: department.name }))}
-                  />
-                ) : null}
-              </div>
-              <div className="create-project__party-list" style={{ marginTop: 12 }}>
-                <div className="create-project__party">
-                  <div className="create-project__party-avatar">ج</div>
-                  <div className="create-project__party-copy">
-                    <strong>{t('orgProjectManager')}</strong>
-                    <input
-                      value={form.orgProjectManagerName}
-                      onChange={(event) => update('orgProjectManagerName', event.target.value)}
-                      style={{ border: 0, background: 'transparent', textAlign: 'right' }}
-                    />
-                  </div>
-                </div>
-                <div className="create-project__party">
-                  <div className="create-project__party-avatar">ع</div>
-                  <div className="create-project__party-copy">
-                    <strong>{t('clientProjectManager')}</strong>
-                    <input
-                      value={form.clientProjectManagerName}
-                      onChange={(event) => update('clientProjectManagerName', event.target.value)}
-                      style={{ border: 0, background: 'transparent', textAlign: 'right' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </section>
-          </>
-        ) : null}
-
-        {entryUser && step === 2 ? (
-          <>
             <section className="create-project__card">
               <h2>{t('workScope')}</h2>
               <div className="create-project__divider" />
@@ -1346,26 +1342,7 @@ export function ProjectForm({
           </>
         ) : null}
 
-        { !entryUser && step === 3 ? (
-          <>
-            <section className="create-project__review-section">
-              <div className="create-project__review-section-title">
-                <h2>{t('projectBasicInfo')}</h2>
-              </div>
-              <div className="create-project__divider" />
-              <div className="create-project__grid">
-                <ReviewField label={t('projectName')} value={form.name} />
-                <ReviewField label={t('projectType')} value={form.type} />
-                <ReviewField label={t('classification')} value={form.classification} />
-                <ReviewField label={isClient ? t('contractingParty') : t('company')} value={companyLabel} />
-              </div>
-              <ReviewField label={t('description')} value={form.description} full />
-            </section>
-            <Timeline stages={form.stages} title={t('setTimeline')} emptyLabel={t('addStageDatesHint')} />
-          </>
-        ) : null}
-
-        {entryUser && step === 4 ? (
+        {step === 4 ? (
           <section className="create-project__card">
             <h2>{t('uploadAttachments')}</h2>
             <div className="create-project__divider" />
@@ -1464,11 +1441,6 @@ export function ProjectForm({
               {step > 1 ? (
                 <button type="button" className="create-project__previous" onClick={() => setStep(step - 1)}>
                   {t('previous')}
-                </button>
-              ) : null}
-              {!entryUser && step === 2 ? (
-                <button type="button" className="create-project__cancel" onClick={() => navigate(listPath)}>
-                  {t('cancel')}
                 </button>
               ) : null}
             </>
