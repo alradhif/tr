@@ -44,11 +44,11 @@ export function Hosting() {
 
         <div className="mt-14 grid gap-8 md:grid-cols-3">
           {options.map((o, i) => (
-            <Reveal key={o.title} delay={i * 0.08}>
+            <Reveal key={o.title} delay={i * 0.08} className="h-full">
               <button
                 type="button"
                 onClick={() => setSelected(i)}
-                className="float-card w-full p-7 text-right focus:outline-none"
+                className="float-card flex h-full w-full flex-col justify-start p-7 text-right focus:outline-none"
                 style={{
                   boxShadow:
                     selected === i
@@ -56,7 +56,7 @@ export function Hosting() {
                       : undefined,
                 }}
               >
-                <img src={o.icon} alt="" aria-hidden className="mr-auto mb-7 size-[59px]" />
+                <img src={o.icon} alt="" aria-hidden className="mb-7 size-[59px] self-start" />
                 <p className="text-xs font-semibold text-brand-strong">{o.eyebrow}</p>
                 <h3 className="mt-2 text-xl font-bold">{o.title}</h3>
                 <p className="mt-4 text-sm leading-7 text-muted-foreground">{o.body}</p>
