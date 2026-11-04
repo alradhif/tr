@@ -79,6 +79,10 @@ function ActiveProjectsPreview({ live }: { live: LiveDashboardData | null }) {
   return <StatInline value={live?.activeProjects} label="مشاريع" />;
 }
 
+function ProjectInvoicesTotalPreview({ live }: { live: LiveDashboardData | null }) {
+  return <StatInline value={live?.totalRevenue} label="ريال" />;
+}
+
 function AvgProgressPreview({ live }: { live: LiveDashboardData | null }) {
   const value = live?.avgProgress;
   if (value == null) return <Dash label="متوسط التقدم" />;
@@ -332,6 +336,7 @@ const PREVIEWS: Record<WidgetId, (props: PreviewProps) => ReactElement> = {
   'open-risks-donut': OpenRisksDonutPreview,
   'risks-by-level': RisksByLevelPreview,
   'project-status-donut': ProjectStatusDonutPreview,
+  'project-invoices-total': ProjectInvoicesTotalPreview,
   'today-alerts': TodayAlertsPreview,
   'deliverables-list': DeliverablesListPreview,
   'projects-list': ProjectsListPreview,

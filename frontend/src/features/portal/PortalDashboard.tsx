@@ -3,7 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { PageHeader } from '../../components/ui'
 import { DashboardGrid, useDashboardState } from '../../super-admin-ui/components/dashboard/DashboardGrid'
 import { WidgetLibraryPanel } from '../../super-admin-ui/components/dashboard/WidgetLibraryPanel'
-import { ADMIN_DEFAULT_ACTIVE_WIDGET_IDS, ADMIN_PORTAL_LAYOUT } from '../../super-admin-ui/config/widgets'
+import {
+  ADMIN_DEFAULT_ACTIVE_WIDGET_IDS,
+  ADMIN_PORTAL_LAYOUT,
+  JODAYN_ACTIVE_WIDGET_IDS,
+  JODAYN_PORTAL_LAYOUT,
+} from '../../super-admin-ui/config/widgets'
 import { EditGridIcon } from '../../super-admin-ui/components/layout/EditGridIcon'
 import {
   DashboardLiveProvider,
@@ -48,7 +53,8 @@ export function PortalDashboard({
 }: PortalDashboardProps) {
   const { t } = useTranslation()
   // Every portal (Jodayn included, per the Figma dashboard frame) shows the project-portfolio widgets.
-  const widgetIds = ADMIN_DEFAULT_ACTIVE_WIDGET_IDS
+  const widgetIds = portal === 'jodayn' ? JODAYN_ACTIVE_WIDGET_IDS : ADMIN_DEFAULT_ACTIVE_WIDGET_IDS
+  const portalLayout = portal === 'jodayn' ? JODAYN_PORTAL_LAYOUT : ADMIN_PORTAL_LAYOUT
   const {
     isEditMode,
     setIsEditMode,
@@ -61,7 +67,7 @@ export function PortalDashboard({
   } = useDashboardState(
     widgetIds,
     widgetIds,
-    ADMIN_PORTAL_LAYOUT,
+    portalLayout,
     portal,
   )
 
@@ -69,8 +75,8 @@ export function PortalDashboard({
   const [loadState, setLoadState] = useState<DashboardLoadState>('loading')
 
   useEffect(() => {
-    setLayout(ADMIN_PORTAL_LAYOUT)
-  }, [portal, setLayout])
+    setLayout(portalLayout)
+  }, [portalLayout, setLayout])
 
   const loadLive = useCallback(async () => {
     const endpoint = dashboardEndpoint(portal)

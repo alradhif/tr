@@ -92,13 +92,15 @@
 }
 
 .widget-wrapper__content--auto {
-  
+  display: flex;
+  min-height: 100%;
   min-width: 0;
 }
 
 .widget-wrapper__content--auto .ui-card {
+  flex: 1;
   height: auto;
-  min-height: 100%;
+  min-width: 0;
   overflow: visible;
 }
 
@@ -273,18 +275,18 @@
 }
 
 .widget-active-projects {
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .widget-active-projects .widget-kpi-compact__title {
   font-size: 16px;
   font-weight: 700;
   color: #8e8f97;
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .widget-active-projects .widget-stat-block {
-  margin-top: 10px;
+  margin-top: auto;
 }
 
 .widget-active-projects .widget-stat-value {
@@ -626,7 +628,9 @@
 
 .alert-list {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  justify-content: space-evenly;
   gap: 0;
 }
 

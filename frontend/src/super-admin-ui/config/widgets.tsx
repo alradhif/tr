@@ -16,6 +16,7 @@ import { OpenRisksDonutWidget } from '../components/dashboard/widgets/OpenRisksD
 import { RisksByLevelChartWidget } from '../components/dashboard/widgets/RisksByLevelChartWidget';
 import { ProjectStatusDonutWidget } from '../components/dashboard/widgets/ProjectStatusDonutWidget';
 import { TodayAlertsWidget } from '../components/dashboard/widgets/TodayAlertsWidget';
+import { ProjectInvoicesTotalWidget } from '../components/dashboard/widgets/ProjectInvoicesTotalWidget';
 import { DeliverablesListWidget } from '../components/dashboard/widgets/DeliverablesListWidget';
 import { ProjectsListWidget } from '../components/dashboard/widgets/ProjectsListWidget';
 
@@ -39,6 +40,7 @@ export type WidgetId =
   | 'risks-by-level'
   | 'project-status-donut'
   | 'today-alerts'
+  | 'project-invoices-total'
   | 'deliverables-list'
   | 'projects-list';
 
@@ -159,6 +161,13 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetDefinition> = {
     minH: 4,
     component: ProjectStatusDonutWidget,
   },
+  'project-invoices-total': {
+    id: 'project-invoices-total',
+    title: 'إجمالي فواتير المشاريع',
+    minW: 3,
+    minH: 2,
+    component: ProjectInvoicesTotalWidget,
+  },
   'today-alerts': {
     id: 'today-alerts',
     title: 'تنبيهات اليوم',
@@ -221,6 +230,33 @@ export const ADMIN_PORTAL_LAYOUT: LayoutItem[] = [
   { i: 'today-alerts', x: 0, y: 6, w: 12, h: 3, minW: 6, minH: 3 },
   { i: 'deliverables-list', x: 6, y: 9, w: 6, h: 3, minW: 4, minH: 3 },
   { i: 'projects-list', x: 0, y: 9, w: 6, h: 3, minW: 4, minH: 3 },
+];
+
+/** Jodayn also tracks invoicing, so its first two rows hold five cards. */
+export const JODAYN_ACTIVE_WIDGET_IDS: WidgetId[] = [
+  'active-projects',
+  'avg-progress',
+  'project-invoices-total',
+  'upcoming-deliverables',
+  'open-risks-donut',
+  'risks-by-level',
+  'project-status-donut',
+  'today-alerts',
+  'deliverables-list',
+  'projects-list',
+];
+
+export const JODAYN_PORTAL_LAYOUT: LayoutItem[] = [
+  { i: 'active-projects', x: 8, y: 0, w: 4, h: 2, minW: 3, minH: 2 },
+  { i: 'avg-progress', x: 4, y: 0, w: 4, h: 2, minW: 3, minH: 2 },
+  { i: 'project-invoices-total', x: 0, y: 0, w: 4, h: 2, minW: 3, minH: 2 },
+  { i: 'upcoming-deliverables', x: 6, y: 2, w: 6, h: 2, minW: 3, minH: 2 },
+  { i: 'open-risks-donut', x: 0, y: 2, w: 6, h: 2, minW: 3, minH: 2 },
+  { i: 'risks-by-level', x: 6, y: 4, w: 6, h: 4, minW: 5, minH: 4 },
+  { i: 'project-status-donut', x: 0, y: 4, w: 6, h: 4, minW: 4, minH: 4 },
+  { i: 'today-alerts', x: 0, y: 8, w: 12, h: 3, minW: 6, minH: 3 },
+  { i: 'deliverables-list', x: 6, y: 11, w: 6, h: 3, minW: 4, minH: 3 },
+  { i: 'projects-list', x: 0, y: 11, w: 6, h: 3, minW: 4, minH: 3 },
 ];
 
 export const DEFAULT_ACTIVE_WIDGET_IDS = SUPERADMIN_DEFAULT_ACTIVE_WIDGET_IDS;
