@@ -11,6 +11,7 @@ import { OrgProjectsPage } from './pages/org/ProjectsPage'
 import { OrgAddProjectPage, OrgEditProjectPage } from './pages/org/AddProjectPage'
 import { OrgProjectDetailPage } from './pages/org/ProjectDetailPage'
 import { OrgCompaniesPage } from './pages/org/CompaniesPage'
+import { OrgInvoicesPage } from './pages/org/InvoicesPage'
 import { OrgAddCompanyPage } from './pages/org/AddCompanyPage'
 import { OrgCompanyDetailPage } from './pages/org/CompanyDetailPage'
 import { OrgDepartmentsPage } from './pages/org/DepartmentsPage'
@@ -141,6 +142,7 @@ export default function App() {
             {projectNestedForms}
             <Route path="projects/:projectId/edit" element={<OrgEditProjectPage />} />
             <Route path="projects/:projectId" element={<OrgProjectDetailPage />} />
+            <Route path="invoices" element={<OrgInvoicesPage />} />
             <Route path="companies" element={<OrgCompaniesPage />} />
             <Route path="companies/new" element={<OrgAddCompanyPage />} />
             <Route path="companies/:companyId/edit" element={<OrgCompanyDetailPage initialEdit />} />

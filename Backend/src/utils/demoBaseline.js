@@ -449,8 +449,65 @@ function projectBody(def) {
   }
 }
 
+const CLIENT_TEAM = [
+  { name: 'نورة القحطاني', role: 'منسقة المشروع', email: 'noura.alqahtani@example.com' },
+  { name: 'سلمان الحربي', role: 'الممثل الفني', email: 'salman.alharbi@example.com' },
+]
+const VENDOR_TEAM = [{ name: 'ريم الدوسري', role: 'مهندسة التنفيذ', email: 'reem.aldosari@example.com' }]
+const PROJECT_CONTACTS = {
+  clientProjectManagerName: 'عبدالله الشهري',
+  clientEmail: 'abdullah.alshehri@example.com',
+  clientPhone: '0550000123',
+}
+const INSTALLMENT_TITLES = ['الدفعة الأولى', 'الدفعة الثانية', 'الدفعة الثالثة', 'الدفعة الرابعة']
+
+async function seedProjectTeams(teamModel, projectModel, project) {
+  if (!project.clientProjectManagerName) {
+    await projectModel.update({ where: { id: project.id }, data: PROJECT_CONTACTS })
+  }
+  for (const [source, members] of [['CLIENT', CLIENT_TEAM], ['VENDOR', VENDOR_TEAM]]) {
+    for (const member of members) {
+      const existing = await teamModel.findFirst({ where: { projectId: project.id, name: member.name } })
+      if (!existing) await teamModel.create({ data: { ...member, source, projectId: project.id } })
+    }
+  }
+}
+
+// Four equal installments per project: progress decides how many are settled, and a late project has one overdue.
+async function seedProjectPayments(def, project, orgId, invoiceBase) {
+  const budget = Number(def.totalBudget) || 0
+  if (!budget) return
+  const settled = Math.floor((Number(def.progress) || 0) / 25)
+  const DAY = 24 * 60 * 60 * 1000
+  const now = Date.now()
+  for (let index = 0; index < INSTALLMENT_TITLES.length; index += 1) {
+    const title = INSTALLMENT_TITLES[index]
+    const existing = await prisma.orgProjectPayment.findFirst({ where: { projectId: project.id, title } })
+    if (existing) continue
+    const isSettled = index < settled
+    const overdue = !isSettled && index === settled && def.uiStatus !== 'onTrack'
+    const dueDate = new Date(
+      isSettled ? now - (settled - index) * 45 * DAY : overdue ? now - 12 * DAY : now + (index - settled + 1) * 30 * DAY,
+    )
+    await prisma.orgProjectPayment.create({
+      data: {
+        title,
+        invoiceNumber: `PAY-${invoiceBase + index}`,
+        amount: Math.round(budget / INSTALLMENT_TITLES.length),
+        dueDate,
+        paidAt: isSettled ? dueDate : null,
+        orgId,
+        projectId: project.id,
+        companyId: project.executingCompanyId,
+      },
+    })
+  }
+}
+
 async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgUpper, orgEntry, clientUpper, department, company }) {
   const findOrCreate = findOrCreateFactory()
+  // The demo organization is government, so its invoices page tracks what it pays.
+  await prisma.orgAccount.update({ where: { id: orgAccount.id }, data: { entityType: 'حكومية' } })
   const departmentsByName = new Map([[department.name, department]])
   const companiesByName = new Map([[company.name, company]])
 
@@ -520,6 +577,8 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
     }
     await saveOrgProjectDetails(project.id, projectBody(def))
     orgProjectsByName.set(def.name, project)
+    await seedProjectTeams(prisma.orgProjectTeamMember, prisma.orgProject, project)
+    await seedProjectPayments(def, project, orgAccount.id, 1000 + orgProjectsByName.size * 10)
 
     for (const risk of MOCK_RISKS) {
       const existing = await prisma.orgRisk.findFirst({ where: { projectId: project.id, name: risk.name } })
@@ -568,6 +627,7 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
       })
     }
     await saveClientProjectDetails(project.id, projectBody(def))
+    await seedProjectTeams(prisma.clientProjectTeamMember, prisma.clientProject, project)
     clientProjectsByName.set(def.name, project)
 
     for (const risk of MOCK_RISKS) {

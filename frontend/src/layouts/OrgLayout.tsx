@@ -12,6 +12,7 @@ import {
   SidebarSettingsIcon,
 } from '../super-admin-ui/components/layout/SidebarIcons'
 import { brandAssets } from '@/assets'
+import invoicesIcon from '../features/jodayn-finance/assets/moneys.svg'
 import '../design/portal-layout.css'
 import '../org-catalog'
 
@@ -46,6 +47,11 @@ export function OrgLayout() {
           { key: '/org/projects', label: t('projects'), icon: <ProjectsIcon /> },
           { key: '/org/companies', label: t('companies'), icon: <CompaniesIcon /> },
           { key: '/org/departments', label: t('departments'), icon: <DepartmentsIcon /> },
+          {
+            key: '/org/invoices',
+            label: t('invoices'),
+            icon: <img src={invoicesIcon} alt="" width={20} height={20} className="sidebar__nav-icon sidebar__nav-icon--dark" />,
+          },
         ]}
       />
       <div className={`app-shell__main${catalog ? ' app-shell__content--catalog' : ''}`}>

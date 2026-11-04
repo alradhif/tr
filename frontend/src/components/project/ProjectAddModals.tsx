@@ -22,6 +22,8 @@ type SharedProps = {
   projectId: string
   portal: 'org' | 'client'
   phases?: PhaseOption[]
+  /** Which side's team a new member joins. */
+  teamSide?: 'VENDOR' | 'CLIENT'
   onClose: () => void
   onSaved: () => void
 }
@@ -438,7 +440,7 @@ export function AddChangeRequestModal({ projectId, portal, onClose, onSaved }: S
   )
 }
 
-export function AddTeamMemberModal({ projectId, portal, onClose, onSaved }: SharedProps) {
+export function AddTeamMemberModal({ projectId, portal, teamSide = 'VENDOR', onClose, onSaved }: SharedProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('')
@@ -453,7 +455,7 @@ export function AddTeamMemberModal({ projectId, portal, onClose, onSaved }: Shar
     setSubmitting(true)
     setError('')
     try {
-      const payload = { name: name.trim(), email: email.trim() || undefined, role: role.trim() || undefined, source: 'MANUAL' }
+      const payload = { name: name.trim(), email: email.trim() || undefined, role: role.trim() || undefined, source: teamSide }
       await postNested(
         portal,
         projectId,
@@ -471,7 +473,7 @@ export function AddTeamMemberModal({ projectId, portal, onClose, onSaved }: Shar
 
   return (
     <TrackFormModal
-      title="إضافة عضو"
+      title={teamSide === 'CLIENT' ? 'إضافة عضو لفريق العميل' : 'إضافة عضو لفريق المورد'}
       icon={<UserPlus size={22} />}
       submitLabel="إضافة"
       submitting={submitting}

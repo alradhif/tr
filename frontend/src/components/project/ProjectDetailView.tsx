@@ -150,6 +150,7 @@ export function ProjectDetailView({
   const [rejectReason, setRejectReason] = useState('')
   const [decisionMode, setDecisionMode] = useState<'reject' | 'return'>('reject')
   const [addKind, setAddKind] = useState<ProjectAddKind | null>(null)
+  const [teamSide, setTeamSide] = useState<'VENDOR' | 'CLIENT'>('VENDOR')
 
   const load = async () => {
     if (!projectId) {
@@ -320,7 +321,13 @@ export function ProjectDetailView({
   const teamMembers = asRows(
     (project as { teamMembers?: unknown[] } | null)?.teamMembers,
     (item) => item,
-  ).map((item) => ({ id: String(item.id), name: String(item.name ?? '—'), role: item.role ? String(item.role) : '' }))
+  ).map((item) => ({
+    id: String(item.id),
+    name: String(item.name ?? '—'),
+    role: item.role ? String(item.role) : '',
+    email: item.email ? String(item.email) : '',
+    side: item.source === 'CLIENT' ? 'CLIENT' : 'VENDOR',
+  }))
   const progress = project?.progressPct ?? 0
   const budget = Number(project?.budget ?? 0)
 
@@ -888,75 +895,84 @@ export function ProjectDetailView({
           </span>
           <h2>{t('projectParties')}</h2>
         </div>
-        {[
-          {
-            role: t('orgPmRole'),
-            contact: [orgProject?.orgProjectManagerName, orgProject?.orgEmail, orgProject?.orgPhone]
-              .filter(Boolean)
-              .join('  ·  ') || orgProject?.manager?.name || '—',
-            tag: t('supplierTag'),
-            color: '#5bc8b4',
-            tagBg: '#dceeff',
-            tagColor: '#2e90fa',
-          },
-          {
-            role: t('clientPmRole'),
-            contact: [orgProject?.clientProjectManagerName, orgProject?.clientEmail, orgProject?.clientPhone]
-              .filter(Boolean)
-              .join('  ·  ') || '—',
-            tag: t('clientTag'),
-            color: '#58a6fb',
-            tagBg: '#d1f0e1',
-            tagColor: '#4fc7a7',
-          },
-        ].map((party) => (
-          <div key={party.role} className="pd-party">
-            <div>
-              <strong>{party.role}</strong>
-              <span>{party.contact}</span>
-            </div>
-            <span className="pd-avatar" style={{ background: party.color }}>
-              {(party.contact || party.role).charAt(0)}
-            </span>
-            <span className="pd-tag" style={{ background: party.tagBg, color: party.tagColor }}>
-              {party.tag}
-            </span>
-          </div>
-        ))}
-        <div className="project-detail__section-heading" style={{ marginTop: 16 }}>
-          <h2>{t('teamMembers', { defaultValue: 'فريق المشروع' })}</h2>
-          {canAddNested ? (
-            <CatalogButton className="project-detail__add-output" onClick={() => setAddKind('team')}>
-              إضافة عضو
-              <Plus size={14} strokeWidth={2.5} />
-            </CatalogButton>
-          ) : null}
-        </div>
-        <div className="project-detail__team-list">
-          {teamMembers.length === 0 ? <em style={{ color: '#96989f', fontSize: 12 }}>لا يوجد أعضاء مضافون بعد</em> : null}
-          {teamMembers.map((member) => (
-            <span key={member.id}>
-              <strong>{member.name}</strong>
-              {member.role ? <small>{member.role}</small> : null}
-              {canDeleteProject ? (
-                <button
-                  type="button"
-                  aria-label={`حذف ${member.name}`}
-                  disabled={rowWorking === member.id}
-                  onClick={() => {
-                    if (!window.confirm(`إزالة ${member.name} من فريق المشروع؟`)) return
-                    void runRowAction(
-                      member.id,
-                      (token, pid) => deleteNested(resolvedPortal, token, pid, 'team', member.id),
-                      t('deletedSuccessfully'),
-                    )
-                  }}
-                >
-                  ×
-                </button>
-              ) : null}
-            </span>
-          ))}
+        <div className="pd-teams">
+          {[
+            {
+              side: 'VENDOR' as const,
+              title: 'فريق المورد',
+              tag: t('supplierTag'),
+              tone: 'vendor',
+              manager: orgProject?.orgProjectManagerName || orgProject?.manager?.name || '',
+              contact: [orgProject?.orgEmail, orgProject?.orgPhone].filter(Boolean).join('  ·  '),
+            },
+            {
+              side: 'CLIENT' as const,
+              title: 'فريق العميل',
+              tag: t('clientTag'),
+              tone: 'client',
+              manager: orgProject?.clientProjectManagerName || '',
+              contact: [orgProject?.clientEmail, orgProject?.clientPhone].filter(Boolean).join('  ·  '),
+            },
+          ].map((team) => {
+            const members = teamMembers.filter((member) => member.side === team.side)
+            return (
+              <div key={team.side} className={`pd-team pd-team--${team.tone}`}>
+                <div className="pd-team__head">
+                  <h3>{team.title}</h3>
+                  <span className="pd-team__tag">{team.tag}</span>
+                  {canAddNested ? (
+                    <button
+                      type="button"
+                      className="pd-team__add"
+                      onClick={() => {
+                        setTeamSide(team.side)
+                        setAddKind('team')
+                      }}
+                    >
+                      إضافة عضو
+                      <Plus size={14} strokeWidth={2.5} />
+                    </button>
+                  ) : null}
+                </div>
+                <ul className="pd-team__list">
+                  <li>
+                    <span className="pd-team__avatar">{(team.manager || '—').charAt(0)}</span>
+                    <div>
+                      <strong>{team.manager || '—'}</strong>
+                      <small>{['مدير المشروع', team.contact].filter(Boolean).join('  ·  ')}</small>
+                    </div>
+                  </li>
+                  {members.map((member) => (
+                    <li key={member.id}>
+                      <span className="pd-team__avatar">{member.name.charAt(0)}</span>
+                      <div>
+                        <strong>{member.name}</strong>
+                        <small>{[member.role, member.email].filter(Boolean).join('  ·  ') || '—'}</small>
+                      </div>
+                      {canDeleteProject ? (
+                        <button
+                          type="button"
+                          className="pd-team__remove"
+                          aria-label={`حذف ${member.name}`}
+                          disabled={rowWorking === member.id}
+                          onClick={() => {
+                            if (!window.confirm(`إزالة ${member.name} من ${team.title}؟`)) return
+                            void runRowAction(
+                              member.id,
+                              (token, pid) => deleteNested(resolvedPortal, token, pid, 'team', member.id),
+                              t('deletedSuccessfully'),
+                            )
+                          }}
+                        >
+                          <X size={14} />
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
         </div>
       </section>
     </div>
@@ -1117,6 +1133,7 @@ export function ProjectDetailView({
           kind={addKind}
           projectId={projectId}
           portal={resolvedPortal}
+          teamSide={teamSide}
           phases={phases.map((phase) => ({ id: String(phase.key), title: String(phase.title) }))}
           onClose={() => setAddKind(null)}
           onSaved={async () => {

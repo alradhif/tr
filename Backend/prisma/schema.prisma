@@ -277,6 +277,7 @@ model OrgAccount {
   forecasts         RevenueForecast[]
   reports           FinancialReport[]
   orgStrategicGoals OrgStrategicGoal[]
+  projectPayments   OrgProjectPayment[]
 
   @@index([sectorId])
   @@index([createdBy])
@@ -490,6 +491,7 @@ model ExecutingCompany {
 
   team     ExecutingCompanyTeam[]
   projects OrgProject[]
+  payments  OrgProjectPayment[]
 
   @@index([orgId])
   @@map("executing_companies")
@@ -548,6 +550,7 @@ model OrgProject {
   phases           OrgProjectPhase[]
   teamMembers      OrgProjectTeamMember[]
   contracts        OrgContract[]
+  payments         OrgProjectPayment[]
   risks            OrgRisk[]
   deliverables     OrgDeliverable[]
   changeRequests   OrgChangeRequest[]
@@ -590,6 +593,29 @@ model OrgProjectTeamMember {
 
   @@index([projectId])
   @@map("org_project_team_members")
+}
+
+// One installment of a project's payments: owed by the organization, or to it when it is private-sector.
+model OrgProjectPayment {
+  id            String            @id @default(uuid())
+  title         String
+  invoiceNumber String?
+  amount        Decimal
+  dueDate       DateTime
+  paidAt        DateTime?
+  orgId         String
+  org           OrgAccount        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  projectId     String
+  project       OrgProject        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  companyId     String?
+  company       ExecutingCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([orgId])
+  @@index([projectId])
+  @@index([companyId])
+  @@map("org_project_payments")
 }
 
 model OrgContract {

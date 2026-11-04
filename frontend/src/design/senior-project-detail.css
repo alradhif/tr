@@ -2015,3 +2015,156 @@
 .project-detail__team-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
 .project-detail__team-list span { display:inline-flex; gap:6px; align-items:center; background:#f4f4f5; border-radius:999px; padding:4px 10px; font-size:12px; }
 .project-detail__team-list button { border:none; background:none; color:#d92d20; cursor:pointer; padding:0; font-size:14px; line-height:1; }
+
+/* أطراف المشروع: the vendor's and the client's teams, side by side. */
+.pd-teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.pd-team {
+  min-width: 0;
+  padding: 14px 16px 6px;
+  border: 1px solid #e7e8eb;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.pd-team__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f1;
+}
+
+.pd-team__head h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 700;
+  color: #0c0c0d;
+}
+
+.pd-team__tag {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.pd-team--vendor .pd-team__tag {
+  background: #dceeff;
+  color: #2e90fa;
+}
+
+.pd-team--client .pd-team__tag {
+  background: #d1f0e1;
+  color: #17b26a;
+}
+
+.pd-team__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: auto;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid #d0d1d6;
+  border-radius: 8px;
+  background: #fff;
+  color: #27272a;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pd-team__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pd-team__list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f6;
+}
+
+.pd-team__list li:last-child {
+  border-bottom: 0;
+}
+
+.pd-team__list li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.pd-team__list strong {
+  display: block;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #0c0c0d;
+}
+
+.pd-team__list small {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 18px;
+  color: #8e8f97;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pd-team__avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pd-team--vendor .pd-team__avatar {
+  background: #58a6fb;
+}
+
+.pd-team--client .pd-team__avatar {
+  background: #4fc7a7;
+}
+
+.pd-team__remove {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #8e8f97;
+  cursor: pointer;
+}
+
+.pd-team__remove:hover {
+  background: #feedec;
+  color: #f04438;
+}
+
+@media (max-width: 900px) {
+  .pd-teams {
+    grid-template-columns: 1fr;
+  }
+}

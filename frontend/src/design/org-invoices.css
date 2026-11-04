@@ -1,0 +1,209 @@
+/* Organization invoices: remaining project payments per company or project. Uses the .jinv page shell. */
+
+.org-invoices__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.org-invoices__note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: #404044;
+}
+
+.org-invoices__tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.org-invoices__tabs button {
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8e8f97;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.org-invoices__tabs button.is-active {
+  background: #0c0c0d;
+  color: #fff;
+}
+
+.org-invoices__name {
+  text-align: right !important;
+}
+
+.org-invoices__left {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 8px;
+  background: #fde9ce;
+  color: #b4690e;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.org-invoices__left.is-done {
+  background: #d1f0e1;
+  color: #118a51;
+}
+
+.org-invoices__left.is-late {
+  background: #feedec;
+  color: #d92d20;
+}
+
+.org-invoices__of {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8e8f97;
+}
+
+.org-invoices__bar {
+  display: block;
+  width: 110px;
+  height: 8px;
+  margin: 0 auto;
+  border-radius: 4px;
+  background: #e7e8eb;
+  overflow: hidden;
+}
+
+.org-invoices__bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #17b26a;
+}
+
+.org-invoices__table tbody tr.org-invoices__details {
+  cursor: default;
+}
+
+.org-invoices__table tbody tr.org-invoices__details td,
+.org-invoices__table tbody tr.org-invoices__details:hover td {
+  height: auto;
+  padding: 4px 18px 12px;
+  background: #fafafa;
+}
+
+.org-invoices__details ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.org-invoices__details li {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.6fr) 150px 130px 80px 190px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  text-align: right;
+}
+
+.org-invoices__details li + li {
+  border-top: 1px solid #ececee;
+}
+
+.org-invoices__payment strong {
+  display: block;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #0c0c0d;
+}
+
+.org-invoices__payment small {
+  display: block;
+  font-size: 12px;
+  line-height: 18px;
+  color: #8e8f97;
+}
+
+.org-invoices__date {
+  font-size: 12px;
+  color: #6b6c72;
+}
+
+.org-invoices__amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0c0c0d;
+}
+
+.org-invoices__state {
+  justify-self: start;
+  padding: 2px 10px;
+  border-radius: 8px;
+  background: #dceeff;
+  color: #1a76d2;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.org-invoices__state.is-done {
+  background: #d1f0e1;
+  color: #118a51;
+}
+
+.org-invoices__state.is-late {
+  background: #feedec;
+  color: #d92d20;
+}
+
+.org-invoices__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.org-invoices__actions button {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid #d0d1d6;
+  border-radius: 8px;
+  background: #fff;
+  color: #27272a;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.org-invoices__actions .org-invoices__delete {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  padding: 0;
+  color: #f04438;
+}
+
+@media (max-width: 900px) {
+  .org-invoices__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .org-invoices__details li {
+    grid-template-columns: 1fr 1fr;
+  }
+}
