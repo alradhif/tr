@@ -3,8 +3,9 @@ import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { getInvoices, type Invoice } from '../../api/jodayn'
-import { getJodaynToken } from '../../auth/jodaynAuth'
+import { deleteJodaynRecord, getInvoices, updateInvoice, type Invoice } from '../../api/jodayn'
+import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
+import { PaymentsTracker, type TrackedPayment } from '../../components/senior/PaymentsTracker'
 import {
   FinanceCreateButton,
   formatAmount,
@@ -27,11 +28,27 @@ function statusText(inv: Invoice) {
   return inv.billingCycle ? `اشتراك ${status}` : status
 }
 
+/** Jodayn is private-sector, so each open invoice is an installment it still has to collect. */
+function toTracked(invoice: Invoice): TrackedPayment {
+  return {
+    id: invoice.id,
+    title: invoice.invoiceNumber,
+    reference: invoice.contractReference,
+    amount: Number(invoice.amount ?? 0),
+    dueDate: invoice.dueDate,
+    settled: invoice.status === 'PAID',
+    counterparty: invoice.clientName,
+    project: invoice.projectName || 'بدون مشروع',
+  }
+}
+
 export function JodaynInvoicesPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState<'collection' | 'list'>('collection')
+  const [working, setWorking] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const token = getJodaynToken()
@@ -54,6 +71,21 @@ export function JodaynInvoicesPage() {
     void load()
   }, [load])
 
+  const run = async (id: string, action: (token: string) => Promise<unknown>, done: string) => {
+    const token = getJodaynToken()
+    if (!token) return
+    setWorking(id)
+    try {
+      await action(token)
+      message.success(done)
+      await load()
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : t('loadError'))
+    } finally {
+      setWorking(null)
+    }
+  }
+
   const byStatus = (status: string) => invoices.filter((i) => i.status === status)
   const total = (list: Invoice[]) => list.reduce((sum, inv) => sum + Number(inv.amount ?? 0), 0)
   const pending = byStatus('PENDING')
@@ -73,6 +105,58 @@ export function JodaynInvoicesPage() {
         <h1 className="jinv-header__title">{t('invoices')}</h1>
       </header>
       <div className="jinv-body">
+        <div className="org-invoices__tabs" role="tablist" aria-label="طريقة عرض الفواتير">
+          {(
+            [
+              ['collection', 'تتبع التحصيل'],
+              ['list', 'كل الفواتير'],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={view === key}
+              className={view === key ? 'is-active' : ''}
+              onClick={() => setView(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {view === 'collection' ? (
+          <PaymentsTracker
+            direction="COLLECT"
+            note="قطاع خاص: جودين تحصّل، وتعرض هذه الصفحة الدفعات المستحقة لها من العملاء."
+            counterpartyLabel="العميل"
+            groupLabel="حسب العميل"
+            payments={invoices.filter((invoice) => invoice.status !== 'CANCELLED').map(toTracked)}
+            loading={loading}
+            working={working}
+            canSettle={getJodaynRole() === 'upper'}
+            action={<FinanceCreateButton label={t('addInvoice')} onClick={() => navigate('/jodayn/invoices/new')} />}
+            onToggleSettled={(payment) =>
+              void run(
+                payment.id,
+                (token) =>
+                  updateInvoice(
+                    token,
+                    payment.id,
+                    payment.settled
+                      ? { status: 'PENDING', remainingAmount: payment.amount }
+                      : { status: 'PAID', remainingAmount: 0 },
+                  ),
+                'تم الحفظ بنجاح',
+              )
+            }
+            onDelete={(payment) => {
+              if (!window.confirm(`حذف ${payment.title}؟`)) return
+              void run(payment.id, (token) => deleteJodaynRecord(token, 'invoices', payment.id), t('deletedSuccessfully'))
+            }}
+          />
+        ) : (
+          <>
         <div className="finance-tabs">
           <FinanceCreateButton label={t('addInvoice')} onClick={() => navigate('/jodayn/invoices/new')} />
         </div>
@@ -139,6 +223,8 @@ export function JodaynInvoicesPage() {
             </table>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   )

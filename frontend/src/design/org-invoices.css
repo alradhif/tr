@@ -207,3 +207,19 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Who pays and who collects stands out at a glance when comparing the two portals. */
+.org-invoices__note {
+  padding: 8px 14px;
+  border-radius: 10px;
+}
+
+.org-invoices__note--pay {
+  background: #fde9ce;
+  color: #93540b;
+}
+
+.org-invoices__note--collect {
+  background: #d1f0e1;
+  color: #0e7a47;
+}

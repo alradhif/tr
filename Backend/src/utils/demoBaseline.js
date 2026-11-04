@@ -399,6 +399,16 @@ const INVOICES = [
   { invoiceNumber: 'INV-4522', amount: 45000, remainingAmount: 0, status: 'PAID', clientName: 'مؤسسة الاتصال الحديث', projectName: 'مبدل شبكة Cisco Catalyst', contractReference: 'SRV-2025-014', region: 'جدة', assetOwner: 'فريق الشبكات' },
   { invoiceNumber: 'INV-4530', amount: 18000, remainingAmount: 18000, status: 'PENDING', clientName: 'شركة البيانات الذكية', projectName: 'نظام تخزين NetApp', contractReference: 'SRV-2025-027', region: 'الدمام', billingCycle: 'ANNUAL', autoRenew: true, assetOwner: 'فريق البيانات' },
   { invoiceNumber: 'INV-4538', amount: 3200, remainingAmount: 3200, status: 'OVERDUE', clientName: 'مجموعة المكتب الحديث', projectName: 'طابعة HP LaserJet Enterprise', contractReference: 'SRV-2025-041', region: 'مكة المكرمة', assetOwner: 'الشؤون الإدارية' },
+  // Installments Jodayn still has to collect; dueInDays keeps them current after every reset.
+  { invoiceNumber: 'SUB-5101', amount: 60000, remainingAmount: 0, status: 'PAID', clientName: 'شركة نماء للتقنية', projectName: 'منصة إدارة المشاريع', contractReference: 'TRK-2026-003', dueInDays: -120 },
+  { invoiceNumber: 'SUB-5102', amount: 60000, remainingAmount: 0, status: 'PAID', clientName: 'شركة نماء للتقنية', projectName: 'منصة إدارة المشاريع', contractReference: 'TRK-2026-003', dueInDays: -30 },
+  { invoiceNumber: 'SUB-5103', amount: 60000, remainingAmount: 60000, status: 'PENDING', clientName: 'شركة نماء للتقنية', projectName: 'منصة إدارة المشاريع', contractReference: 'TRK-2026-003', dueInDays: 20 },
+  { invoiceNumber: 'SUB-5104', amount: 60000, remainingAmount: 60000, status: 'PENDING', clientName: 'شركة نماء للتقنية', projectName: 'منصة إدارة المشاريع', contractReference: 'TRK-2026-003', dueInDays: 110 },
+  { invoiceNumber: 'SUB-5201', amount: 35000, remainingAmount: 0, status: 'PAID', clientName: 'شركة ألفا للاستشارات', projectName: 'تطبيق إدارة العقود', contractReference: 'TRK-2026-011', dueInDays: -75 },
+  { invoiceNumber: 'SUB-5202', amount: 35000, remainingAmount: 35000, status: 'OVERDUE', clientName: 'شركة ألفا للاستشارات', projectName: 'تطبيق إدارة العقود', contractReference: 'TRK-2026-011', dueInDays: -15 },
+  { invoiceNumber: 'SUB-5203', amount: 35000, remainingAmount: 35000, status: 'PENDING', clientName: 'شركة ألفا للاستشارات', projectName: 'تطبيق إدارة العقود', contractReference: 'TRK-2026-011', dueInDays: 45 },
+  { invoiceNumber: 'SUB-5301', amount: 22000, remainingAmount: 0, status: 'PAID', clientName: 'مؤسسة الوقف الخيري', projectName: 'نظام إدارة المنح', contractReference: 'TRK-2026-018', dueInDays: -40 },
+  { invoiceNumber: 'SUB-5302', amount: 22000, remainingAmount: 22000, status: 'PENDING', clientName: 'مؤسسة الوقف الخيري', projectName: 'نظام إدارة المنح', contractReference: 'TRK-2026-018', dueInDays: 50 },
 ]
 
 const FORECASTS = [
@@ -733,15 +743,16 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
     })
   }
 
-  for (const invoice of INVOICES) {
+  for (const { dueInDays, ...invoice } of INVOICES) {
     const vatAmount = Math.round(invoice.amount * 0.15)
+    const dueDate = dueInDays === undefined ? new Date('2026-04-01') : new Date(Date.now() + dueInDays * 24 * 60 * 60 * 1000)
     await findOrCreate(prisma.invoice, { invoiceNumber: invoice.invoiceNumber }, {
       ...invoice,
       vatRate: 15,
       vatAmount,
       totalWithVat: invoice.amount + vatAmount,
-      issueDate: new Date('2026-03-01'),
-      dueDate: new Date('2026-04-01'),
+      issueDate: dueInDays === undefined ? new Date('2026-03-01') : new Date(dueDate.getTime() - 30 * 24 * 60 * 60 * 1000),
+      dueDate,
       orgId: orgAccount.id,
       clientId: clientAccount.id,
     })
