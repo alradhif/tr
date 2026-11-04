@@ -356,9 +356,6 @@
   padding: 20px 22px 16px;
   border-bottom: 1px solid #e7e8ea;
   direction: rtl;
-  
-  flex-direction: row-reverse;
-  justify-content: flex-end;
 }
 
 .cd-logo {
