@@ -220,3 +220,15 @@ export type JodaynClientDetail = {
 export function getJodaynClient(token: string, id: string) {
   return apiRequest<JodaynClientDetail>(`/jodayn/clients/${id}`, { method: 'GET', token })
 }
+
+/** One account's project with what its page shows, read-only. */
+export async function getJodaynProjectDetails(token: string, kind: 'org' | 'client', id: string) {
+  const path = `/jodayn/projects/${kind}/${id}`
+  const [{ project }, { contracts }, { changeRequests }, { scenarios }] = await Promise.all([
+    apiRequest<{ project: unknown }>(path, { method: 'GET', token }),
+    apiRequest<{ contracts?: unknown[] }>(`${path}/contracts`, { method: 'GET', token }),
+    apiRequest<{ changeRequests?: unknown[] }>(`${path}/change-requests`, { method: 'GET', token }),
+    apiRequest<{ scenarios?: unknown[] }>(`${path}/scenarios`, { method: 'GET', token }),
+  ])
+  return { project, contracts: contracts ?? [], changeRequests: changeRequests ?? [], scenarios: scenarios ?? [] }
+}

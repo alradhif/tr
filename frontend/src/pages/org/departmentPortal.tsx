@@ -43,7 +43,7 @@ function portalFor(kind: DepartmentPortalKind): DepartmentPortal {
     kind,
     base: kind === 'jodayn' ? '/jodayn/departments' : '/org/departments',
     token: kind === 'jodayn' ? getJodaynToken : getOrgToken,
-    projectHref: (id) => (kind === 'jodayn' ? null : `/org/projects/${id}`),
+    projectHref: (id) => (kind === 'jodayn' ? `/jodayn/projects/org/${id}` : `/org/projects/${id}`),
     list: (token) => apiRequest(prefix, { method: 'GET', token }),
     get: (token, id) => apiRequest(`${prefix}/${id}`, { method: 'GET', token }),
     create: (token, data) => apiRequest(prefix, { method: 'POST', token, body: json(data) }),

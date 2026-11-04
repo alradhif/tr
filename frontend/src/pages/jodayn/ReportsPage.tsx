@@ -6,15 +6,12 @@ import { ApiError } from '../../api/client'
 import { getReports } from '../../api/jodayn'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
-  FinanceGenerator,
-  FinanceHead,
+  FinanceCreateButton,
   FinancePage,
   FinanceRow,
   FinanceStats,
   FinanceTable,
-  FinanceTabs,
   formatAmount,
-  type FinanceView,
 } from '../../features/jodayn-finance/FinanceParts'
 import icon1 from '../../features/jodayn-finance/assets/icon1.svg'
 import icon2 from '../../features/jodayn-finance/assets/icon2.svg'
@@ -34,7 +31,6 @@ type ReportRow = {
 export function JodaynReportsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<ReportRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -77,62 +73,32 @@ export function JodaynReportsPage() {
 
   return (
     <FinancePage title={t('financialReports')}>
-      <FinanceHead
-        title={t('financialReports')}
-        subtitle="متابعة أداء العقود وتوليد التقارير المالية الخاصة بها"
-        createLabel="إنشاء تقرير"
-        onCreate={() => navigate('/jodayn/reports/new')}
-      />
-      <FinanceTabs active={view} onChange={setView} withList />
+      <div className="finance-tabs">
+        <FinanceCreateButton label="إنشاء تقرير" onClick={() => navigate('/jodayn/reports/new')} />
+      </div>
 
-      {view === 'generator' ? (
-        <FinanceGenerator
-          title="مولّد العروض التقديمية - التقارير"
-          data={
-            rows[0]
-              ? {
-                  project: {
-                    name: rows[0].name,
-                    code: rows[0].key.slice(0, 8).toUpperCase(),
-                    department: 'التقارير المالية — جودين',
-                    projectManager: '—',
-                    sponsor: '—',
-                    statusLabel: rows[0].period,
-                    budget: rows[0].totalContractsValue,
-                    budgetCurrency: 'SAR',
-                  },
-                  outputs: rows.slice(0, 4).map((r) => `${r.name} — ربح ${formatAmount(r.netProfit)}`),
-                  sourceLabel: `بيانات حية — ${rows.length} تقرير`,
-                }
-              : null
-          }
-        />
-      ) : (
-        <>
-          <FinanceStats
-            cards={[
-              { label: 'إجمالي التقارير', value: String(rows.length), icon: icon1 },
-              { label: 'إجمالي قيمة العقود', value: formatAmount(totalContracts), icon: icon2 },
-              { label: 'صافي الربح الإجمالي', value: formatAmount(totalProfit), icon: icon3 },
-            ]}
-          />
-          <FinanceTable
-            headers={['اسم التقرير', 'الفترة / الربع', 'قيمة العقود', 'صافي الربح', 'صافي التدفق النقدي']}
-            loading={loading}
-            empty={rows.length === 0}
-          >
-            {rows.map((row) => (
-              <FinanceRow key={row.key} onOpen={() => navigate(`/jodayn/reports/${row.key}`)}>
-                <td>{row.name}</td>
-                <td className="finance-muted">{row.period}</td>
-                <td>{formatAmount(row.totalContractsValue)}</td>
-                <td>{formatAmount(row.netProfit)}</td>
-                <td>{formatAmount(row.netCashFlow)}</td>
-              </FinanceRow>
-            ))}
-          </FinanceTable>
-        </>
-      )}
+      <FinanceStats
+        cards={[
+          { label: 'إجمالي التقارير', value: String(rows.length), icon: icon1 },
+          { label: 'إجمالي قيمة العقود', value: formatAmount(totalContracts), icon: icon2 },
+          { label: 'صافي الربح الإجمالي', value: formatAmount(totalProfit), icon: icon3 },
+        ]}
+      />
+      <FinanceTable
+        headers={['اسم التقرير', 'الفترة / الربع', 'قيمة العقود', 'صافي الربح', 'صافي التدفق النقدي']}
+        loading={loading}
+        empty={rows.length === 0}
+      >
+        {rows.map((row) => (
+          <FinanceRow key={row.key} onOpen={() => navigate(`/jodayn/reports/${row.key}`)}>
+            <td>{row.name}</td>
+            <td className="finance-muted">{row.period}</td>
+            <td>{formatAmount(row.totalContractsValue)}</td>
+            <td>{formatAmount(row.netProfit)}</td>
+            <td>{formatAmount(row.netCashFlow)}</td>
+          </FinanceRow>
+        ))}
+      </FinanceTable>
     </FinancePage>
   )
 }

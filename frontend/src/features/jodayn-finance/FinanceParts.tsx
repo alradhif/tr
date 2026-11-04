@@ -3,7 +3,6 @@ import { Modal } from 'antd'
 import { ChevronLeft, Plus } from 'lucide-react'
 import icon1 from './assets/icon1.svg'
 import icon2 from './assets/icon2.svg'
-import { PptGeneratorFrame, type PptBridgePayload } from '../portal'
 import './finance.css'
 
 /** Page frame from the Jodayn finance design: top bar with the page title, then the body. */
@@ -14,80 +13,6 @@ export function FinancePage({ title, children }: { title: string; children: Reac
         <h2 className="finance-topbar__title">{title}</h2>
       </header>
       <div className="finance-body">{children}</div>
-    </div>
-  )
-}
-
-export function FinanceHead({
-  title,
-  subtitle,
-  onCreate,
-  createLabel,
-  actions,
-}: {
-  title: string
-  subtitle?: string
-  onCreate?: () => void
-  createLabel?: string
-  actions?: ReactNode
-}) {
-  return (
-    <div className="finance-head">
-      <div>
-        <h1 className="finance-head__title">{title}</h1>
-        <p className="finance-head__subtitle">{subtitle ?? '\u00a0'}</p>
-      </div>
-      <div className="finance-head__actions">
-        {actions}
-        {createLabel && onCreate ? (
-          <button type="button" className="finance-btn finance-btn--dark" onClick={onCreate}>
-            <Plus size={18} strokeWidth={2.4} />
-            <span>{createLabel}</span>
-          </button>
-        ) : null}
-      </div>
-    </div>
-  )
-}
-
-export type FinanceView = 'list' | 'generator'
-
-/**
- * Buttons row under the page head. Reports show القائمة + مولد العروض; the other
- * screens show only مولد العروض, which toggles between the table and the generator.
- * `extra` holds page actions (e.g. add) placed beside them.
- */
-export function FinanceTabs({
-  active,
-  onChange,
-  withList = false,
-  extra,
-}: {
-  active: FinanceView
-  onChange: (view: FinanceView) => void
-  withList?: boolean
-  extra?: ReactNode
-}) {
-  return (
-    <div className="finance-tabs">
-      {extra}
-      {withList ? (
-        <button
-          type="button"
-          className={`finance-btn ${active === 'list' ? 'finance-btn--dark' : 'finance-btn--outline'}`}
-          onClick={() => onChange('list')}
-        >
-          القائمة
-        </button>
-      ) : null}
-      <button
-        type="button"
-        className="finance-btn finance-btn--outline finance-btn--generator"
-        aria-pressed={active === 'generator'}
-        onClick={() => onChange(withList || active !== 'generator' ? 'generator' : 'list')}
-      >
-        مولد العروض
-      </button>
     </div>
   )
 }
@@ -226,14 +151,6 @@ export function FinanceDetails({
       </dl>
       {actions ? <div className="finance-details__actions">{actions}</div> : null}
     </Modal>
-  )
-}
-
-export function FinanceGenerator({ title, data }: { title: string; data: PptBridgePayload | null }) {
-  return (
-    <section className="finance-table-wrap finance-generator">
-      <PptGeneratorFrame title={title} data={data} />
-    </section>
   )
 }
 

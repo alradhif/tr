@@ -10,6 +10,18 @@ import { canCreateDraft } from '../../auth/permissions'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { averageProgress, formatJoinDate, projectStatusClass, STATUS_META } from './orgEntityUi'
 import '../../design/departments.css'
+import '../../design/senior-projects.css'
+
+type DepartmentFilter = 'all' | 'track' | 'delay' | 'blocked' | 'done' | 'inactive'
+
+const DEPARTMENT_FILTERS: { key: DepartmentFilter; label: string }[] = [
+  { key: 'all', label: 'الكل' },
+  { key: 'track', label: STATUS_META.track },
+  { key: 'delay', label: STATUS_META.delay },
+  { key: 'blocked', label: STATUS_META.blocked },
+  { key: 'done', label: STATUS_META.done },
+  { key: 'inactive', label: 'غير نشطة' },
+]
 
 type ListNotice = 'success' | 'deleted' | undefined
 
@@ -26,7 +38,8 @@ export function OrgDepartmentsPage() {
   const [projects, setProjects] = useState<OrgProject[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [onlyDelayed, setOnlyDelayed] = useState(false)
+  const [filter, setFilter] = useState<DepartmentFilter>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [notice, setNotice] = useState<ListNotice>(() => (location.state as { notice?: ListNotice } | null)?.notice)
 
   useEffect(() => {
@@ -72,7 +85,9 @@ export function OrgDepartmentsPage() {
     })
   }, [departments, projects])
 
-  const visible = onlyDelayed ? rows.filter((row) => !row.department.isActive) : rows
+  const matches = (row: (typeof rows)[number], key: DepartmentFilter) =>
+    key === 'all' || (key === 'inactive' ? !row.department.isActive : row.department.isActive && row.status === key)
+  const visible = rows.filter((row) => matches(row, filter))
 
   return (
     <div className="dashboard-page departments-page departments-page--screenshot-one" dir="rtl">
@@ -104,15 +119,33 @@ export function OrgDepartmentsPage() {
               </button>
             ) : null}
             <button
-              className="departments-outline"
+              className={`departments-outline${filtersOpen || filter !== 'all' ? ' departments-outline--active' : ''}`}
               type="button"
-              onClick={() => setOnlyDelayed((value) => !value)}
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
             >
               <Filter size={18} />
               <span>تصفية</span>
             </button>
           </div>
         </div>
+        {filtersOpen ? (
+          <div className="sp-filters departments-filters" role="tablist" aria-label="تصفية الإدارات">
+            {DEPARTMENT_FILTERS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                aria-selected={item.key === filter}
+                className={item.key === filter ? 'is-active' : ''}
+                onClick={() => setFilter(item.key)}
+              >
+                {item.label}
+                <span className="sp-filters__count">{rows.filter((row) => matches(row, item.key)).length}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="departments-table-wrap departments-table-wrap--screenshot-one">
           <table className="departments-table departments-table--screenshot-one">
             <thead>

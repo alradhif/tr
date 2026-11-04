@@ -144,6 +144,34 @@ async function loadProjectSubmitters(projects, { tableName, userModel }) {
  * @param {string} accountId orgId or clientId
  * @param {{ role?: string }} [options]
  */
+/** "منذ 3 ساعات"-style label for the dashboard alerts. */
+function relativeTimeLabel(value, now = new Date()) {
+  const minutes = Math.floor((now.getTime() - new Date(value).getTime()) / 60000)
+  if (minutes < 1) return 'الآن'
+  if (minutes < 60) return minutes === 1 ? 'منذ دقيقة' : minutes === 2 ? 'منذ دقيقتين' : `منذ ${minutes} دقيقة`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return hours === 1 ? 'منذ ساعة' : hours === 2 ? 'منذ ساعتين' : `منذ ${hours} ساعات`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'أمس'
+  if (days === 2) return 'منذ يومين'
+  if (days < 7) return `منذ ${days} أيام`
+  return new Date(value).toLocaleDateString('en-GB')
+}
+
+/** The dashboard shows three alerts, as in the design: one of each kind first, then the rest in order. */
+function pickTodayAlerts(alerts, limit = 3) {
+  const picked = []
+  for (const type of ['approval', 'risk', 'deliverable']) {
+    const first = alerts.find((alert) => alert.type === type)
+    if (first) picked.push(first)
+  }
+  for (const alert of alerts) {
+    if (picked.length >= limit) break
+    if (!picked.includes(alert)) picked.push(alert)
+  }
+  return picked.slice(0, limit)
+}
+
 async function buildProjectPortalDashboard(kind, accountId, options = {}) {
   const isOrg = kind === 'ORG'
   const isManager = isOrg
@@ -237,7 +265,7 @@ async function buildProjectPortalDashboard(kind, accountId, options = {}) {
       where: { ...projectScope, status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
       take: 5,
-      select: { id: true, title: true, createdAt: true },
+      select: { id: true, title: true, createdAt: true, projectId: true, project: { select: { name: true } } },
     }),
     riskModel.findMany({
       where: {
@@ -247,7 +275,7 @@ async function buildProjectPortalDashboard(kind, accountId, options = {}) {
       },
       orderBy: { createdAt: 'desc' },
       take: 5,
-      select: { id: true, name: true, impact: true, createdAt: true },
+      select: { id: true, name: true, impact: true, createdAt: true, projectId: true, project: { select: { name: true } } },
     }),
     isManager
       ? projectModel.count({ where: { ...accountFilter, approvalStatus: 'PENDING' } })
@@ -296,45 +324,47 @@ async function buildProjectPortalDashboard(kind, accountId, options = {}) {
     tableName: isOrg ? 'org_projects' : 'client_projects',
     userModel: isOrg ? prisma.orgUser : prisma.clientUser,
   })
-  const projectBasePath = isOrg ? '/org/projects' : '/client/projects'
+  const projectBasePath = options.projectBasePath || (isOrg ? '/org/projects' : '/client/projects')
 
-  const todayAlerts = [
-    ...pendingApprovalProjects.map((p) => ({
-      id: `project-approval-${p.id}`,
-      type: 'approval',
-      title: p.name,
-      subtitle: 'مشروع بانتظار موافقتك',
-      submittedBy: submitterByProject[p.id] || p.manager?.name || null,
-      time: new Date(p.updatedAt || p.createdAt).toLocaleDateString('ar-SA'),
-      href: `${projectBasePath}/${p.id}`,
-      projectId: p.id,
-      canDecide: true,
-    })),
+  const todayAlerts = pickTodayAlerts([
+    ...pendingApprovalProjects.map((p) => {
+      const submittedBy = submitterByProject[p.id] || p.manager?.name
+      return {
+        id: `project-approval-${p.id}`,
+        type: 'approval',
+        title: 'طلب مصادقة جديد',
+        subtitle: submittedBy ? `${p.name} — ${submittedBy}` : p.name,
+        time: relativeTimeLabel(p.updatedAt || p.createdAt, now),
+        href: `${projectBasePath}/${p.id}`,
+      }
+    }),
     ...pendingChangeRequests.map((cr) => ({
       id: `cr-${cr.id}`,
       type: 'approval',
-      title: cr.title,
-      subtitle: 'طلب تغيير بانتظار الموافقة',
-      time: new Date(cr.createdAt).toLocaleDateString('ar-SA'),
+      title: 'طلب تغيير جديد',
+      subtitle: `${cr.project?.name || 'مشروع'} — ${cr.title}`,
+      time: relativeTimeLabel(cr.createdAt, now),
+      href: `${projectBasePath}/${cr.projectId}`,
     })),
     ...highRisks.map((r) => ({
       id: `risk-${r.id}`,
       type: 'risk',
-      title: r.name,
-      subtitle: `مخاطرة ${r.impact === 'CRITICAL' ? 'حرجة' : 'مرتفعة'}`,
-      time: new Date(r.createdAt).toLocaleDateString('ar-SA'),
+      title: r.impact === 'CRITICAL' ? 'خطر حرج جديد' : 'خطر مرتفع جديد',
+      subtitle: `${r.project?.name || 'مشروع'} — ${r.name}`,
+      time: relativeTimeLabel(r.createdAt, now),
+      href: `${projectBasePath}/${r.projectId}`,
     })),
     ...recentDeliverables
       .filter((d) => d.status === 'ACTIVE')
-      .slice(0, 3)
       .map((d) => ({
         id: `del-${d.id}`,
         type: 'deliverable',
-        title: d.name,
-        subtitle: d.project?.name || 'مخرج نشط',
-        time: new Date(d.createdAt).toLocaleDateString('ar-SA'),
+        title: 'مخرج قيد التنفيذ',
+        subtitle: `${d.name} — ${d.project?.name || 'مشروع'}`,
+        time: relativeTimeLabel(d.createdAt, now),
+        href: `${projectBasePath}/${d.projectId}`,
       })),
-  ].slice(0, 8)
+  ])
 
   return {
     live: true,
@@ -381,8 +411,8 @@ async function buildProjectPortalDashboard(kind, accountId, options = {}) {
 /** Project-portfolio dashboard across every organization and client account. */
 async function buildPlatformProjectDashboard() {
   const [org, client] = await Promise.all([
-    buildProjectPortalDashboard('ORG', null),
-    buildProjectPortalDashboard('CLIENT', null),
+    buildProjectPortalDashboard('ORG', null, { projectBasePath: '/jodayn/projects/org' }),
+    buildProjectPortalDashboard('CLIENT', null, { projectBasePath: '/jodayn/projects/client' }),
   ])
   const sum = (key) => (org[key] || 0) + (client[key] || 0)
   const totalProjects = sum('totalProjects')
@@ -420,7 +450,7 @@ async function buildPlatformProjectDashboard() {
       high: month.high + (client.risksByMonth[i]?.high || 0),
     })),
     projectStatuses,
-    todayAlerts: [...org.todayAlerts, ...client.todayAlerts].slice(0, 8),
+    todayAlerts: pickTodayAlerts([...org.todayAlerts, ...client.todayAlerts]),
     deliverables: [...org.deliverables, ...client.deliverables].slice(0, 8),
     projects: [...org.projects, ...client.projects].slice(0, 8),
   }

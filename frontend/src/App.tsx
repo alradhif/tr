@@ -28,6 +28,7 @@ import { ClientGoalDetailPage } from './pages/client/GoalDetailPage'
 import { JodaynDashboardPage } from './pages/jodayn/DashboardPage'
 import { JodaynGoalsPage } from './pages/jodayn/GoalsPage'
 import { JodaynProjectsPage } from './pages/jodayn/ProjectsPage'
+import { JodaynProjectDetailPage } from './pages/jodayn/ProjectDetailPage'
 import { JodaynSectorsPage } from './pages/jodayn/SectorsPage'
 import { JodaynAddSectorPage } from './pages/jodayn/AddSectorPage'
 import { JodaynOrgAccountsPage } from './pages/jodayn/OrgAccountsPage'
@@ -100,6 +101,7 @@ export default function App() {
             <Route path="dashboard" element={<JodaynDashboardPage />} />
             <Route path="goals" element={<JodaynGoalsPage />} />
             <Route path="projects" element={<JodaynProjectsPage />} />
+            <Route path="projects/:kind/:projectId" element={<JodaynProjectDetailPage />} />
             <Route path="sectors" element={<JodaynSectorsPage />} />
             <Route path="departments" element={<DepartmentPortalProvider kind="jodayn"><OrgDepartmentsPage /></DepartmentPortalProvider>} />
             <Route path="departments/new" element={<DepartmentPortalProvider kind="jodayn"><OrgAddDepartmentPage /></DepartmentPortalProvider>} />

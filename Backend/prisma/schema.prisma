@@ -476,6 +476,7 @@ model ExecutingCompany {
   name           String
   registrationNo String?
   sector         String?
+  logoUrl        String?
   managerName    String?
   email          String?
   phone          String?

@@ -1,4 +1,8 @@
+const multer = require('multer')
 const prisma = require('../lib/prisma')
+
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+const logoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 } }).single('logo')
 
 // ============ EXECUTING COMPANIES ============
 
@@ -93,6 +97,8 @@ exports.updateCompany = async (req, res) => {
     const data = { ...req.body }
     delete data.orgId
     delete data.id
+    // A logo is set through uploadLogo only; here it can only be removed.
+    if (data.logoUrl !== null) delete data.logoUrl
 
     const company = await prisma.executingCompany.update({
       where: { id },
@@ -103,6 +109,30 @@ exports.updateCompany = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
+}
+
+// Company logo: kept as a data URL on the company so it needs no separate file hosting.
+exports.uploadLogo = (req, res) => {
+  logoUpload(req, res, async (uploadErr) => {
+    try {
+      if (uploadErr) {
+        const tooLarge = uploadErr.code === 'LIMIT_FILE_SIZE'
+        return res.status(400).json({ message: tooLarge ? 'حجم الشعار يجب ألا يتجاوز 1 ميجابايت' : uploadErr.message })
+      }
+      if (!req.file || !LOGO_TYPES.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: 'الرجاء رفع صورة PNG أو JPG أو WEBP' })
+      }
+      const existing = await prisma.executingCompany.findUnique({ where: { id: req.params.id } })
+      if (!existing) return res.status(404).json({ message: 'Company not found' })
+      if (existing.orgId !== req.user.orgId) return res.status(403).json({ message: 'Access denied' })
+
+      const logoUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+      const company = await prisma.executingCompany.update({ where: { id: existing.id }, data: { logoUrl } })
+      res.json({ success: true, company })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
 }
 
 exports.deleteCompany = async (req, res) => {

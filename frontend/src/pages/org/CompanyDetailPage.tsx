@@ -13,11 +13,13 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { CompanyLogoPicker } from '../../components/ui/CompanyLogoPicker'
 import { companiesAssets, matchCompanyLogo } from '@/assets'
 import { ApiError } from '../../api/client'
 import {
   deleteCompany,
   getCompanyById,
+  uploadCompanyLogo,
   getCompanyTeam,
   updateCompany,
   type CompanyTeamMember,
@@ -105,6 +107,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
   const [draftPhone, setDraftPhone] = useState('')
   const [draftEmail, setDraftEmail] = useState('')
   const [draftDescription, setDraftDescription] = useState('')
+  const [draftLogo, setDraftLogo] = useState<{ file: File | null; preview: string | null }>({ file: null, preview: null })
   const [touched, setTouched] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -193,6 +196,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
     setDraftPhone(company.phone ?? '')
     setDraftEmail(company.email ?? '')
     setDraftDescription(company.description ?? '')
+    setDraftLogo({ file: null, preview: company.logoUrl ?? null })
     setTouched(false)
     setEditOpen(true)
   }
@@ -218,8 +222,10 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
         phone: draftPhone.trim() || undefined,
         email: draftEmail.trim() || undefined,
         description: draftDescription.trim() || undefined,
+        ...(draftLogo.preview ? {} : { logoUrl: null }),
       })
-      setCompany(updated)
+      const saved = draftLogo.file ? (await uploadCompanyLogo(token, companyId, draftLogo.file)).company : updated
+      setCompany(saved)
       setBanner('success')
       setEditOpen(false)
     } catch (err) {
@@ -247,7 +253,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
   }
 
   const logo = useMemo(
-    () => (company ? matchCompanyLogo(company.name) ?? companiesAssets.company : companiesAssets.company),
+    () => (company ? company.logoUrl ?? matchCompanyLogo(company.name) ?? companiesAssets.company : companiesAssets.company),
     [company],
   )
 
@@ -452,6 +458,11 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
                 <ClipboardList size={22} />
               </span>
             </div>
+            <CompanyLogoPicker
+              src={draftLogo.preview}
+              onPick={(file, preview) => setDraftLogo({ file, preview })}
+              onRemove={() => setDraftLogo({ file: null, preview: null })}
+            />
             <div className="edit-modal__grid">
               <ModalInput id="edit-name" label="اسم الشركة" value={draftName} onChange={setDraftName} invalid={missing(draftName)} />
               <ModalInput id="edit-registration" label="رقم السجل التجاري" value={draftRegistration} onChange={setDraftRegistration} invalid={false} />

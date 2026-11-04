@@ -25,6 +25,7 @@ router.post('/:id/team', ...isOrgAny, createTeamMember)
 router.patch('/:id/team/:memberId', ...isOrgAny, updateTeamMember)
 router.delete('/:id/team/:memberId', ...isUpperMgmt, deleteTeamMember)
 
+router.post('/:id/logo', ...isOrgAny, require('../controllers/orgCompaniesController').uploadLogo)
 router.get('/:id', ...isOrgAny, getCompanyById)
 router.patch('/:id', ...isOrgAny, updateCompany)
 router.delete('/:id', ...isUpperMgmt, deleteCompany)

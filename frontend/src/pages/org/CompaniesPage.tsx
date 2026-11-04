@@ -147,7 +147,7 @@ export function OrgCompaniesPage() {
                 <div className="sc-company-cell">
                   <span className="sc-logo-box">
                     <img
-                      src={matchCompanyLogo(row.company.name) ?? companiesAssets.company}
+                      src={row.company.logoUrl ?? matchCompanyLogo(row.company.name) ?? companiesAssets.company}
                       alt={row.company.name}
                       className="sc-logo-img"
                     />

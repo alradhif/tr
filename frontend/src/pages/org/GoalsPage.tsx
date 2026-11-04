@@ -4,6 +4,7 @@ import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { commonAssets, dashboardDataAssets, navigationAssets } from '@/assets'
+import warningIcon from '../../features/jodayn-finance/assets/card-icon.svg'
 import { AssetIcon } from '../../components/ui/AssetIcon'
 import { ApiError } from '../../api/client'
 import { getGoals, type StrategicGoal } from '../../api/orgStrategy'
@@ -161,8 +162,7 @@ export function OrgGoalsPage() {
           label={t('delayedGoals')}
           value={delayedGoals}
           suffix={t('goalsUnit')}
-          tone="warn"
-          icon={<AssetIcon src={dashboardDataAssets.suspended} size={16} />}
+          icon={<img src={warningIcon} alt="" width={18} height={18} />}
         />
       </StatGrid>
 

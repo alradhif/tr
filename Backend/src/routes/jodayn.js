@@ -33,8 +33,13 @@ const {
   getClient,
   getDepartments: getAllDepartments,
   scopeToDepartmentOrg,
+  scopeToProjectOwner,
 } = require('../controllers/jodaynPortfolioController')
 const departments = require('../controllers/orgDepartmentsController')
+const orgProjects = require('../controllers/orgProjectsController')
+const orgNested = require('../controllers/orgProjectNestedController')
+const clientProjects = require('../controllers/clientProjectsController')
+const clientNested = require('../controllers/clientProjectNestedController')
 
 const isJodaynUpper = [auth, roles('JODAYN_UPPER_MGMT', 'SUPER_ADMIN')]
 const isJodayn = [
@@ -46,6 +51,18 @@ router.get('/dashboard', ...isJodayn, getDashboard)
 router.get('/goals', ...isJodayn, getGoals)
 router.get('/projects', ...isJodayn, getProjects)
 router.get('/clients/:id', ...isJodayn, getClient)
+
+// Read-only project page: the portal handlers scoped to the project's owner.
+for (const [kind, project, nested] of [
+  ['org', orgProjects, orgNested],
+  ['client', clientProjects, clientNested],
+]) {
+  const scoped = [...isJodayn, scopeToProjectOwner(kind)]
+  router.get(`/projects/${kind}/:id`, ...scoped, project.getProjectById)
+  router.get(`/projects/${kind}/:projectId/contracts`, ...scoped, nested.getContracts)
+  router.get(`/projects/${kind}/:projectId/change-requests`, ...scoped, nested.getChangeRequests)
+  router.get(`/projects/${kind}/:projectId/scenarios`, ...scoped, nested.getScenarios)
+}
 
 // Departments of every organization; per-department handlers reuse the organization ones.
 router.get('/departments', ...isJodayn, getAllDepartments)

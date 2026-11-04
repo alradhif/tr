@@ -137,3 +137,20 @@ exports.scopeToDepartmentOrg = async (req, res, next) => {
     res.status(500).json({ message: err.message })
   }
 }
+
+// Lets the organization / client project read handlers serve Jodayn's read-only project page.
+exports.scopeToProjectOwner = (kind) => async (req, res, next) => {
+  try {
+    const id = req.params.projectId || req.params.id
+    const model = kind === 'org' ? prisma.orgProject : prisma.clientProject
+    const project = await model.findUnique({
+      where: { id },
+      select: kind === 'org' ? { orgId: true } : { clientId: true },
+    })
+    if (!project) return res.status(404).json({ message: 'Project not found' })
+    req.user = { ...req.user, ...project }
+    next()
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}

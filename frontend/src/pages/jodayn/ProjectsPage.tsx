@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { getJodaynProjects, type JodaynProject } from '../../api/jodayn'
 import { getJodaynToken } from '../../auth/jodaynAuth'
-import { FinanceDetails, formatAmount, formatDate } from '../../features/jodayn-finance/FinanceParts'
 import { ProjectsListView } from '../../components/senior/ProjectsListView'
 
 type ProjectUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
@@ -17,7 +17,7 @@ type ProjectRow = {
   approvalStatus: string
   uiStatus: ProjectUiStatus
   outputsCount: number
-  source: JodaynProject
+  ownerType: JodaynProject['ownerType']
 }
 
 function mapStatus(raw: string, endDate?: string | null): ProjectUiStatus {
@@ -44,11 +44,11 @@ function matchesFilter(row: ProjectRow, filter: ProjectFilter) {
 /** Read-only list of every organization's and client's projects. */
 export function JodaynProjectsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [rows, setRows] = useState<ProjectRow[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [opened, setOpened] = useState<ProjectRow | null>(null)
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -69,7 +69,7 @@ export function JodaynProjectsPage() {
             approvalStatus: p.approvalStatus ?? 'DRAFT',
             uiStatus: mapStatus(p.status, p.endDate),
             outputsCount: p._count?.deliverables ?? 0,
-            source: p,
+            ownerType: p.ownerType,
           })),
         )
       } catch (err) {
@@ -104,47 +104,33 @@ export function JodaynProjectsPage() {
   )
 
   return (
-    <>
-      <ProjectsListView
-        rows={filteredRows.map((row) => ({
-          key: row.key,
-          name: row.name,
-          progress: row.progress,
-          status: row.uiStatus,
-          approvalStatus: row.approvalStatus,
-        }))}
-        loading={loading}
-        totalOutputs={rows.reduce((sum, row) => sum + row.outputsCount, 0)}
-        onOpen={(key) => setOpened(rows.find((row) => row.key === key) ?? null)}
-        filtersOpen={filtersOpen}
-        onToggleFilters={() => setFiltersOpen((open) => !open)}
-        activeFilter={activeFilter}
-        onFilterChange={(key) => setActiveFilter(key as ProjectFilter)}
-        filters={[
-          { key: 'all', label: t('all'), count: filterCounts.all },
-          { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
-          { key: 'delayed', label: t('delayedTab'), count: filterCounts.delayed },
-          { key: 'completed', label: t('completed'), count: filterCounts.completed },
-          { key: 'pending', label: t('approvalStatusPending'), count: filterCounts.pending },
-          { key: 'draft', label: t('approvalStatusDraft'), count: filterCounts.draft },
-          { key: 'rejected', label: t('approvalStatusRejected'), count: filterCounts.rejected },
-        ]}
-      />
-      {opened ? (
-        <FinanceDetails
-          title={opened.name}
-          onClose={() => setOpened(null)}
-          fields={[
-            { label: 'الجهة', value: opened.source.ownerName ?? '—' },
-            { label: 'نوع الحساب', value: opened.source.ownerType === 'client' ? 'عميل' : 'جهة' },
-            { label: t('progress'), value: `${opened.progress}%` },
-            { label: 'الميزانية', value: `${formatAmount(opened.source.budget)} ريال` },
-            { label: 'تاريخ البدء', value: formatDate(opened.source.startDate) },
-            { label: 'تاريخ الانتهاء', value: formatDate(opened.source.endDate) },
-            { label: 'المخرجات', value: opened.outputsCount },
-          ]}
-        />
-      ) : null}
-    </>
+    <ProjectsListView
+      rows={filteredRows.map((row) => ({
+        key: row.key,
+        name: row.name,
+        progress: row.progress,
+        status: row.uiStatus,
+        approvalStatus: row.approvalStatus,
+      }))}
+      loading={loading}
+      totalOutputs={rows.reduce((sum, row) => sum + row.outputsCount, 0)}
+      onOpen={(key) => {
+        const row = rows.find((item) => item.key === key)
+        if (row) navigate(`/jodayn/projects/${row.ownerType}/${row.key}`)
+      }}
+      filtersOpen={filtersOpen}
+      onToggleFilters={() => setFiltersOpen((open) => !open)}
+      activeFilter={activeFilter}
+      onFilterChange={(key) => setActiveFilter(key as ProjectFilter)}
+      filters={[
+        { key: 'all', label: t('all'), count: filterCounts.all },
+        { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
+        { key: 'delayed', label: t('delayedTab'), count: filterCounts.delayed },
+        { key: 'completed', label: t('completed'), count: filterCounts.completed },
+        { key: 'pending', label: t('approvalStatusPending'), count: filterCounts.pending },
+        { key: 'draft', label: t('approvalStatusDraft'), count: filterCounts.draft },
+        { key: 'rejected', label: t('approvalStatusRejected'), count: filterCounts.rejected },
+      ]}
+    />
   )
 }

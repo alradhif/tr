@@ -46,10 +46,6 @@
   font-weight: 700;
 }
 
-.jinv .finance-btn--generator {
-  border-color: #000 !important;
-  color: #0c0c0d !important;
-}
 
 .jinv-cards {
   display: grid;

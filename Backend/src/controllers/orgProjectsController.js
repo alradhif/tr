@@ -34,7 +34,7 @@ async function withApproverName(project) {
 const PROJECT_INCLUDE = {
   manager: { select: { id: true, name: true, email: true } },
   department: { select: { id: true, name: true } },
-  executingCompany: { select: { id: true, name: true } },
+  executingCompany: { select: { id: true, name: true, description: true, logoUrl: true } },
   phases: true,
   teamMembers: true,
   deliverables: true,

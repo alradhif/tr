@@ -8,15 +8,12 @@ import { getAccounts } from '../../api/superAdmin'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
   FinanceDetails,
-  FinanceGenerator,
-  FinanceHead,
+  FinanceCreateButton,
   FinancePage,
   FinanceRow,
   FinanceStats,
   FinanceTable,
-  FinanceTabs,
   shortRef,
-  type FinanceView,
 } from '../../features/jodayn-finance/FinanceParts'
 import icon1 from '../../features/jodayn-finance/assets/icon1.svg'
 import icon2 from '../../features/jodayn-finance/assets/icon2.svg'
@@ -37,7 +34,6 @@ type OrgAccountRow = {
 export function JodaynOrgAccountsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<OrgAccountRow[]>([])
   const [loading, setLoading] = useState(true)
   const [opened, setOpened] = useState<OrgAccountRow | null>(null)
@@ -81,75 +77,51 @@ export function JodaynOrgAccountsPage() {
 
   return (
     <FinancePage title={t('orgAccounts')}>
-      <FinanceHead title={t('orgAccounts')} createLabel="إنشاء تقرير" onCreate={() => navigate('/jodayn/reports/new')} />
-      <FinanceTabs active={view} onChange={setView} />
+      <div className="finance-tabs">
+        <FinanceCreateButton label="إنشاء تقرير" onClick={() => navigate('/jodayn/reports/new')} />
+      </div>
 
-      {view === 'generator' ? (
-        <FinanceGenerator
-          title="مولّد العروض التقديمية - حسابات الجهات"
-          data={
-            rows[0]
-              ? {
-                  project: {
-                    name: 'حسابات الجهات',
-                    code: shortRef(rows[0].key).toUpperCase(),
-                    department: 'حسابات الجهات — جودين',
-                    projectManager: '—',
-                    sponsor: '—',
-                    statusLabel: `${active} نشطة من ${rows.length}`,
-                    progress: rows.length ? Math.round((active / rows.length) * 100) : 0,
-                  },
-                  outputs: rows.slice(0, 4).map((r) => `${r.name} — ${r.sector}`),
-                  sourceLabel: `بيانات حية — ${rows.length} جهة`,
-                }
-              : null
-          }
+      <FinanceStats
+        cards={[
+          { label: 'إجمالي الجهات', value: String(rows.length), icon: icon1 },
+          { label: 'الجهات النشطة', value: String(active), icon: icon2 },
+          { label: 'الجهات غير النشطة', value: String(rows.length - active), icon: icon3 },
+        ]}
+      />
+      <FinanceTable
+        headers={['اسم الجهة', 'نوع الجهة', 'المدينة', 'الحالة', 'المعرّف']}
+        loading={loading}
+        empty={rows.length === 0}
+      >
+        {rows.map((row) => (
+          <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
+            <td>{row.name}</td>
+            <td className="finance-muted">{row.type}</td>
+            <td>{row.city}</td>
+            <td>
+              <span className={`finance-status finance-status--${row.active ? 'active' : 'inactive'}`}>
+                <CheckCircle2 size={14} strokeWidth={2.4} />
+                {row.active ? 'نشطة' : 'غير نشطة'}
+              </span>
+            </td>
+            <td>{row.reference}</td>
+          </FinanceRow>
+        ))}
+      </FinanceTable>
+      {opened ? (
+        <FinanceDetails
+          title={opened.name}
+          onClose={() => setOpened(null)}
+          fields={[
+            { label: 'نوع الجهة', value: opened.type },
+            { label: 'المدينة', value: opened.city },
+            { label: 'القطاع', value: opened.sector },
+            { label: 'حالة العقد', value: opened.contractStatus },
+            { label: 'الحالة', value: opened.active ? 'نشطة' : 'غير نشطة' },
+            { label: 'المعرّف', value: opened.reference },
+          ]}
         />
-      ) : (
-        <>
-          <FinanceStats
-            cards={[
-              { label: 'إجمالي الجهات', value: String(rows.length), icon: icon1 },
-              { label: 'الجهات النشطة', value: String(active), icon: icon2 },
-              { label: 'الجهات غير النشطة', value: String(rows.length - active), icon: icon3 },
-            ]}
-          />
-          <FinanceTable
-            headers={['اسم الجهة', 'نوع الجهة', 'المدينة', 'الحالة', 'المعرّف']}
-            loading={loading}
-            empty={rows.length === 0}
-          >
-            {rows.map((row) => (
-              <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
-                <td>{row.name}</td>
-                <td className="finance-muted">{row.type}</td>
-                <td>{row.city}</td>
-                <td>
-                  <span className={`finance-status finance-status--${row.active ? 'active' : 'inactive'}`}>
-                    <CheckCircle2 size={14} strokeWidth={2.4} />
-                    {row.active ? 'نشطة' : 'غير نشطة'}
-                  </span>
-                </td>
-                <td>{row.reference}</td>
-              </FinanceRow>
-            ))}
-          </FinanceTable>
-          {opened ? (
-            <FinanceDetails
-              title={opened.name}
-              onClose={() => setOpened(null)}
-              fields={[
-                { label: 'نوع الجهة', value: opened.type },
-                { label: 'المدينة', value: opened.city },
-                { label: 'القطاع', value: opened.sector },
-                { label: 'حالة العقد', value: opened.contractStatus },
-                { label: 'الحالة', value: opened.active ? 'نشطة' : 'غير نشطة' },
-                { label: 'المعرّف', value: opened.reference },
-              ]}
-            />
-          ) : null}
-        </>
-      )}
+      ) : null}
     </FinancePage>
   )
 }

@@ -28,7 +28,9 @@ import {
 } from '../../api/orgProjects'
 import { decideChangeRequest, deleteNested, updateNested, returnProjectForChanges, updateProjectStatus } from '../../api/projectNested'
 import { getClientRole, getClientToken } from '../../auth/clientAuth'
+import { getJodaynToken } from '../../auth/jodaynAuth'
 import { getOrgRole, getOrgToken } from '../../auth/orgAuth'
+import { getJodaynProjectDetails } from '../../api/jodayn'
 import { canCreateDraft, isDataEntry, isUpperManagement } from '../../auth/permissions'
 import type { PptBridgePayload } from '../../features/portal/PptGeneratorFrame'
 import { Badge, CatalogButton, SubpageHeader } from '../ui'
@@ -54,6 +56,8 @@ type ProjectDetailViewProps = {
   backPath: string
   basePath: string
   portal?: 'org' | 'client'
+  /** Jodayn reads any account's project here, without editing it. */
+  jodaynKind?: 'org' | 'client'
   variant?: 'full' | 'client'
   showUpdateAction?: boolean
   showGeneratePresentation?: boolean
@@ -120,6 +124,7 @@ export function ProjectDetailView({
   backPath,
   basePath,
   portal,
+  jodaynKind,
   variant,
   showGeneratePresentation = false,
   canApprove = false,
@@ -128,7 +133,7 @@ export function ProjectDetailView({
   const navigate = useNavigate()
   const id = projectId || 'new'
   const formBase = `${basePath}/${id}`
-  const resolvedPortal = portal ?? (basePath.startsWith('/client') ? 'client' : 'org')
+  const resolvedPortal = jodaynKind ?? portal ?? (basePath.startsWith('/client') ? 'client' : 'org')
   const isClient = variant === 'client' || resolvedPortal === 'client'
 
   const [loading, setLoading] = useState(Boolean(projectId))
@@ -153,7 +158,15 @@ export function ProjectDetailView({
     }
     setLoading(true)
     try {
-      if (resolvedPortal === 'client') {
+      if (jodaynKind) {
+        const token = getJodaynToken()
+        if (!token) return
+        const details = await getJodaynProjectDetails(token, jodaynKind, projectId)
+        setProject(details.project as OrgProject | ClientProject)
+        setContracts(details.contracts as AnyRecord[])
+        setChangeRequests(details.changeRequests as AnyRecord[])
+        setScenarios(details.scenarios as AnyRecord[])
+      } else if (resolvedPortal === 'client') {
         const token = getClientToken()
         if (!token) return
         const { project: p } = await getClientProjectById(token, projectId)
@@ -291,8 +304,8 @@ export function ProjectDetailView({
 
   const orgRole = getOrgRole()
   const clientRole = getClientRole()
-  const portalRole = isClient ? clientRole : orgRole
-  const portalToken = isClient ? getClientToken() : getOrgToken()
+  const portalRole = jodaynKind ? null : isClient ? clientRole : orgRole
+  const portalToken = jodaynKind ? getJodaynToken() : isClient ? getClientToken() : getOrgToken()
   const canMutate = portalRole ? canCreateDraft(portalRole) : false
   const canDeleteProject = Boolean(portalRole && isUpperManagement(portalRole))
   const approvalStatus = isClient
@@ -521,7 +534,8 @@ export function ProjectDetailView({
   const spent = Number(financials?.spent ?? 0)
   const remainingBudget = Math.max(0, budget - spent)
   const budgetPct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0
-  const companyLogoSrc = matchCompanyLogo(orgProject?.executingCompany?.name) ?? companiesAssets.company
+  const companyLogoSrc =
+    orgProject?.executingCompany?.logoUrl ?? matchCompanyLogo(orgProject?.executingCompany?.name) ?? companiesAssets.company
   const riskCounts = { high: 0, medium: 0, low: 0 }
   risks.forEach((row) => {
     if (String(row.status).toUpperCase() === 'CLOSED') return

@@ -7,15 +7,12 @@ import { getSectors } from '../../api/superAdmin'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
   FinanceDetails,
-  FinanceGenerator,
-  FinanceHead,
+  FinanceCreateButton,
   FinancePage,
   FinanceRow,
   FinanceStats,
   FinanceTable,
-  FinanceTabs,
   formatAmount,
-  type FinanceView,
 } from '../../features/jodayn-finance/FinanceParts'
 import icon1 from '../../features/jodayn-finance/assets/icon1.svg'
 import icon2 from '../../features/jodayn-finance/assets/icon2.svg'
@@ -35,7 +32,6 @@ type SectorRow = {
 export function JodaynSectorsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<SectorRow[]>([])
   const [loading, setLoading] = useState(true)
   const [opened, setOpened] = useState<SectorRow | null>(null)
@@ -80,72 +76,47 @@ export function JodaynSectorsPage() {
 
   return (
     <FinancePage title={t('sectors')}>
-      <FinanceHead title={t('sectors')} createLabel={t('addSector')} onCreate={() => navigate('/jodayn/sectors/new')} />
-      <FinanceTabs active={view} onChange={setView} />
+      <div className="finance-tabs">
+        <FinanceCreateButton label={t('addSector')} onClick={() => navigate('/jodayn/sectors/new')} />
+      </div>
 
-      {view === 'generator' ? (
-        <FinanceGenerator
-          title="مولّد العروض التقديمية - القطاعات"
-          data={
-            rows[0]
-              ? {
-                  project: {
-                    name: 'القطاعات',
-                    code: `${rows.length}`,
-                    department: 'القطاعات — جودين',
-                    projectManager: rows[0].managerName,
-                    sponsor: '—',
-                    statusLabel: `${rows.length} قطاع`,
-                    budget: budgets,
-                    budgetCurrency: 'SAR',
-                  },
-                  outputs: rows.slice(0, 4).map((r) => `${r.name} — إيراد ${formatAmount(r.annualRevenue)}`),
-                  sourceLabel: `بيانات حية — ${rows.length} قطاع`,
-                }
-              : null
-          }
+      <FinanceStats
+        cards={[
+          { label: 'عدد القطاعات', value: String(rows.length), icon: icon1 },
+          { label: 'الإيراد السنوي', value: formatAmount(revenue), icon: icon2 },
+          { label: 'إجمالي الميزانيات', value: formatAmount(budgets), icon: icon4 },
+        ]}
+      />
+      <FinanceTable
+        headers={['اسم القطاع', 'المدير المسؤول', 'الميزانية', 'عدد الموظفين', 'عدد الإدارات', 'الربح']}
+        loading={loading}
+        empty={rows.length === 0}
+      >
+        {rows.map((row) => (
+          <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
+            <td>{row.name}</td>
+            <td>{row.managerName}</td>
+            <td>{formatAmount(row.budget)}</td>
+            <td>{row.employeeCount}</td>
+            <td>{row.departmentCount}</td>
+            <td>{formatAmount(row.profit)}</td>
+          </FinanceRow>
+        ))}
+      </FinanceTable>
+      {opened ? (
+        <FinanceDetails
+          title={opened.name}
+          onClose={() => setOpened(null)}
+          fields={[
+            { label: 'المدير المسؤول', value: opened.managerName },
+            { label: 'الميزانية', value: formatAmount(opened.budget) },
+            { label: 'الإيراد السنوي', value: formatAmount(opened.annualRevenue) },
+            { label: 'الربح', value: formatAmount(opened.profit) },
+            { label: 'عدد الموظفين', value: opened.employeeCount },
+            { label: 'عدد الإدارات', value: opened.departmentCount },
+          ]}
         />
-      ) : (
-        <>
-          <FinanceStats
-            cards={[
-              { label: 'عدد القطاعات', value: String(rows.length), icon: icon1 },
-              { label: 'الإيراد السنوي', value: formatAmount(revenue), icon: icon2 },
-              { label: 'إجمالي الميزانيات', value: formatAmount(budgets), icon: icon4 },
-            ]}
-          />
-          <FinanceTable
-            headers={['اسم القطاع', 'المدير المسؤول', 'الميزانية', 'عدد الموظفين', 'عدد الإدارات', 'الربح']}
-            loading={loading}
-            empty={rows.length === 0}
-          >
-            {rows.map((row) => (
-              <FinanceRow key={row.key} onOpen={() => setOpened(row)}>
-                <td>{row.name}</td>
-                <td>{row.managerName}</td>
-                <td>{formatAmount(row.budget)}</td>
-                <td>{row.employeeCount}</td>
-                <td>{row.departmentCount}</td>
-                <td>{formatAmount(row.profit)}</td>
-              </FinanceRow>
-            ))}
-          </FinanceTable>
-          {opened ? (
-            <FinanceDetails
-              title={opened.name}
-              onClose={() => setOpened(null)}
-              fields={[
-                { label: 'المدير المسؤول', value: opened.managerName },
-                { label: 'الميزانية', value: formatAmount(opened.budget) },
-                { label: 'الإيراد السنوي', value: formatAmount(opened.annualRevenue) },
-                { label: 'الربح', value: formatAmount(opened.profit) },
-                { label: 'عدد الموظفين', value: opened.employeeCount },
-                { label: 'عدد الإدارات', value: opened.departmentCount },
-              ]}
-            />
-          ) : null}
-        </>
-      )}
+      ) : null}
     </FinancePage>
   )
 }

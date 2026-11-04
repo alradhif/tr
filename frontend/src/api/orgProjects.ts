@@ -45,7 +45,7 @@ export type OrgProject = {
   constraints?: string | null
   manager?: { id: string; name: string; email: string }
   department?: { id: string; name: string } | null
-  executingCompany?: { id: string; name: string } | null
+  executingCompany?: { id: string; name: string; logoUrl?: string | null } | null
   _count?: { deliverables?: number }
   phases?: unknown[]
   teamMembers?: unknown[]

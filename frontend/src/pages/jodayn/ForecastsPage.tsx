@@ -8,13 +8,10 @@ import { getForecasts } from '../../api/jodayn'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
   FinanceCreateButton,
-  FinanceGenerator,
   FinancePage,
   FinanceRow,
   FinanceTable,
-  FinanceTabs,
   formatAmount,
-  type FinanceView,
 } from '../../features/jodayn-finance/FinanceParts'
 import { periodLabel, periodName } from './labels'
 
@@ -43,7 +40,6 @@ const ACHIEVED_RATIO = 0.9
 export function JodaynForecastsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [view, setView] = useState<FinanceView>('list')
   const [rows, setRows] = useState<ForecastRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -92,103 +88,74 @@ export function JodaynForecastsPage() {
 
   return (
     <FinancePage title={t('revenueForecasts')}>
-      <FinanceTabs
-        active={view}
-        onChange={setView}
-        extra={<FinanceCreateButton label={t('addForecast')} onClick={() => navigate('/jodayn/forecasts/new')} />}
-      />
+      <div className="finance-tabs">
+        <FinanceCreateButton label={t('addForecast')} onClick={() => navigate('/jodayn/forecasts/new')} />
+      </div>
 
-      {view === 'generator' ? (
-        <FinanceGenerator
-          title="مولّد العروض التقديمية - توقعات الإيرادات"
-          data={
-            rows[0]
-              ? {
-                  project: {
-                    name: 'توقعات الإيرادات',
-                    code: rows[0].period,
-                    department: 'توقعات الإيرادات — جودين',
-                    projectManager: '—',
-                    sponsor: '—',
-                    statusLabel: `${rows.length} توقع`,
-                    budget: expected,
-                    spent: actual,
-                    budgetCurrency: 'SAR',
-                  },
-                  outputs: rows.slice(0, 4).map((r) => `${r.name} — ${r.entity} — ${formatAmount(r.actual)} من ${formatAmount(r.expected)}`),
-                  sourceLabel: `بيانات حية — ${rows.length} توقع`,
-                }
-              : null
-          }
-        />
-      ) : (
-        <>
-          <div className="finance-cards">
-            <div className="finance-card finance-card--plain">
-              <div className="finance-card__top">
-                <span className="finance-card__label">إجمالي الإيرادات المتوقعة للفترة الحالية</span>
-              </div>
-              <div className="finance-card__value-row">
-                <span className="finance-card__value" style={{ marginTop: 0 }}>
-                  {formatAmount(expected)}
-                </span>
-                <span className="finance-card__unit">ريال</span>
-              </div>
-            </div>
-
-            <div className="finance-card finance-card--plain">
-              <div className="finance-card__top">
-                <span className="finance-card__label">الإيراد الفعلي المحقق حتى الآن</span>
-              </div>
-              <div className="finance-card__value-row">
-                <span className="finance-card__value" style={{ marginTop: 0 }}>
-                  {formatAmount(actual)}
-                </span>
-                <span className="finance-card__unit">ريال</span>
-              </div>
-            </div>
-
-            <div className="finance-card finance-card--plain">
-              <div className="finance-card__top">
-                <span className="finance-card__label">الميزانية</span>
-              </div>
-              <div className="finance-budget__row finance-budget__row--legend">
-                <span className="finance-budget__legend-expected">المتوقع</span>
-                <span className="finance-budget__legend-actual">الفعلي</span>
-              </div>
-              <div className="finance-budget__track">
-                <div className="finance-budget__fill" style={{ width: `${percent}%` }} />
-              </div>
-              <div className="finance-budget__row finance-budget__row--values">
-                <span className="finance-budget__value">{formatAmount(expected)}</span>
-                <span className="finance-budget__value">{formatAmount(actual)}</span>
-              </div>
-            </div>
+      <div className="finance-cards">
+        <div className="finance-card finance-card--plain">
+          <div className="finance-card__top">
+            <span className="finance-card__label">إجمالي الإيرادات المتوقعة للفترة الحالية</span>
           </div>
+          <div className="finance-card__value-row">
+            <span className="finance-card__value" style={{ marginTop: 0 }}>
+              {formatAmount(expected)}
+            </span>
+            <span className="finance-card__unit">ريال</span>
+          </div>
+        </div>
 
-          <FinanceTable
-            headers={['اسم', 'الفترة الزمنية', 'الجهة', 'الإيراد المتوقع', 'الإيراد الفعلي المحقق', 'الحالة']}
-            loading={loading}
-            empty={rows.length === 0}
-          >
-            {rows.map((row) => (
-              <FinanceRow key={row.key} onOpen={() => navigate(`/jodayn/forecasts/${row.key}`)}>
-                <td>{row.name}</td>
-                <td className="finance-muted">{row.period}</td>
-                <td>{row.entity}</td>
-                <td>{formatAmount(row.expected)}</td>
-                <td>{formatAmount(row.actual)}</td>
-                <td>
-                  <span className="finance-status finance-status--active">
-                    <CheckCircle2 size={14} strokeWidth={2.4} />
-                    {row.achieved ? 'محقق' : 'قيد التحقيق'}
-                  </span>
-                </td>
-              </FinanceRow>
-            ))}
-          </FinanceTable>
-        </>
-      )}
+        <div className="finance-card finance-card--plain">
+          <div className="finance-card__top">
+            <span className="finance-card__label">الإيراد الفعلي المحقق حتى الآن</span>
+          </div>
+          <div className="finance-card__value-row">
+            <span className="finance-card__value" style={{ marginTop: 0 }}>
+              {formatAmount(actual)}
+            </span>
+            <span className="finance-card__unit">ريال</span>
+          </div>
+        </div>
+
+        <div className="finance-card finance-card--plain">
+          <div className="finance-card__top">
+            <span className="finance-card__label">الميزانية</span>
+          </div>
+          <div className="finance-budget__row finance-budget__row--legend">
+            <span className="finance-budget__legend-expected">المتوقع</span>
+            <span className="finance-budget__legend-actual">الفعلي</span>
+          </div>
+          <div className="finance-budget__track">
+            <div className="finance-budget__fill" style={{ width: `${percent}%` }} />
+          </div>
+          <div className="finance-budget__row finance-budget__row--values">
+            <span className="finance-budget__value">{formatAmount(expected)}</span>
+            <span className="finance-budget__value">{formatAmount(actual)}</span>
+          </div>
+        </div>
+      </div>
+
+      <FinanceTable
+        headers={['اسم', 'الفترة الزمنية', 'الجهة', 'الإيراد المتوقع', 'الإيراد الفعلي المحقق', 'الحالة']}
+        loading={loading}
+        empty={rows.length === 0}
+      >
+        {rows.map((row) => (
+          <FinanceRow key={row.key} onOpen={() => navigate(`/jodayn/forecasts/${row.key}`)}>
+            <td>{row.name}</td>
+            <td className="finance-muted">{row.period}</td>
+            <td>{row.entity}</td>
+            <td>{formatAmount(row.expected)}</td>
+            <td>{formatAmount(row.actual)}</td>
+            <td>
+              <span className="finance-status finance-status--active">
+                <CheckCircle2 size={14} strokeWidth={2.4} />
+                {row.achieved ? 'محقق' : 'قيد التحقيق'}
+              </span>
+            </td>
+          </FinanceRow>
+        ))}
+      </FinanceTable>
     </FinancePage>
   )
 }

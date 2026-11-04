@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Presentation } from 'lucide-react'
 import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useOutletContext } from 'react-router-dom'
@@ -9,11 +8,9 @@ import type { ClientRole } from '../../auth/clientAuth'
 import { getClientToken } from '../../auth/clientAuth'
 import { canCreateDraft } from '../../auth/permissions'
 import { ProjectsListView } from '../../components/senior/ProjectsListView'
-import { PptGeneratorFrame } from '../../features/portal'
 
 type ProjectUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
 type ProjectFilter = 'all' | 'onTrack' | 'delayed' | 'completed' | 'draft' | 'pending' | 'approved' | 'rejected'
-type ViewMode = 'list' | 'ppt'
 
 type ProjectRow = {
   key: string
@@ -58,7 +55,6 @@ export function ClientProjectsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { role } = useOutletContext<{ role: ClientRole }>()
-  const [view, setView] = useState<ViewMode>('list')
   const [rows, setRows] = useState<ProjectRow[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
@@ -119,7 +115,6 @@ export function ClientProjectsPage() {
     [rows, activeFilter],
   )
 
-  const first = filteredRows[0] ?? rows[0]
 
   return (
     <ProjectsListView
@@ -148,43 +143,6 @@ export function ClientProjectsPage() {
         { key: 'draft', label: t('approvalStatusDraft'), count: filterCounts.draft },
         { key: 'rejected', label: t('approvalStatusRejected'), count: filterCounts.rejected },
       ]}
-      toolbarExtra={
-        <button
-          type="button"
-          className={`sc-btn-outline${view === 'ppt' ? ' sc-btn-outline--active' : ''}`}
-          onClick={() => setView((current) => (current === 'ppt' ? 'list' : 'ppt'))}
-        >
-          <Presentation size={17} />
-          <span>{view === 'ppt' ? t('listTab') : t('pptGeneratorTab')}</span>
-        </button>
-      }
-    >
-      {view === 'ppt' ? (
-        <section className="sc-table-wrap sp-ppt">
-          <PptGeneratorFrame
-            title="مولّد العروض التقديمية - المشاريع"
-            data={
-              first
-                ? {
-                    project: {
-                      name: first.name,
-                      code: first.key.slice(0, 8).toUpperCase(),
-                      department: 'مشاريع العميل',
-                      endDate: first.endDate,
-                      statusLabel: first.rawStatus,
-                      progress: first.progress,
-                      ...(Number.isFinite(first.budget)
-                        ? { budget: first.budget, budgetCurrency: 'SAR' as const }
-                        : {}),
-                    },
-                    outputs: rows.slice(0, 4).map((r) => r.name),
-                    sourceLabel: `بيانات حية — ${rows.length} مشروع`,
-                  }
-                : null
-            }
-          />
-        </section>
-      ) : undefined}
-    </ProjectsListView>
+    />
   )
 }

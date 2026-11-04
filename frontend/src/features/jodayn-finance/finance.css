@@ -4,29 +4,29 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: #ffffff;
+  background: #f5f5f6;
 }
 
 .finance-topbar {
   display: flex;
   align-items: center;
-  height: 76px;
+  height: 75px;
   padding: 0 28px;
-  border-bottom: 1px solid oklch(0.93 0.008 150);
-  background: #fff;
+  border-bottom: 1px solid #e7e8eb;
+  background: #fafafa;
 }
 
 .finance-topbar__title {
   margin: 0;
-  font-size: 17px;
-  font-weight: 600;
-  color: oklch(0.28 0.015 160);
+  font-size: 20px;
+  font-weight: 500;
+  color: #0c0c0d;
 }
 
 .finance-body {
   flex: 1;
   padding: 26px 28px 40px;
-  background: linear-gradient(180deg, #ffffff 0%, oklch(0.965 0.02 155) 100%);
+  background: linear-gradient(180deg, #f5f5f6 0%, #d4ebd2 134.57%);
 }
 
 .finance-head {
@@ -87,19 +87,6 @@
 .finance-btn--outline:hover {
   border-color: oklch(0.72 0.16 158);
   color: oklch(0.6 0.15 160);
-}
-
-/* مولد العروض should always blend into the page background rather than sit
-   as a solid box on top of the finance-body gradient, regardless of tab state. */
-.finance-btn--generator {
-  background: transparent !important;
-  color: oklch(0.2 0.01 160) !important;
-  border-color: oklch(0.86 0.01 150) !important;
-}
-
-.finance-btn--generator:hover {
-  border-color: oklch(0.72 0.16 158);
-  color: oklch(0.6 0.15 160) !important;
 }
 
 .finance-tabs {
@@ -542,10 +529,6 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-}
-
-.finance-generator {
-  margin-top: 4px;
 }
 
 @media (max-width: 640px) {

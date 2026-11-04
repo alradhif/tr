@@ -2,8 +2,15 @@ import { useEffect, useState } from 'react'
 import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { createCompany, createCompanyTeamMember, getAssignableOrgUsers, type OrgUser } from '../../api/org'
+import {
+  createCompany,
+  createCompanyTeamMember,
+  getAssignableOrgUsers,
+  uploadCompanyLogo,
+  type OrgUser,
+} from '../../api/org'
 import { getOrgToken } from '../../auth/orgAuth'
+import { CompanyLogoPicker } from '../../components/ui/CompanyLogoPicker'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { SubpageHeader } from '../../components/ui'
 import '../../design/departments.css'
@@ -20,6 +27,7 @@ export function OrgAddCompanyPage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [owner, setOwner] = useState('')
+  const [logo, setLogo] = useState<{ file: File; preview: string } | null>(null)
   const [users, setUsers] = useState<OrgUser[]>([])
   const [team, setTeam] = useState<LocalMember[]>([])
   const [showTeamForm, setShowTeamForm] = useState(false)
@@ -70,6 +78,7 @@ export function OrgAddCompanyPage() {
         description: description.trim() || undefined,
         managerName: owner.trim() || undefined,
       })
+      if (logo) await uploadCompanyLogo(token, company.id, logo.file)
       await Promise.all(
         team.map((member) =>
           createCompanyTeamMember(token, company.id, {
@@ -100,6 +109,11 @@ export function OrgAddCompanyPage() {
         <form onSubmit={onSubmit} className="nc-form">
           <div className="department-card">
             <h2 className="department-card__title">معلومات الشركة</h2>
+            <CompanyLogoPicker
+              src={logo?.preview ?? null}
+              onPick={(file, preview) => setLogo({ file, preview })}
+              onRemove={() => setLogo(null)}
+            />
             <label htmlFor="nc-name">
               اسم الشركة
               <input

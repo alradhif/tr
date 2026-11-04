@@ -21,14 +21,12 @@ import { downloadCsv } from '../../api/me'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import { SubpageHeader } from '../../components/ui'
 import { TrendKpiRow } from '../../components/senior/TrendKpiCard'
-import { FinanceDetails, formatAmount, formatDate } from '../../features/jodayn-finance/FinanceParts'
+import { formatAmount } from '../../features/jodayn-finance/FinanceParts'
 import { nextStatusFilter, projectStatusClass, STATUS_META, type StatusClass } from '../org/orgEntityUi'
 import { reportName, reportTypeLabel } from './labels'
 import '../../design/senior-companies.css'
 
 const tabs = ['المشاريع', 'التقارير', 'الموظفين'] as const
-
-type ClientProject = JodaynClientDetail['projects'][number]
 
 function Field({ icon: Icon, label, value }: { icon: typeof User; label: string; value: string }) {
   return (
@@ -59,7 +57,6 @@ export function JodaynClientDetailPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<(typeof tabs)[number]>('المشاريع')
   const [statusFilter, setStatusFilter] = useState<StatusClass | 'all'>('all')
-  const [opened, setOpened] = useState<ClientProject | null>(null)
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -265,7 +262,7 @@ export function JodaynClientDetailPage() {
                             type="button"
                             aria-label={`تفاصيل ${project.name}`}
                             className="sc-btn-action"
-                            onClick={() => setOpened(project)}
+                            onClick={() => navigate(`/jodayn/projects/client/${project.id}`)}
                           >
                             <ChevronLeft size={18} />
                           </button>
@@ -325,20 +322,6 @@ export function JodaynClientDetailPage() {
         ) : null}
       </div>
 
-      {opened ? (
-        <FinanceDetails
-          title={opened.name}
-          onClose={() => setOpened(null)}
-          fields={[
-            { label: t('progress'), value: `${opened.progressPct || 0}%` },
-            { label: 'الحالة', value: STATUS_META[projectStatusClass(opened.status)] },
-            { label: 'الميزانية', value: `${formatAmount(opened.budget)} ريال` },
-            { label: 'تاريخ البدء', value: formatDate(opened.startDate) },
-            { label: 'تاريخ الانتهاء', value: formatDate(opened.endDate) },
-            { label: 'المخرجات', value: opened._count?.deliverables ?? 0 },
-          ]}
-        />
-      ) : null}
     </div>
   )
 }

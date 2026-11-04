@@ -1082,3 +1082,42 @@
   height: 150px;
   flex-shrink: 0;
 }
+
+/* Today's alerts rows, as in the Figma dashboard frame. */
+.widget-today-alerts .alert-item {
+  width: 100%;
+  gap: 12px;
+  padding: 7px 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: right;
+}
+
+.widget-today-alerts .alert-item--link {
+  cursor: pointer;
+}
+
+.widget-today-alerts .alert-item__icon {
+  width: 44px;
+  height: 44px;
+}
+
+.widget-today-alerts .alert-item__title {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  color: #0c0c0d;
+}
+
+.widget-today-alerts .alert-item__subtitle {
+  font-size: 12px;
+  line-height: 18px;
+  color: #8e8f97;
+}
+
+.widget-today-alerts .alert-item__time {
+  font-size: 12px;
+  line-height: 18px;
+  color: #8e8f97;
+}

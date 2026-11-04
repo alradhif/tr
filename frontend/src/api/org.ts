@@ -66,6 +66,7 @@ export type ExecutingCompany = {
   phone?: string | null
   teamCount: number
   description?: string | null
+  logoUrl?: string | null
   isActive: boolean
 }
 
@@ -186,6 +187,8 @@ export type CompanyPayload = {
   phone?: string
   description?: string
   teamCount?: number
+  /** Only null is accepted, to remove the logo; a new one goes through uploadCompanyLogo. */
+  logoUrl?: null
 }
 
 export function createCompany(token: string, data: CompanyPayload) {
@@ -208,6 +211,16 @@ export function updateCompany(token: string, id: string, data: Partial<CompanyPa
     method: 'PATCH',
     token,
     body: JSON.stringify(data),
+  })
+}
+
+export function uploadCompanyLogo(token: string, id: string, file: File) {
+  const body = new FormData()
+  body.append('logo', file)
+  return apiRequest<{ success: boolean; company: ExecutingCompany }>(`/org/companies/${id}/logo`, {
+    method: 'POST',
+    token,
+    body,
   })
 }
 
