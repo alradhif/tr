@@ -1,6 +1,7 @@
 const crypto = require('crypto')
 const bcrypt = require('bcryptjs')
 const prisma = require('../lib/prisma')
+const { sendPasswordResetEmail } = require('../lib/mailer')
 const {
   MIN_PASSWORD_LENGTH,
   activateInvite,
@@ -49,17 +50,17 @@ async function updatePasswordByType(userId, type, hashedPassword) {
     case 'JODAYN':
       return prisma.jodaynUser.update({
         where: { id: userId },
-        data: { password: hashedPassword, pendingActivation: false }
+        data: { password: hashedPassword, pendingActivation: false, mustChangePassword: false }
       })
     case 'ORG':
       return prisma.orgUser.update({
         where: { id: userId },
-        data: { password: hashedPassword, pendingActivation: false }
+        data: { password: hashedPassword, pendingActivation: false, mustChangePassword: false }
       })
     case 'CLIENT':
       return prisma.clientUser.update({
         where: { id: userId },
-        data: { password: hashedPassword, pendingActivation: false }
+        data: { password: hashedPassword, pendingActivation: false, mustChangePassword: false }
       })
     default:
       throw new Error('Invalid actor type')
@@ -225,11 +226,12 @@ exports.forgotPassword = async (req, res) => {
       }
     })
 
-    console.log(`[forgot-password] type=${actorType} email=${email} token=${token}`)
+    const emailed = await sendPasswordResetEmail({ email: user.email, token })
+    if (!emailed) console.log(`[forgot-password] type=${actorType} email=${email} token=${token}`)
 
     const payload = { success: true }
-    // No email delivery yet: hand the token back outside production and on the demo
-    if (process.env.NODE_ENV !== 'production' || isDemoEnvironment()) {
+    // Without email delivery, hand the token back outside production and on the demo
+    if (!emailed && (process.env.NODE_ENV !== 'production' || isDemoEnvironment())) {
       payload.token = token
     }
 

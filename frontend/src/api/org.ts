@@ -24,7 +24,7 @@ export type OrgUser = {
 export type CreatePortalUserResult = {
   success: boolean
   user: OrgUser
-  temporaryPassword: string
+  temporaryPassword: string; emailSent?: boolean
 }
 
 export function createOrgUser(
@@ -259,7 +259,7 @@ export function deleteCompanyTeamMember(token: string, id: string, memberId: str
 
 /** New one-time initial password for an invited user who has not signed in yet. */
 export function resetOrgUserCredentials(token: string, id: string) {
-  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string }>(
+  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string; emailSent?: boolean }>(
     `/org/users/${id}/credentials`,
     { method: 'POST', token },
   )

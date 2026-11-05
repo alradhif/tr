@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const prisma = require('./prisma')
+const { sendLoginCodeEmail } = require('./mailer')
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const OTP_TTL_MS = 5 * 60 * 1000
@@ -93,7 +94,7 @@ async function activateInvite(token, password) {
   if (claimed.count !== 1) return null
   await modelFor(invite.actorType).update({
     where: { id: user.id },
-    data: { password: hashed, pendingActivation: false },
+    data: { password: hashed, pendingActivation: false, mustChangePassword: false },
   })
   return { user, actorType: invite.actorType }
 }
@@ -106,14 +107,20 @@ function challengeCodeHash(challengeId, code) {
   return hashSecret(`${challengeId}:${code}`)
 }
 
-function challengeResponse(challenge, code) {
+/** Emails the login code to the account; returns whether it was sent. */
+async function deliverLoginCode(actorType, userId, code) {
+  const user = await findAccountById(actorType, userId)
+  return user ? sendLoginCodeEmail({ email: user.email, code }) : false
+}
+
+function challengeResponse(challenge, code, emailed) {
   const payload = {
     otpRequired: true,
     challengeId: challenge.id,
     expiresAt: challenge.expiresAt.toISOString(),
     resendAfterSeconds: Math.round(OTP_RESEND_MS / 1000),
   }
-  if (exposeSecretsInResponse()) payload.demoCode = code
+  if (!emailed && exposeSecretsInResponse()) payload.demoCode = code
   return payload
 }
 
@@ -129,8 +136,9 @@ async function startLoginChallenge(userId, actorType) {
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
     },
   })
-  console.log(`[login-otp] type=${actorType} userId=${userId} challenge=${id} code=${code}`)
-  return challengeResponse(challenge, code)
+  const emailed = await deliverLoginCode(actorType, userId, code)
+  if (!emailed) console.log(`[login-otp] type=${actorType} userId=${userId} challenge=${id} code=${code}`)
+  return challengeResponse(challenge, code, emailed)
 }
 
 async function resendLoginChallenge(challengeId) {
@@ -146,8 +154,9 @@ async function resendLoginChallenge(challengeId) {
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
     },
   })
-  console.log(`[login-otp] resend challenge=${challenge.id} code=${code}`)
-  return { response: challengeResponse(updated, code) }
+  const emailed = await deliverLoginCode(challenge.actorType, challenge.userId, code)
+  if (!emailed) console.log(`[login-otp] resend challenge=${challenge.id} code=${code}`)
+  return { response: challengeResponse(updated, code, emailed) }
 }
 
 /** Checks a login code. Returns { user, actorType } on success or { error } otherwise. */
@@ -243,6 +252,7 @@ function publicSessionUser(user, type) {
     clientId: user.clientId,
     orgName: user.org?.name || null,
     clientName: user.client?.name || null,
+    mustChangePassword: Boolean(user.mustChangePassword),
   }
 }
 

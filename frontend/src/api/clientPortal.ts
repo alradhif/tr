@@ -85,7 +85,7 @@ export function createClientUser(
   token: string,
   data: { name: string; email: string; accessLevel: 'UPPER' | 'DATA_ENTRY' },
 ) {
-  return apiRequest<{ success: boolean; user: ClientUser; temporaryPassword: string }>('/client/users', {
+  return apiRequest<{ success: boolean; user: ClientUser; temporaryPassword: string; emailSent?: boolean }>('/client/users', {
     method: 'POST',
     token,
     body: JSON.stringify(data),
@@ -233,7 +233,7 @@ export function deleteClientProjectAttachment(token: string, projectId: string, 
 
 /** New one-time initial password for an invited user who has not signed in yet. */
 export function resetClientUserCredentials(token: string, id: string) {
-  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string }>(
+  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string; emailSent?: boolean }>(
     `/client/users/${id}/credentials`,
     { method: 'POST', token },
   )

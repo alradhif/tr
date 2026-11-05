@@ -91,7 +91,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
   const [details, setDetails] = useState<TenantDetails | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
-  const [credentials, setCredentials] = useState<{ name: string; email: string; temporaryPassword: string } | null>(null);
+  const [credentials, setCredentials] = useState<{ name: string; email: string; temporaryPassword: string; emailSent?: boolean } | null>(null);
 
   const loadDetails = useCallback(async () => {
     const token = getSuperAdminToken();
@@ -256,7 +256,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
     if (!window.confirm('إصدار كلمة مرور مؤقتة جديدة؟ سيعود الحساب «غير نشط» حتى أول دخول.')) return;
     try {
       const result = await resetPlatformUserCredentials(token, ref.kind, userId);
-      setCredentials({ name: result.user.name, email: result.user.email, temporaryPassword: result.temporaryPassword });
+      setCredentials({ name: result.user.name, email: result.user.email, temporaryPassword: result.temporaryPassword, emailSent: result.emailSent });
       await loadDetails();
     } catch (err) {
       setNotice({ ok: false, text: err instanceof Error ? err.message : 'تعذر إصدار بيانات الدخول' });
@@ -631,6 +631,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
           name={credentials.name}
           email={credentials.email}
           temporaryPassword={credentials.temporaryPassword}
+          emailSent={credentials.emailSent}
           reissued
           onClose={() => setCredentials(null)}
         />

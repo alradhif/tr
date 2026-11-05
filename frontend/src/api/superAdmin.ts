@@ -213,7 +213,7 @@ export function updatePlatformUser(
 }
 
 export function resetPlatformUserCredentials(token: string, portal: 'org' | 'client' | 'jodayn', id: string) {
-  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string }>(
+  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string; emailSent?: boolean }>(
     `/super-admin/users/${portal}/${id}/credentials`,
     { method: 'POST', token },
   )
@@ -308,6 +308,7 @@ export function createTenant(
     client?: ClientAccount
     jodaynUser?: JodaynAccount
       temporaryPassword?: string | null
+    emailSent?: boolean
     manager?: { id: string; name: string; email: string }
   }>('/super-admin/tenants', {
     method: 'POST',
@@ -386,7 +387,7 @@ export function createPlatformUser(
     success: boolean
     message?: string
     user: PlatformUser
-    temporaryPassword: string
+    temporaryPassword: string; emailSent?: boolean
   }>('/super-admin/users', {
     method: 'POST',
     token,

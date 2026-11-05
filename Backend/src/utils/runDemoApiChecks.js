@@ -220,11 +220,19 @@ async function main() {
   expect(activatedRow?.pendingActivation === false && Boolean(activatedRow?.activatedAt) && Boolean(activatedRow?.lastLoginAt), 'first successful login activates the account (نشط)')
   const firstLoginLog = await prisma.activityLog.findFirst({ where: { userId: activatedRow?.id, action: 'FIRST_LOGIN' } })
   expect(Boolean(firstLoginLog), 'first login recorded in the activity log')
+  // A temporary password blocks everything until it is changed.
+  expect(activatedRow?.mustChangePassword === true && invitedLogin.data.user?.mustChangePassword === true, 'first login reports that the temporary password must change')
+  const blockedDashboard = await request('/org/dashboard', {}, invitedLogin.data.token)
+  expect(blockedDashboard.status === 403 && blockedDashboard.data.code === 'PASSWORD_CHANGE_REQUIRED', 'temporary password blocks the portal until it is changed')
+  const changedPassword = await request('/me/password', { method: 'POST', body: JSON.stringify({ currentPassword: activationPassword, newPassword: `${activationPassword}x` }) }, invitedLogin.data.token)
+  expect(changedPassword.status === 200, 'invited user changes the temporary password')
+  const oldTemporary = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email: inviteEmail, password: activationPassword }) })
+  expect(oldTemporary.status === 400, 'temporary password stops working once changed')
   const reissueAfter = await request(`/org/users/${invited.data.user?.id}/credentials`, { method: 'POST' }, sessions.ORG_UPPER_MGMT.token)
   expect(reissueAfter.status === 400, 'cannot reissue initial credentials for an active account')
   const invitedDashboard = await request('/org/dashboard', {}, invitedLogin.data.token)
   expect(invitedDashboard.status === 200, 'activated user session loads org data')
-  const invitedPassword = activationPassword
+  const invitedPassword = `${activationPassword}x`
 
   const selfToggle = await request(`/org/users/${sessions.ORG_UPPER_MGMT.user.id}/toggle`, { method: 'PATCH' }, sessions.ORG_UPPER_MGMT.token)
   expect(selfToggle.status === 400, 'cannot deactivate own account')

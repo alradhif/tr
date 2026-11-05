@@ -80,6 +80,7 @@ export function UsersPage() {
     accessLevel: AccessLevel
     email: string
     temporaryPassword: string
+    emailSent?: boolean
     name: string
   } | null>(null)
   const [copied, setCopied] = useState<'email' | 'password' | null>(null)
@@ -87,7 +88,7 @@ export function UsersPage() {
   const [search, setSearch] = useState(() => new URLSearchParams(location.search).get('q') ?? '')
   const [rowBusy, setRowBusy] = useState<string | null>(null)
   const [rowError, setRowError] = useState<string | null>(null)
-  const [reissued, setReissued] = useState<{ name: string; email: string; temporaryPassword: string } | null>(null)
+  const [reissued, setReissued] = useState<{ name: string; email: string; temporaryPassword: string; emailSent?: boolean } | null>(null)
 
   const portalKey = (user: PlatformUser) => String(user.portalType).toLowerCase() as 'org' | 'client' | 'jodayn'
 
@@ -192,6 +193,7 @@ export function UsersPage() {
         accessLevel: form.accessLevel as AccessLevel,
         email: result.user.email,
         temporaryPassword: result.temporaryPassword,
+        emailSent: result.emailSent,
         name: result.user.name,
       })
       setForm(BLANK)
@@ -234,6 +236,10 @@ export function UsersPage() {
                 <dd>
                   {PORTAL_LABEL[created.portalType]} — {ACCESS_LABEL[created.accessLevel]}
                 </dd>
+              </div>
+              <div>
+                <dt>الدعوة</dt>
+                <dd>{created.emailSent ? 'أُرسلت بالإيميل' : 'لم تُرسل، انسخ البيانات وأرسلها يدوياً'}</dd>
               </div>
               <div>
                 <dt>Email</dt>
@@ -516,7 +522,7 @@ export function UsersPage() {
                     if (!window.confirm('إصدار كلمة مرور مؤقتة جديدة؟ سيعود الحساب «غير نشط» حتى أول دخول.')) return
                     void runRow(user, async (token) => {
                       const result = await resetPlatformUserCredentials(token, portalKey(user), user.id)
-                      setReissued({ name: result.user.name, email: result.user.email, temporaryPassword: result.temporaryPassword })
+                      setReissued({ name: result.user.name, email: result.user.email, temporaryPassword: result.temporaryPassword, emailSent: result.emailSent })
                     })
                   }}
                 >
@@ -534,6 +540,7 @@ export function UsersPage() {
           name={reissued.name}
           email={reissued.email}
           temporaryPassword={reissued.temporaryPassword}
+          emailSent={reissued.emailSent}
           reissued
           onClose={() => setReissued(null)}
         />

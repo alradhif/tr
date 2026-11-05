@@ -114,7 +114,10 @@ exports.changePassword = async (req, res) => {
     }
     await MODELS[req.user.type]().update({
       where: { id: user.id },
-      data: { password: await bcrypt.hash(String(newPassword), 10) },
+      data: {
+        password: await bcrypt.hash(String(newPassword), 10),
+        ...(req.user.type === 'SUPER_ADMIN' ? {} : { mustChangePassword: false }),
+      },
     })
     await writeAuditLog({
       action: 'UPDATE',

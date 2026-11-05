@@ -222,6 +222,7 @@ model JodaynUser {
   role              JodaynRole
   isActive          Boolean    @default(true)
   pendingActivation Boolean    @default(false)
+  mustChangePassword Boolean @default(false)
   activatedAt       DateTime?
   lastLoginAt       DateTime?
   createdAt         DateTime   @default(now())
@@ -413,6 +414,7 @@ model OrgUser {
   role              OrgRole
   isActive          Boolean    @default(true)
   pendingActivation Boolean    @default(false)
+  mustChangePassword Boolean @default(false)
   activatedAt       DateTime?
   lastLoginAt       DateTime?
   orgId             String
@@ -936,6 +938,7 @@ model ClientUser {
   role              ClientRole
   isActive          Boolean       @default(true)
   pendingActivation Boolean       @default(false)
+  mustChangePassword Boolean @default(false)
   activatedAt       DateTime?
   lastLoginAt       DateTime?
   clientId          String

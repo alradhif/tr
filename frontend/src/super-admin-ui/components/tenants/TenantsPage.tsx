@@ -102,7 +102,7 @@ export function TenantsPage() {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState('');
   const [confirming, setConfirming] = useState(false);
-  const [createdCredentials, setCreatedCredentials] = useState<{ name: string; email: string; temporaryPassword: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ name: string; email: string; temporaryPassword: string; emailSent?: boolean } | null>(null);
   const [search, setSearch] = useState('');
   const location = useLocation();
   const contextTenants = useTenants();
@@ -237,6 +237,7 @@ export function TenantsPage() {
           name: created.manager?.name || created.jodaynUser?.name || draft.managerName,
           email: created.manager?.email || created.jodaynUser?.email || draft.managerEmail,
           temporaryPassword: created.temporaryPassword,
+          emailSent: created.emailSent,
         });
       }
 
@@ -488,6 +489,7 @@ export function TenantsPage() {
           name={createdCredentials.name}
           email={createdCredentials.email}
           temporaryPassword={createdCredentials.temporaryPassword}
+          emailSent={createdCredentials.emailSent}
           onClose={() => setCreatedCredentials(null)}
         />
       ) : null}

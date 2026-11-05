@@ -7,10 +7,12 @@ type CredentialsModalProps = {
   email: string
   temporaryPassword: string
   reissued?: boolean
+  /** The invitation with these credentials has already gone out by email. */
+  emailSent?: boolean
   onClose: () => void
 }
 
-export function CredentialsModal({ name, email, temporaryPassword, reissued = false, onClose }: CredentialsModalProps) {
+export function CredentialsModal({ name, email, temporaryPassword, reissued = false, emailSent = false, onClose }: CredentialsModalProps) {
   const [copied, setCopied] = useState<'email' | 'password' | null>(null)
 
   async function copy(kind: 'email' | 'password', value: string) {
@@ -42,7 +44,10 @@ export function CredentialsModal({ name, email, temporaryPassword, reissued = fa
         </div>
         <div className="td-add-user-modal__divider" />
         <p className="td-credentials-hint">
-          انسخ بيانات الدخول لـ {name} الآن. لن تظهر كلمة المرور مرة أخرى. يبقى الحساب «غير نشط» حتى أول تسجيل دخول ناجح.
+          {emailSent
+            ? `أرسلنا بيانات الدخول إلى إيميل ${name}. احتفظ بها هنا احتياطاً، فلن تظهر كلمة المرور مرة أخرى.`
+            : `انسخ بيانات الدخول لـ ${name} الآن، فلم يُرسل إيميل ولن تظهر كلمة المرور مرة أخرى.`}{' '}
+          يبقى الحساب «غير نشط» حتى أول تسجيل دخول ناجح، ويُطلب منه تغيير كلمة المرور.
         </p>
         <div className="td-add-user-form">
           <label className="td-add-user-field">

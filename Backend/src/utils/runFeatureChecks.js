@@ -311,6 +311,8 @@ async function main() {
   const after = (details.data.users || []).find((u) => u.email === managerEmail)
   expect(after && !after.pendingActivation, 'manager becomes active (نشط) after first login', after)
   const newToken = firstLogin.data.token
+  const changedManagerPassword = await request('/me/password', json('POST', { currentPassword: tempPassword, newPassword: `${tempPassword}x` }), newToken)
+  expect(changedManagerPassword.status === 200, 'new manager changes the temporary password')
 
   // Tenant isolation: the new org sees none of the demo org's projects
   const otherProjects = await request('/org/projects', {}, newToken)
@@ -331,7 +333,7 @@ async function main() {
   expect(suspend.status === 200, 'super admin suspends the tenant')
   const blocked = await request('/org/projects', {}, newToken)
   expect(blocked.status === 401 && blocked.data.code === 'SUSPENDED', 'suspended tenant session is rejected')
-  const blockedLogin = await request('/auth/login', json('POST', { email: managerEmail, password: tempPassword }))
+  const blockedLogin = await request('/auth/login', json('POST', { email: managerEmail, password: `${tempPassword}x` }))
   expect(blockedLogin.status === 403, 'suspended tenant cannot sign in')
   await request(`/super-admin/accounts/org/${orgId}`, json('PATCH', { isActive: true }), saToken)
   const restored = await request('/org/projects', {}, newToken)

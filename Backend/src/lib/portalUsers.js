@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const prisma = require('./prisma')
 const { resolveInviteRole } = require('./passwords')
 const { writeAuditLog } = require('./audit')
+const { sendInviteEmail } = require('./mailer')
 
 const PORTALS = {
   ORG: { model: () => prisma.orgUser, scopeKey: 'orgId', table: 'org_users' },
@@ -76,6 +77,7 @@ async function createInvitedUser({ type, name, email, role, scopeId, invitedBy, 
     role,
     isActive: true,
     pendingActivation: true,
+    mustChangePassword: true,
   }
   if (portal.scopeKey) data[portal.scopeKey] = scopeId
   const user = await portal.model().create({ data, select: USER_SELECT })
@@ -87,7 +89,8 @@ async function createInvitedUser({ type, name, email, role, scopeId, invitedBy, 
     performedBy: invitedBy,
     actorType: invitedByType || type,
   }).catch(() => {})
-  return { user, temporaryPassword }
+  const emailSent = await sendInviteEmail({ name: user.name, email: user.email, temporaryPassword })
+  return { user, temporaryPassword, emailSent }
 }
 
 function sendError(res, err) {
@@ -119,7 +122,7 @@ function portalUserHandlers(type) {
         const role = resolveInviteRole(req.body, type)
         const scopeId = scopeOf(req, type)
         if (portal.scopeKey && !scopeId) return res.status(403).json({ message: 'Account scope required' })
-        const { user, temporaryPassword } = await createInvitedUser({
+        const { user, temporaryPassword, emailSent } = await createInvitedUser({
           type,
           name: req.body.name,
           email: req.body.email,
@@ -128,7 +131,7 @@ function portalUserHandlers(type) {
           invitedBy: req.user.userId,
           invitedByType: req.user.type,
         })
-        res.json({ success: true, user, temporaryPassword })
+        res.json({ success: true, user, temporaryPassword, emailSent })
       } catch (err) {
         sendError(res, err)
       }
@@ -189,18 +192,20 @@ function portalUserHandlers(type) {
     resetCredentials: async (req, res) => {
       try {
         const current = await loadScopedUser(req, type)
-        if (!current.pendingActivation) {
+        if (!current.pendingActivation && !current.mustChangePassword) {
           return res.status(400).json({ message: 'تم تفعيل هذا الحساب مسبقاً' })
         }
         const temporaryPassword = generateTemporaryPassword()
         await portal.model().update({
           where: { id: current.id },
-          data: { password: await bcrypt.hash(temporaryPassword, 10) },
+          data: { password: await bcrypt.hash(temporaryPassword, 10), mustChangePassword: true },
         })
+        const emailSent = await sendInviteEmail({ name: current.name, email: current.email, temporaryPassword })
         res.json({
           success: true,
           user: { id: current.id, name: current.name, email: current.email },
           temporaryPassword,
+          emailSent,
         })
       } catch (err) {
         sendError(res, err)

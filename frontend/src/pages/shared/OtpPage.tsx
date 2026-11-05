@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { resendLoginCode, verifyLoginCode } from '../../api/auth'
 import { ApiError } from '../../api/client'
-import { clearPendingLogin, commitSession, getPendingLogin, setPendingLogin } from '../../auth/pendingLogin'
+import {
+  clearPendingLogin,
+  commitSession,
+  getPendingLogin,
+  setPendingLogin,
+  setPendingPasswordChange,
+} from '../../auth/pendingLogin'
 import { beginPostAuthLoading } from '../../auth/postAuthLoading'
 import { TwoFactor } from '../../super-admin-ui/components/auth/TwoFactor'
 
@@ -26,6 +32,11 @@ export function OtpPage() {
       onVerify={async (code) => {
         try {
           const session = await verifyLoginCode(pending.challengeId, code)
+          if (session.user.mustChangePassword) {
+            setPendingPasswordChange(session)
+            navigate('/change-password', { replace: true })
+            return
+          }
           const destination = commitSession(session.token, session.user)
           if (!destination) throw new Error('هذا الحساب غير مدعوم في النظام')
           beginPostAuthLoading(navigate, destination)

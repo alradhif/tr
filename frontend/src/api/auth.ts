@@ -10,6 +10,8 @@ export type AuthUser = {
   type?: 'SUPER_ADMIN' | 'JODAYN' | 'ORG' | 'CLIENT'
   orgName?: string | null
   clientName?: string | null
+  /** The account still holds a temporary password and must change it before anything else. */
+  mustChangePassword?: boolean
 }
 
 export type LoginResponse = {

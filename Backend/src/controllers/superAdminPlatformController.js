@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const { writeAuditLog } = require('../lib/audit')
 const { buildSuperAdminDashboard } = require('../lib/dashboardStats')
 const { createInvitedUser, generateTemporaryPassword, USER_SELECT } = require('../lib/portalUsers')
+const { sendInviteEmail } = require('../lib/mailer')
 const { createForUsers } = require('../lib/notify')
 const { deleteProjectFiles } = require('./projectAttachmentsController')
 
@@ -122,7 +123,7 @@ exports.createTenant = async (req, res) => {
     }
 
     if (tenantType === 'JODAYN') {
-      const { user, temporaryPassword } = await createInvitedUser({
+      const { user, temporaryPassword, emailSent } = await createInvitedUser({
         type: 'JODAYN',
         name: managerName || name,
         email: managerEmail,
@@ -130,7 +131,7 @@ exports.createTenant = async (req, res) => {
         invitedBy: req.user.userId,
         invitedByType: 'SUPER_ADMIN',
       })
-      return res.json({ success: true, tenantType, jodaynUser: { ...user, tenantType }, temporaryPassword })
+      return res.json({ success: true, tenantType, jodaynUser: { ...user, tenantType }, temporaryPassword, emailSent })
     }
 
     let sectorId = body.sectorId
@@ -214,6 +215,7 @@ exports.createTenant = async (req, res) => {
       [tenantType === 'ORG' ? 'org' : 'client']: payload,
       manager: manager.user,
       temporaryPassword: manager.temporaryPassword,
+      emailSent: manager.emailSent,
     })
   } catch (err) {
     fail(res, err)
@@ -494,7 +496,7 @@ exports.createPlatformUser = async (req, res) => {
         : null
       if (!account) return res.status(400).json({ message: 'اختر الجهة التابع لها المستخدم' })
     }
-    const { user, temporaryPassword } = await createInvitedUser({
+    const { user, temporaryPassword, emailSent } = await createInvitedUser({
       type: portalType,
       name: req.body?.name,
       email: req.body?.email,
@@ -508,6 +510,7 @@ exports.createPlatformUser = async (req, res) => {
       success: true,
       user: { ...user, portalType, accessLevel: accessLevel(user.role), [cfg.scopeKey || 'scope']: scopeId, ...userStatus(user) },
       temporaryPassword,
+      emailSent,
     })
   } catch (err) {
     fail(res, err)
@@ -555,7 +558,7 @@ exports.resetPlatformUserCredentials = async (req, res) => {
     const temporaryPassword = generateTemporaryPassword()
     await cfg.model().update({
       where: { id: current.id },
-      data: { password: await bcrypt.hash(temporaryPassword, 10), pendingActivation: true, activatedAt: null },
+      data: { password: await bcrypt.hash(temporaryPassword, 10), pendingActivation: true, activatedAt: null, mustChangePassword: true },
     })
     await writeAuditLog({
       action: 'UPDATE',
@@ -565,7 +568,8 @@ exports.resetPlatformUserCredentials = async (req, res) => {
       performedBy: req.user.userId,
       actorType: 'SUPER_ADMIN',
     })
-    res.json({ success: true, user: { id: current.id, name: current.name, email: current.email }, temporaryPassword })
+    const emailSent = await sendInviteEmail({ name: current.name, email: current.email, temporaryPassword })
+    res.json({ success: true, user: { id: current.id, name: current.name, email: current.email }, temporaryPassword, emailSent })
   } catch (err) {
     fail(res, err)
   }

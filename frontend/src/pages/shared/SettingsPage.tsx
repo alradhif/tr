@@ -23,7 +23,7 @@ import '../../design/settings-users.css'
 
 type SettingsTab = 'profile' | 'security' | 'notifications' | 'users'
 type PortalUser = OrgUser | ClientUser | JodaynUser
-type CreatedCredentials = { name: string; email: string; temporaryPassword: string; reissued?: boolean }
+type CreatedCredentials = { name: string; email: string; temporaryPassword: string; emailSent?: boolean; reissued?: boolean }
 
 const AVATAR_COLORS = ['#dbeafe', '#d1f0e1', '#e9d5ff', '#fde9ce', '#f4f4f5']
 
@@ -326,6 +326,7 @@ export function SettingsPage() {
         name: result.user.name,
         email: result.user.email,
         temporaryPassword: result.temporaryPassword,
+        emailSent: result.emailSent,
       })
       await loadUsers()
     } catch (error) {
@@ -350,6 +351,7 @@ export function SettingsPage() {
         name: row.name,
         email: row.email,
         temporaryPassword: result.temporaryPassword,
+        emailSent: result.emailSent,
         reissued: true,
       })
     } catch (error) {
@@ -634,6 +636,7 @@ export function SettingsPage() {
           name={credentials.name}
           email={credentials.email}
           temporaryPassword={credentials.temporaryPassword}
+          emailSent={credentials.emailSent}
           reissued={credentials.reissued}
           onClose={() => setCredentials(null)}
         />

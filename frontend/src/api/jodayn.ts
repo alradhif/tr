@@ -33,7 +33,7 @@ export function createJodaynUser(
   token: string,
   data: { name: string; email: string; accessLevel: 'UPPER' | 'DATA_ENTRY' },
 ) {
-  return apiRequest<{ success: boolean; user: JodaynUser; temporaryPassword: string }>('/jodayn/users', {
+  return apiRequest<{ success: boolean; user: JodaynUser; temporaryPassword: string; emailSent?: boolean }>('/jodayn/users', {
     method: 'POST',
     token,
     body: JSON.stringify(data),
@@ -147,7 +147,7 @@ export function createReport(token: string, data: Record<string, unknown>) {
 
 /** New one-time initial password for an invited user who has not signed in yet. */
 export function resetJodaynUserCredentials(token: string, id: string) {
-  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string }>(
+  return apiRequest<{ success: boolean; user: { id: string; name: string; email: string }; temporaryPassword: string; emailSent?: boolean }>(
     `/jodayn/users/${id}/credentials`,
     { method: 'POST', token },
   )
