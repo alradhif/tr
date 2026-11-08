@@ -27,10 +27,8 @@ type GoalUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
 
 const TAG_DOTS = ['#17b26a', '#2e90fa', '#f79009', '#7a5af8']
 
-function formatDate(value?: string | null) {
-  if (!value) return '—'
-  const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString()
+function yearOf(value?: string | null) {
+  return value ? String(new Date(value).getFullYear()) : '—'
 }
 
 function isOverdue(endDate?: string | null) {
@@ -123,7 +121,10 @@ export function OrgGoalsPage() {
 
   const filteredGoals = useMemo(() => {
     if (activeFilter === 'all') return goals
-    return goals.filter((goal) => mapGoalUiStatus(goal) === activeFilter)
+    return goals.filter((goal) => {
+      const status = mapGoalUiStatus(goal)
+      return activeFilter === 'stalled' ? status === 'stalled' || status === 'delayed' : status === activeFilter
+    })
   }, [goals, activeFilter])
 
   return (
@@ -158,7 +159,7 @@ export function OrgGoalsPage() {
           icon={<AssetIcon src={navigationAssets.projects} size={16} />}
         />
         <StatCard
-          label={t('delayedGoals')}
+          label="أهداف متعثرة"
           value={delayedGoals}
           suffix={t('goalsUnit')}
           icon={<img src={warningIcon} alt="" width={18} height={18} />}
@@ -171,8 +172,7 @@ export function OrgGoalsPage() {
         items={[
           { key: 'all', label: t('all'), count: filterCounts.all },
           { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
-          { key: 'delayed', label: t('delayed'), count: filterCounts.delayed },
-          { key: 'stalled', label: t('stalled'), count: filterCounts.stalled },
+          { key: 'stalled', label: t('stalled'), count: filterCounts.stalled + filterCounts.delayed },
           { key: 'completed', label: t('completed'), count: filterCounts.completed },
         ]}
       />
@@ -182,6 +182,7 @@ export function OrgGoalsPage() {
           const uiStatus = mapGoalUiStatus(goal)
           const variant = statusVariant(uiStatus)
           const progress = goal.executive?.pct ?? 0
+          const ready = Boolean(goal.executive?.total) && goal.executive?.approved === goal.executive?.total
           const projectCount = goal.projectLinks?.length ?? 0
           const projectNames = (goal.projectLinks ?? [])
             .map(projectLinkName)
@@ -193,6 +194,7 @@ export function OrgGoalsPage() {
               key={goal.id}
               title={goal.title}
               onOpen={() => navigate(`/org/goals/${goal.id}`)}
+              hideChevron
               badge={
                 <Badge variant={variant} icon={<span className="tenants-status-dot" />}>
                   {t(statusLabelKey(uiStatus))}
@@ -202,10 +204,13 @@ export function OrgGoalsPage() {
                 `المعتمد ${goal.executive?.approved ?? 0} من ${goal.executive?.total ?? 0} مخرجًا`,
                 <>
                   <AssetIcon src={commonAssets.clock} size={13} />
-                  {[formatDate(goal.startDate), formatDate(goal.endDate)].join(' – ')}
+                  {[yearOf(goal.startDate), yearOf(goal.endDate)].join(' - ')}
                 </>,
+                <Badge variant={goal.approvedAt ? 'success' : ready ? 'warning' : 'neutral'}>
+                  {goal.approvedAt ? 'معتمد' : ready ? 'جاهز للاعتماد' : 'غير جاهز للاعتماد'}
+                </Badge>,
               ]}
-              progress={{ value: progress, tone: variant, label: 'التقدم التنفيذي' }}
+              progress={{ value: progress, tone: progress < 40 ? 'danger' : progress < 70 ? 'warning' : 'success', label: 'التقدم التنفيذي' }}
               tags={
                 <>
                   {projectNames.slice(0, 2).map((name, index) => (

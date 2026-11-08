@@ -21,7 +21,7 @@ export function FilterChips({ items, value, onChange, className }: FilterChipsPr
           className={`filter-chip ${value === item.key ? 'filter-chip--active' : ''}`}
           onClick={() => onChange(item.key)}
         >
-          {item.count == null ? item.label : `${item.label}(${item.count})`}
+          {item.count == null ? item.label : `${item.label} (${item.count})`}
         </button>
       ))}
     </div>

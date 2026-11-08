@@ -364,7 +364,7 @@
 }
 
 .dashboard-page .filter-chips {
-  align-self: flex-end;
+  align-self: flex-start;
 }
 
 .dashboard-page .filter-chip {

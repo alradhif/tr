@@ -11,6 +11,7 @@ export type ListCardProgress = {
 }
 
 export type ListCardProps = {
+  hideChevron?: boolean
   title: string
   badge?: ReactNode
   metaItems?: ReactNode[]
@@ -19,7 +20,7 @@ export type ListCardProps = {
   onOpen?: () => void
 }
 
-export function ListCard({ title, badge, metaItems, progress, tags, onOpen }: ListCardProps) {
+export function ListCard({ title, badge, metaItems, progress, tags, onOpen, hideChevron }: ListCardProps) {
   const clickable = Boolean(onOpen)
   const tone = progress?.tone ?? 'success'
   const value = Math.min(100, Math.max(0, progress?.value ?? 0))
@@ -46,7 +47,7 @@ export function ListCard({ title, badge, metaItems, progress, tags, onOpen }: Li
         <h3 className="list-card__title">{title}</h3>
         <div className="list-card__header-end">
           {badge}
-          {clickable ? (
+          {clickable && !hideChevron ? (
             <span className="list-card__chevron" aria-hidden>
               <AssetIcon src={commonAssets.chevronLeft} size={16} />
             </span>
@@ -70,6 +71,7 @@ export function ListCard({ title, badge, metaItems, progress, tags, onOpen }: Li
       {progress ? (
         <>
           <div className="list-card__progress-row">
+            {progress.label ? <span className="list-card__progress-label">{progress.label}</span> : null}
             <span className="list-card__progress-text">
               {progress.text ?? (
                 <>
@@ -80,7 +82,6 @@ export function ListCard({ title, badge, metaItems, progress, tags, onOpen }: Li
                 </>
               )}
             </span>
-            {progress.label ? <span className="list-card__progress-label">{progress.label}</span> : null}
           </div>
           <div className={`list-card__bar list-card__bar--${tone}`}>
             <span className="list-card__bar-fill" style={{ width: `${value}%` }} />

@@ -369,6 +369,8 @@ const GOALS = [
   { title: 'تطوير البنية التحتية الرقمية', description: 'نظام تقني متكامل لإدارة المحتوى الرقمي مع واجهات متعددة', aiSummary: 'نسبة الخدمات المرقمنة', achievementPct: 77, progressPct: 77 },
   { title: 'رفع نسبة الخدمات الحكومية الرقمية', description: 'برنامج لتقليص زمن إنجاز الخدمات الحكومية الرقمية وتحسين تجربة المستفيدين', aiSummary: 'من 5 أيام إلى يوم واحد', achievementPct: 34, progressPct: 34 },
   { title: 'تحقيق اعتماد الأمن السيبراني ISO 27001', description: 'خطة الوصول لاعتماد ISO 27001 عبر تعزيز الضوابط الأمنية ورفع الوعي الداخلي', aiSummary: 'من 5 أيام إلى يوم واحد', achievementPct: 40, progressPct: 40 },
+  { title: 'تقليص وقت معالجة الطلبات الداخلية', description: 'خفض متوسط زمن معالجة الطلبات الداخلية عبر رقمنتها ومتابعتها من لوحة موحدة.', aiSummary: 'زمن المعالجة | 3 أيام | 7 أيام' },
+  { title: 'رقمنة خدمات الموظفين الذاتية', description: 'إتاحة خدمات الموظفين الأساسية عبر بوابة ذاتية موحدة.', aiSummary: 'نسبة الرقمنة | 100% | 40%' },
 ]
 
 const SECTORS = [
@@ -833,7 +835,13 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
         },
       })
     }
-    for (const projectName of linkedOrgNames) {
+    // Each goal follows its own projects, so their approved share differs.
+    const goalIndex = GOALS.indexOf(goal)
+    const goalProjects =
+      goalIndex === GOALS.length - 1
+        ? ORG_PROJECTS.filter((def) => def.uiStatus === 'completed')
+        : ORG_PROJECTS.filter((_, index) => index % (GOALS.length - 1) === goalIndex)
+    for (const { name: projectName } of goalProjects) {
       const project = orgProjectsByName.get(projectName)
       if (!project) continue
       const existing = await prisma.orgGoalProjectLink.findFirst({ where: { goalId: row.id, projectId: project.id } })
