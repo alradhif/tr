@@ -29,6 +29,7 @@ import { downloadWithToken } from '../../../api/me';
 import { getSuperAdminToken } from '../../../auth/superAdminAuth';
 import { CredentialsModal } from '../../../components/settings/CredentialsModal';
 import { PageHeader } from '../layout/PageHeader';
+import { SaDialog, SaToast, type SaToastValue } from '../ui/SaDialog';
 import './tenant-details.css';
 
 interface TenantDetailsPageProps {
@@ -67,6 +68,14 @@ function barClass(p: number) {
 
 const AVATAR_COLORS = ['#dbeafe', '#d1f0e1', '#e9d5ff', '#fde9ce', '#f4f4f5'];
 
+type DialogState =
+  | { kind: 'suspend' }
+  | { kind: 'delete'; typed: string }
+  | { kind: 'export' }
+  | { kind: 'notify'; title: string; message: string }
+  | { kind: 'toggleUser'; userId: string; active: boolean }
+  | { kind: 'role'; userId: string; accessLevel: 'UPPER' | 'DATA_ENTRY' };
+
 function splitTenantId(id: string): { kind: 'org' | 'client' | 'jodayn'; id: string } {
   const [kind, ...rest] = id.split('-');
   return { kind: kind as 'org' | 'client' | 'jodayn', id: rest.join('-') };
@@ -81,7 +90,7 @@ function formatBytes(bytes: number) {
 function formatDateTime(value?: string | null) {
   if (!value) return '—';
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('ar-SA');
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('ar-SA-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetailsPageProps) {
@@ -90,7 +99,9 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
   const ref = splitTenantId(tenantId);
   const [details, setDetails] = useState<TenantDetails | null>(null);
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [notice, setNotice] = useState<SaToastValue | null>(null);
+  const [dialog, setDialog] = useState<DialogState | null>(null);
+  const clearNotice = useCallback(() => setNotice(null), []);
   const [credentials, setCredentials] = useState<{ name: string; email: string; temporaryPassword: string; emailSent?: boolean } | null>(null);
 
   const loadDetails = useCallback(async () => {
@@ -99,7 +110,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
     try {
       setDetails(await getTenantDetails(token, ref.kind, ref.id));
     } catch (err) {
-      setNotice({ ok: false, text: err instanceof Error ? err.message : 'تعذر تحميل تفاصيل المستأجر' });
+      setNotice({ ok: false, title: err instanceof Error ? err.message : 'تعذر تحميل تفاصيل المستأجر' });
     }
   }, [ref.kind, ref.id]);
 
@@ -107,17 +118,18 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
     void loadDetails();
   }, [loadDetails]);
 
-  async function run(action: (token: string) => Promise<unknown>, success: string) {
+  async function run(action: (token: string) => Promise<unknown>, success: SaToastValue) {
     const token = getSuperAdminToken();
     if (!token) return;
     setBusy(true);
     setNotice(null);
     try {
       await action(token);
-      setNotice({ ok: true, text: success });
+      setNotice(success);
+      setDialog(null);
       await Promise.all([refreshTenants(), loadDetails()]);
     } catch (err) {
-      setNotice({ ok: false, text: err instanceof Error ? err.message : 'تعذر تنفيذ العملية' });
+      setNotice({ ok: false, title: err instanceof Error ? err.message : 'تعذر تنفيذ العملية' });
     } finally {
       setBusy(false);
     }
@@ -127,7 +139,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
     ? {
         ...baseTenant,
         users: details
-          ? details.users.map<TenantUser & { pending: boolean; accessLevel: string }>((user, index) => ({
+          ? details.users.map<TenantUser & { pending: boolean; accessLevel: 'UPPER' | 'DATA_ENTRY'; lastLogin: string }>((user, index) => ({
               id: user.id,
               name: user.name,
               email: user.email,
@@ -138,6 +150,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
               statusLabel: user.statusLabel,
               pending: user.pendingActivation,
               accessLevel: user.accessLevel,
+              lastLogin: formatDateTime(user.lastLoginAt),
             }))
           : [],
         activeUsers: details?.usage.activeUsers ?? baseTenant.activeUsers,
@@ -184,37 +197,26 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
 
   
 
+  const isPrivate = /خاص/.test(tenant.entityType ?? '');
   const infoFields = [
-    { label: 'اسم الجهة',           value: tenant.entityName },
-    { label: 'رقم السجل التجاري',   value: tenant.crNumber },
-    { label: 'القطاع',              value: tenant.sector },
-    { label: 'مدير الحساب',         value: tenant.adminName },
-    { label: 'رقم الهاتف',          value: tenant.phone },
-    { label: 'البريد الإلكتروني',   value: tenant.email },
-    { label: 'تاريخ الانضمام',      value: tenant.joinDate },
-    { label: 'نوع المستأجر',        value: tenant.accountType },
-    { label: 'نوع الجهة',           value: tenant.entityType || '—' },
-    { label: 'المنطقة',             value: tenant.region },
+    { label: 'اسم الجهة', value: tenant.entityName },
+    { label: 'رقم السجل التجاري', value: tenant.crNumber },
+    { label: 'القطاع', value: [tenant.entityType, tenant.sector].filter((part) => part && part !== '—').join(' — ') },
+    { label: 'اتجاه المبالغ', value: isPrivate ? 'تحصيل من العملاء' : 'دفع للشركات المنفذة' },
+    { label: 'وظيفة الفواتير', value: isPrivate ? 'تحصيل الفواتير' : 'تتبع الفواتير' },
+    { label: 'المسؤول الرئيسي (Tenant Admin)', value: tenant.adminName },
+    { label: 'الهاتف', value: tenant.phone },
+    { label: 'البريد الإلكتروني', value: tenant.email },
+    { label: 'تاريخ الانضمام', value: tenant.joinDate },
+    { label: 'نوع الحساب', value: tenant.package.name },
+    { label: 'المنطقة', value: tenant.region },
   ];
+
 
   
 
-  function handleToggleSuspend() {
-    if (!tenant) return;
-    const next = isSuspended ? 'تفعيل' : 'تعليق';
-    if (!window.confirm(`${next} حساب "${tenant.name}"؟`)) return;
-    void run(
-      (token) => toggleAccount(token, ref.kind, ref.id),
-      isSuspended ? 'تم إعادة تفعيل الحساب' : 'تم تعليق الحساب ومنع وصول مستخدميه',
-    );
-  }
-
-  async function handleDelete() {
+  async function handleDelete(typed: string) {
     if (!tenant || ref.kind === 'jodayn') return;
-    const typed = window.prompt(
-      `سيتم حذف "${tenant.name}" وجميع مشاريعه ومستخدميه وملفاته نهائياً.\nاكتب اسم الجهة للتأكيد:`,
-    );
-    if (typed === null) return;
     const token = getSuperAdminToken();
     if (!token) return;
     setBusy(true);
@@ -224,29 +226,9 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
       await refreshTenants();
       onDeleted();
     } catch (err) {
-      setNotice({ ok: false, text: err instanceof Error ? err.message : 'تعذر حذف المستأجر' });
-    } finally {
+      setNotice({ ok: false, title: err instanceof Error ? err.message : 'تعذر حذف المستأجر' });
       setBusy(false);
     }
-  }
-
-  function handleToggleUser(userId: string, current: 'active' | 'suspended') {
-    if (ref.kind === 'jodayn') return;
-    void run(
-      (token) => updatePlatformUser(token, ref.kind as 'org' | 'client', userId, { isActive: current !== 'active' }),
-      current === 'active' ? 'تم تعليق المستخدم' : 'تم تفعيل المستخدم',
-    );
-  }
-
-  function handleEditRole(userId: string, accessLevel: string) {
-    if (ref.kind === 'jodayn') return;
-    const next = accessLevel === 'UPPER' ? 'DATA_ENTRY' : 'UPPER';
-    const label = next === 'UPPER' ? 'إدارة عليا' : 'مدخل بيانات';
-    if (!window.confirm(`تغيير صلاحية المستخدم إلى «${label}»؟`)) return;
-    void run(
-      (token) => updatePlatformUser(token, ref.kind as 'org' | 'client', userId, { accessLevel: next }),
-      'تم تحديث الدور',
-    );
   }
 
   async function handleResetCredentials(userId: string) {
@@ -259,34 +241,9 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
       setCredentials({ name: result.user.name, email: result.user.email, temporaryPassword: result.temporaryPassword, emailSent: result.emailSent });
       await loadDetails();
     } catch (err) {
-      setNotice({ ok: false, text: err instanceof Error ? err.message : 'تعذر إصدار بيانات الدخول' });
+      setNotice({ ok: false, title: err instanceof Error ? err.message : 'تعذر إصدار بيانات الدخول' });
     }
   }
-
-  function handleExport() {
-    if (ref.kind === 'jodayn') return;
-    void run(
-      (token) => downloadWithToken(`/super-admin/accounts/${ref.kind}/${ref.id}/export`, token, `tenant-${ref.id}.csv`),
-      'تم تنزيل ملف البيانات',
-    );
-  }
-
-  function handleNotify() {
-    if (ref.kind === 'jodayn') return;
-    const title = window.prompt('عنوان الإشعار');
-    if (!title?.trim()) return;
-    const body = window.prompt('نص الإشعار');
-    if (!body?.trim()) return;
-    void run(
-      async (token) => {
-        const result = await notifyTenant(token, ref.kind as 'org' | 'client', ref.id, { title: title.trim(), message: body.trim() });
-        setNotice({ ok: true, text: `تم إرسال الإشعار إلى ${result.recipients} مستخدم` });
-      },
-      'تم إرسال الإشعار',
-    );
-  }
-
-  
 
   return (
     <div className="dashboard-page">
@@ -298,9 +255,6 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
 
         {}
         <div className="td-body">
-          {notice ? (
-            <p style={{ color: notice.ok ? '#067647' : '#b91c1c', fontSize: 13, fontWeight: 600 }}>{notice.text}</p>
-          ) : null}
 
           {}
           <div className="td-title-row">
@@ -322,11 +276,11 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
             </div>
 
             <div className="td-actions">
-              <button type="button" className="td-btn td-btn--outline" disabled={busy || ref.kind === 'jodayn'} onClick={handleExport}>
+              <button type="button" className="td-btn td-btn--outline" disabled={busy || ref.kind === 'jodayn'} onClick={() => setDialog({ kind: 'export' })}>
                 <Download size={14} strokeWidth={2.25} />
                 تصدير البيانات
               </button>
-              <button type="button" className="td-btn td-btn--solid" disabled={busy || ref.kind === 'jodayn'} onClick={handleNotify}>
+              <button type="button" className="td-btn td-btn--solid" disabled={busy || ref.kind === 'jodayn'} onClick={() => setDialog({ kind: 'notify', title: '', message: '' })}>
                 <AssetIcon src={dashboardAssets.notification} size={14} />
                 إرسال إشعار
               </button>
@@ -480,6 +434,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                   <span className="td-users-head-cell">المستخدم</span>
                   <span className="td-users-head-cell">الدور</span>
                   <span className="td-users-head-cell">الحالة</span>
+                  <span className="td-users-head-cell">آخر دخول</span>
                   <span className="td-users-head-cell">إجراءات</span>
                 </div>
 
@@ -516,6 +471,8 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                       {user.statusLabel}
                     </span>
 
+                    <span className="td-user-last-login">{user.lastLogin}</span>
+
                     {}
                     <div className="td-user-actions">
                       <button
@@ -523,7 +480,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                         className="td-user-btn"
                         title="تعديل الدور"
                         disabled={busy}
-                        onClick={() => handleEditRole(user.id, user.accessLevel)}
+                        onClick={() => setDialog({ kind: 'role', userId: user.id, accessLevel: user.accessLevel })}
                       >
                         <Pencil size={11} strokeWidth={2.5} />
                         تعديل الدور
@@ -546,7 +503,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                             : 'td-user-btn--activate'
                         }`}
                         disabled={busy}
-                        onClick={() => handleToggleUser(user.id, user.status)}
+                        onClick={() => setDialog({ kind: 'toggleUser', userId: user.id, active: user.status === 'active' })}
                       >
                         {user.status === 'active' ? (
                           <><UserX size={11} strokeWidth={2.5} /> تعليق</>
@@ -584,7 +541,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                       type="checkbox"
                       checked={isSuspended}
                       disabled={busy}
-                      onChange={handleToggleSuspend}
+                      onChange={() => setDialog({ kind: 'suspend' })}
                     />
                     <span className="td-toggle__track" />
                   </label>
@@ -614,7 +571,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                     type="button"
                     className="td-delete-btn"
                     disabled={busy || ref.kind === 'jodayn'}
-                    onClick={() => void handleDelete()}
+                    onClick={() => setDialog({ kind: 'delete', typed: '' })}
                   >
                     <Trash2 size={13} strokeWidth={2.25} />
                     حذف الحساب
@@ -626,6 +583,161 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
           </div>{}
         </div>{}
       </div>{}
+      {notice ? <SaToast toast={notice} onClose={clearNotice} /> : null}
+      {dialog?.kind === 'suspend' ? (
+        <SaDialog
+          title={isSuspended ? 'إعادة تفعيل حساب الجهة؟' : 'تعليق حساب الجهة؟'}
+          body={
+            isSuspended
+              ? `سيتمكن مستخدمو «${tenant.name}» من تسجيل الدخول مجددًا.`
+              : `سيُمنع جميع مستخدمي «${tenant.name}» من تسجيل الدخول، وتبقى البيانات محفوظة حتى إعادة التفعيل.`
+          }
+          tone={isSuspended ? 'info' : 'danger'}
+          confirmLabel={isSuspended ? 'إعادة التفعيل' : 'تعليق الحساب'}
+          busy={busy}
+          onClose={() => setDialog(null)}
+          onConfirm={() =>
+            void run(
+              (token) => toggleAccount(token, ref.kind, ref.id),
+              isSuspended
+                ? { ok: true, title: 'تمت إعادة تفعيل حساب الجهة' }
+                : { ok: true, title: 'تم تعليق حساب الجهة', body: 'لن يتمكن مستخدموها من الدخول حتى إعادة التفعيل.' },
+            )
+          }
+        />
+      ) : null}
+      {dialog?.kind === 'delete' ? (
+        <SaDialog
+          title="حذف المستأجر نهائيًا؟"
+          body={`سيُحذف «${tenant.name}» وجميع مشاريعه وبيانات مستخدميه بشكل دائم، ولا يمكن التراجع.`}
+          tone="danger"
+          confirmLabel="حذف نهائي"
+          confirmDisabled={dialog.typed.trim() !== tenant.name}
+          busy={busy}
+          onClose={() => setDialog(null)}
+          onConfirm={() => void handleDelete(dialog.typed)}
+        >
+          <label className="sa-dialog__field">
+            للتأكيد اكتب اسم الجهة
+            <input
+              value={dialog.typed}
+              placeholder={tenant.name}
+              onChange={(event) => setDialog({ kind: 'delete', typed: event.target.value })}
+            />
+          </label>
+        </SaDialog>
+      ) : null}
+      {dialog?.kind === 'export' ? (
+        <SaDialog
+          title="تصدير بيانات الجهة"
+          body="يشمل الملف: معلومات الجهة، المستخدمين، الاشتراك، وسجل الإجراءات."
+          confirmLabel="تصدير CSV"
+          busy={busy}
+          onClose={() => setDialog(null)}
+          onConfirm={() =>
+            void run(
+              (token) => downloadWithToken(`/super-admin/accounts/${ref.kind}/${ref.id}/export`, token, `tenant-${ref.id}.csv`),
+              { ok: true, title: 'ملف التصدير جاهز', body: `${tenant.name} · CSV` },
+            )
+          }
+        />
+      ) : null}
+      {dialog?.kind === 'notify' ? (
+        <SaDialog
+          title="إرسال إشعار للجهة"
+          body="يصل الإشعار داخل المنصة لكل مستخدمي الجهة."
+          confirmLabel="إرسال الإشعار"
+          confirmDisabled={!dialog.title.trim() || !dialog.message.trim()}
+          busy={busy}
+          onClose={() => setDialog(null)}
+          onConfirm={() =>
+            void run(
+              (token) =>
+                notifyTenant(token, ref.kind as 'org' | 'client', ref.id, {
+                  title: dialog.title.trim(),
+                  message: dialog.message.trim(),
+                }),
+              { ok: true, title: 'تم إرسال الإشعار', body: 'أُرسل إلى مستخدمي الجهة.' },
+            )
+          }
+        >
+          <label className="sa-dialog__field">
+            عنوان الإشعار *
+            <input
+              value={dialog.title}
+              placeholder="مثال: صيانة مجدولة"
+              onChange={(event) => setDialog({ ...dialog, title: event.target.value })}
+            />
+          </label>
+          <label className="sa-dialog__field">
+            نص الإشعار *
+            <textarea
+              rows={3}
+              value={dialog.message}
+              onChange={(event) => setDialog({ ...dialog, message: event.target.value })}
+            />
+          </label>
+        </SaDialog>
+      ) : null}
+      {dialog?.kind === 'toggleUser' ? (
+        <SaDialog
+          title={dialog.active ? 'تعطيل المستخدم؟' : 'إعادة تفعيل المستخدم؟'}
+          body={
+            dialog.active
+              ? 'لن يتمكن المستخدم من تسجيل الدخول حتى تُعيد تفعيله. تبقى بياناته وصلاحياته محفوظة.'
+              : 'سيتمكن المستخدم من تسجيل الدخول مجددًا بنفس دوره السابق.'
+          }
+          tone={dialog.active ? 'danger' : 'info'}
+          confirmLabel={dialog.active ? 'تعطيل المستخدم' : 'إعادة التفعيل'}
+          busy={busy}
+          onClose={() => setDialog(null)}
+          onConfirm={() =>
+            void run(
+              (token) => updatePlatformUser(token, ref.kind as 'org' | 'client', dialog.userId, { isActive: !dialog.active }),
+              dialog.active
+                ? { ok: true, title: 'تم تعطيل المستخدم', body: 'يمكنك إعادة تفعيله في أي وقت.' }
+                : { ok: true, title: 'تمت إعادة تفعيل المستخدم' },
+            )
+          }
+        />
+      ) : null}
+      {dialog?.kind === 'role' ? (
+        <SaDialog
+          title="تعديل دور المستخدم"
+          body="اختر الدور الجديد. يُطبّق التغيير عند تسجيل الدخول التالي للمستخدم."
+          confirmLabel="حفظ الدور"
+          busy={busy}
+          onClose={() => setDialog(null)}
+          onConfirm={() =>
+            void run(
+              (token) => updatePlatformUser(token, ref.kind as 'org' | 'client', dialog.userId, { accessLevel: dialog.accessLevel }),
+              { ok: true, title: 'تم تحديث دور المستخدم', body: 'يُطبّق عند تسجيل دخوله التالي.' },
+            )
+          }
+        >
+          <div className="sa-dialog__options">
+            {(
+              [
+                ['UPPER', 'إدارة عليا'],
+                ['DATA_ENTRY', 'مدخل بيانات'],
+              ] as const
+            ).map(([value, label]) => (
+              <label
+                key={value}
+                className={`sa-dialog__option${dialog.accessLevel === value ? ' sa-dialog__option--active' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="role"
+                  checked={dialog.accessLevel === value}
+                  onChange={() => setDialog({ ...dialog, accessLevel: value })}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </SaDialog>
+      ) : null}
       {credentials ? (
         <CredentialsModal
           name={credentials.name}

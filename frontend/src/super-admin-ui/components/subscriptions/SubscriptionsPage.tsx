@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getPlatformUsers } from '../../../api/superAdmin';
 import { getSuperAdminToken } from '../../../auth/superAdminAuth';
 import { useTenants } from '../../context/TenantContext';
 import { ChevronLeft, Plus } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
+import { SaDialog, SaToast, type SaToastValue } from '../ui/SaDialog';
 import { AddPackagePage, type NewPackageData } from './AddPackagePage';
 import { PackageDetailsPage } from './PackageDetailsPage';
 import {
@@ -95,6 +96,10 @@ export function SubscriptionsPage() {
 
   const [view, setView] = useState<SubscriptionsView>('list');
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState<SaToastValue | null>(null);
+  const clearToast = useCallback(() => setToast(null), []);
 
   const openPackage = (id: string) => {
     setSelectedPackageId(id);
@@ -128,33 +133,68 @@ export function SubscriptionsPage() {
 
   const handleDeletePackage = async () => {
     if (!selectedPackageId) return;
-    const confirmed = window.confirm('هل أنت متأكد من حذف هذه الباقة؟');
-    if (!confirmed) return;
+    setDeleting(true);
     try {
+      const name = selectedPackage?.name;
       await deletePackage(selectedPackageId);
+      setConfirmDelete(false);
       setSelectedPackageId(null);
       setView('list');
+      setToast({ ok: true, title: `تم حذف باقة ${name}` });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'تعذر حذف الباقة');
+      setConfirmDelete(false);
+      setToast({ ok: false, title: err instanceof Error ? err.message : 'تعذر حذف الباقة' });
+    } finally {
+      setDeleting(false);
     }
   };
 
-  
+  const overlays = (
+    <>
+      {toast ? <SaToast toast={toast} onClose={clearToast} /> : null}
+      {confirmDelete && selectedPackage ? (
+        selectedPackage.tenants > 0 ? (
+          <SaDialog
+            title={`لا يمكن حذف باقة ${selectedPackage.name} الآن`}
+            body={`الباقة مستخدمة لدى ${selectedPackage.tenants} مستأجر. انقل هؤلاء المستأجرين إلى باقة أخرى أولًا.`}
+            confirmLabel="حسنًا"
+            cancelLabel="إغلاق"
+            onClose={() => setConfirmDelete(false)}
+            onConfirm={() => setConfirmDelete(false)}
+          />
+        ) : (
+          <SaDialog
+            title={`حذف باقة ${selectedPackage.name}؟`}
+            body="ستُحذف الباقة من قائمة الباقات ولا يمكن التراجع عن هذا الإجراء."
+            tone="danger"
+            confirmLabel="حذف الباقة"
+            busy={deleting}
+            onClose={() => setConfirmDelete(false)}
+            onConfirm={() => void handleDeletePackage()}
+          />
+        )
+      ) : null}
+    </>
+  );
+
   if (view === 'add') {
     return <AddPackagePage onCancel={() => setView('list')} onSave={handleSavePackage} />;
   }
 
   if (view === 'details' && selectedPackage) {
     return (
-      <PackageDetailsPage
-        pkg={selectedPackage}
-        onBack={() => {
-          setSelectedPackageId(null);
-          setView('list');
-        }}
-        onEdit={() => setView('edit')}
-        onDelete={() => void handleDeletePackage()}
-      />
+      <>
+        <PackageDetailsPage
+          pkg={selectedPackage}
+          onBack={() => {
+            setSelectedPackageId(null);
+            setView('list');
+          }}
+          onEdit={() => setView('edit')}
+          onDelete={() => setConfirmDelete(true)}
+        />
+        {overlays}
+      </>
     );
   }
 
@@ -253,6 +293,7 @@ export function SubscriptionsPage() {
           </div>
         </Card>
       </div>
+      {overlays}
     </div>
   );
 }

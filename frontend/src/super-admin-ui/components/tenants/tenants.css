@@ -362,3 +362,10 @@
 .tenants-table__row.subscriptions-table__row:not(.tenants-table__row--head) {
   height: 72px;
 }
+
+.tenant-entity-note {
+  margin: 6px 0 0;
+  color: #2e90fa;
+  font-size: 12px;
+  line-height: 18px;
+}

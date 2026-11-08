@@ -58,7 +58,7 @@ function toUiPackage(pkg: PlatformPackage): Package {
     storage: `${pkg.storageGb ?? 0} GB`,
     users: pkg.maxUsers,
     status: active ? 'active' : 'inactive',
-    statusLabel: active ? 'مفعلة' : 'غير مفعلة',
+    statusLabel: active ? 'نشطة' : 'غير نشطة',
     tenants: pkg.tenants ?? 0,
     userLimit: pkg.maxUsers,
     packageType: pkg.packageType || '—',

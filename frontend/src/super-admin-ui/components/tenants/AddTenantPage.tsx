@@ -367,6 +367,11 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
                 options={ENTITY_TYPE_OPTIONS}
                 onChange={updateField('entityType')}
               />
+              <p className="tenant-entity-note">
+                {/خاص/.test(formData.entityType)
+                  ? 'جهة خاصة ← ستظهر في حسابها وظيفة «تحصيل الفواتير» (تحصيل مبالغ من العملاء)، ولن تظهر «تتبع الفواتير».'
+                  : 'جهة حكومية ← ستظهر في حسابها وظيفة «تتبع الفواتير» (دفع مبالغ للشركات المنفذة)، ولن تظهر «تحصيل الفواتير».'}
+              </p>
             </FormField>
 
             <FormField

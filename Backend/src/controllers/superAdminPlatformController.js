@@ -606,7 +606,7 @@ function packageInput(body, partial) {
 async function withTenantCounts(packages) {
   const counts = await prisma.accountSubscription.groupBy({
     by: ['packageId'],
-    where: { status: 'ACTIVE' },
+    where: { status: { in: ['ACTIVE', 'DEMO'] } },
     _count: { packageId: true },
   })
   const byId = new Map(counts.map((row) => [row.packageId, row._count.packageId]))
