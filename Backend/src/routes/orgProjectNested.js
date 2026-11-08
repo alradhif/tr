@@ -43,7 +43,11 @@ router.delete('/:projectId/risks/:riskId/actions/:id', ...isUpperMgmt, ctrl.dele
 // ============ DELIVERABLES ============
 router.get('/:projectId/deliverables', ...isOrgAny, ctrl.getDeliverables)
 router.post('/:projectId/deliverables', ...isOrgAnyWrite, ctrl.createDeliverable)
+router.get('/:projectId/deliverables/:id', ...isOrgAny, ctrl.getDeliverable)
 router.patch('/:projectId/deliverables/:id', ...isOrgAnyWrite, ctrl.updateDeliverable)
+router.post('/:projectId/deliverables/:id/submit', ...isOrgAny, ctrl.submitDeliverable)
+router.post('/:projectId/deliverables/:id/approve', ...isUpperMgmt, ctrl.approveDeliverable)
+router.post('/:projectId/deliverables/:id/request-changes', ...isUpperMgmt, ctrl.requestDeliverableChanges)
 router.delete('/:projectId/deliverables/:id', ...isUpperMgmt, ctrl.deleteDeliverable)
 
 router.get(

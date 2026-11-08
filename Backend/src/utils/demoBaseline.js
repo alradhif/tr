@@ -473,6 +473,35 @@ const PROJECT_CONTACTS = {
 }
 const INSTALLMENT_TITLES = ['الدفعة الأولى', 'الدفعة الثانية', 'الدفعة الثالثة', 'الدفعة الرابعة']
 
+// Approved share follows the project's progress; the next two wait for review and one needs changes.
+async function seedDeliverableReviews(def, project, orgEntry) {
+  const deliverables = await prisma.orgDeliverable.findMany({ where: { projectId: project.id }, orderBy: { createdAt: 'asc' } })
+  const approvedCount = Math.round(((Number(def.progress) || 0) / 100) * deliverables.length)
+  const hoursAgo = (hours) => new Date(Date.now() - hours * 60 * 60 * 1000)
+  for (const [index, deliverable] of deliverables.entries()) {
+    if (deliverable.reviewStatus !== 'NOT_SUBMITTED') continue
+    const offset = index - approvedCount
+    const submitted = { submittedAt: hoursAgo(24 + index * 7), submittedByName: orgEntry.name }
+    let data = null
+    if (offset < 0) {
+      data = { ...submitted, reviewStatus: 'APPROVED', status: 'COMPLETED', progressPct: 100, reviewedAt: hoursAgo(12 + index), reviewedByName: 'أحمد محمد' }
+    } else if (offset < 2) {
+      data = { ...submitted, reviewStatus: 'PENDING' }
+    } else if (offset === 2) {
+      data = { ...submitted, reviewStatus: 'CHANGES_REQUESTED', reviewedAt: hoursAgo(8), reviewedByName: 'أحمد محمد', reviewNote: 'الرجاء استكمال قائمة المتطلبات وإرفاق النسخة النهائية.' }
+    }
+    if (!data) continue
+    await prisma.orgDeliverable.update({ where: { id: deliverable.id }, data })
+    await prisma.orgDeliverableAttachment.create({
+      data: { fileUrl: 'demo://file', fileName: `${deliverable.name}.pdf`, fileType: 'application/pdf', fileSize: 1024 * 1024, deliverableId: deliverable.id, uploadedBy: orgEntry.id },
+    })
+  }
+  const approved = await prisma.orgDeliverable.count({ where: { projectId: project.id, reviewStatus: 'APPROVED' } })
+  if (deliverables.length) {
+    await prisma.orgProject.update({ where: { id: project.id }, data: { progressPct: Math.round((approved / deliverables.length) * 100) } })
+  }
+}
+
 async function seedProjectTeams(teamModel, projectModel, project) {
   if (!project.clientProjectManagerName) {
     await projectModel.update({ where: { id: project.id }, data: PROJECT_CONTACTS })
@@ -693,6 +722,7 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
     await saveOrgProjectDetails(project.id, projectBody(def))
     orgProjectsByName.set(def.name, project)
     await seedProjectTeams(prisma.orgProjectTeamMember, prisma.orgProject, project)
+    await seedDeliverableReviews(def, project, orgEntry)
     await seedProjectPayments(def, project, orgAccount.id, 1000 + orgProjectsByName.size * 10)
 
     for (const risk of MOCK_RISKS) {

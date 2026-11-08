@@ -42,6 +42,7 @@ import {
 } from '../../org-catalog/OrgProjectCatalogViews'
 import { CreatePresentationModal } from './CreatePresentationModal'
 import { ProjectAddModal, type ProjectAddKind } from './ProjectAddModals'
+import { DeliverablesApprovalTab, type ReviewStatus } from './DeliverablesApprovalTab'
 import { CatalogConfirmDialog } from '../../org-catalog/CatalogConfirmDialog'
 import { parsePhaseActivities } from '../../org-catalog/phaseActivities'
 import {
@@ -243,6 +244,10 @@ export function ProjectDetailView({
         status: String(item.status ?? '—'),
         progress: Number(item.progressPct ?? 0),
         price: Number(item.price ?? 0),
+        description: String(item.description ?? ''),
+        reviewStatus: String(item.reviewStatus ?? 'NOT_SUBMITTED') as ReviewStatus,
+        submittedAt: item.submittedAt ? formatDate(item.submittedAt) : '—',
+        submittedBy: String(item.submittedByName ?? '—'),
       })),
     [project],
   )
@@ -356,7 +361,23 @@ export function ProjectDetailView({
         }))}
       />
     ),
-    deliverables: (
+    deliverables: resolvedPortal === 'org' ? (
+      <DeliverablesApprovalTab
+        rows={deliverables.map((row) => ({
+          key: String(row.key),
+          name: String(row.name),
+          description: String(row.description),
+          reviewStatus: row.reviewStatus as ReviewStatus,
+          submittedAt: String(row.submittedAt),
+          submittedBy: String(row.submittedBy),
+        }))}
+        canDecide={Boolean(portalRole && isUpperManagement(portalRole))}
+        canSubmit={Boolean(portalRole && isDataEntry(portalRole))}
+        canOpen={!jodaynKind}
+        reviewBase={`${basePath}/${id}/deliverables`}
+        onChanged={load}
+      />
+    ) : (
       <OrgProjectOutputsView
         rows={deliverables.map((row) => ({
           key: String(row.key),

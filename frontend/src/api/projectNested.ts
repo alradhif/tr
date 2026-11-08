@@ -68,3 +68,40 @@ export function returnProjectForChanges(portal: 'org' | 'client', token: string,
     body: JSON.stringify({ reason }),
   })
 }
+
+export type DeliverableReview = {
+  id: string
+  name: string
+  description?: string | null
+  reviewStatus: 'NOT_SUBMITTED' | 'PENDING' | 'CHANGES_REQUESTED' | 'APPROVED'
+  version: number
+  submittedAt?: string | null
+  submittedByName?: string | null
+  reviewedAt?: string | null
+  reviewedByName?: string | null
+  reviewNote?: string | null
+  attachments: Array<{ id: string; fileName: string; fileUrl: string; fileSize?: number | null; createdAt: string }>
+}
+
+export function getOrgDeliverable(token: string, projectId: string, id: string) {
+  return apiRequest<{ deliverable: DeliverableReview; project: { id: string; name: string; progressPct: number } }>(
+    `/org/projects/${projectId}/deliverables/${id}`,
+    { method: 'GET', token },
+  )
+}
+
+export function submitOrgDeliverable(token: string, projectId: string, id: string) {
+  return apiRequest(`/org/projects/${projectId}/deliverables/${id}/submit`, { method: 'POST', token })
+}
+
+export function approveOrgDeliverable(token: string, projectId: string, id: string) {
+  return apiRequest(`/org/projects/${projectId}/deliverables/${id}/approve`, { method: 'POST', token })
+}
+
+export function requestOrgDeliverableChanges(token: string, projectId: string, id: string, reason: string) {
+  return apiRequest(`/org/projects/${projectId}/deliverables/${id}/request-changes`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ reason }),
+  })
+}

@@ -74,6 +74,13 @@ enum DeliverableStatus {
   COMPLETED
 }
 
+enum DeliverableReviewStatus {
+  NOT_SUBMITTED
+  PENDING
+  CHANGES_REQUESTED
+  APPROVED
+}
+
 enum GoalStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -700,6 +707,13 @@ model OrgDeliverable {
   project       OrgProject        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   responsibleId String?
   responsible   OrgUser?          @relation(fields: [responsibleId], references: [id])
+  reviewStatus    DeliverableReviewStatus @default(NOT_SUBMITTED)
+  version         Int                     @default(1)
+  submittedAt     DateTime?
+  submittedByName String?
+  reviewedAt      DateTime?
+  reviewedByName  String?
+  reviewNote      String?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 

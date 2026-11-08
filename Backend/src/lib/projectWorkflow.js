@@ -154,6 +154,18 @@ async function notifyProjectDecision(kind, project, decision, reason) {
  */
 async function recomputeProjectProgress(kind, projectId) {
   const cfg = KINDS[kind]
+  if (kind === 'ORG') {
+    // Organization progress counts approved deliverables only; uploading alone changes nothing.
+    const rows = await cfg.deliverable().findMany({ where: { projectId }, select: { reviewStatus: true } })
+    if (rows.length === 0) return null
+    const approved = rows.filter((row) => row.reviewStatus === 'APPROVED').length
+    const pct = Math.round((approved / rows.length) * 100)
+    await cfg.project().update({
+      where: { id: projectId },
+      data: { progressPct: pct, ...(pct === 100 ? { status: 'COMPLETED' } : {}) },
+    })
+    return pct
+  }
   const deliverables = await cfg.deliverable().findMany({
     where: { projectId },
     select: { status: true, progressPct: true },

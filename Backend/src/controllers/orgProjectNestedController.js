@@ -1,6 +1,7 @@
 const prisma = require('../lib/prisma')
 const { normalizeDeliverableInput, recomputeProjectProgress } = require('../lib/projectWorkflow')
 const { notifyChangeRequestCreated } = require('../lib/changeRequests')
+const { createForUsers } = require('../lib/notify')
 
 async function assertOrgProject(projectId, orgId) {
   const project = await prisma.orgProject.findUnique({ where: { id: projectId } })
@@ -597,6 +598,10 @@ exports.updateDeliverable = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
 
+    if (existing.reviewStatus === 'APPROVED') {
+      return res.status(409).json({ message: 'لا يمكن تعديل مخرج معتمد إلا بطلب تغيير' })
+    }
+
     const data = normalizeDeliverableInput({ ...req.body })
     delete data.projectId
     delete data.id
@@ -625,6 +630,10 @@ exports.deleteDeliverable = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
 
+    if (existing.reviewStatus === 'APPROVED') {
+      return res.status(409).json({ message: 'لا يمكن حذف مخرج معتمد' })
+    }
+
     await prisma.orgDeliverable.delete({ where: { id } })
     await recomputeProjectProgress('ORG', projectId)
     res.json({ success: true, message: 'Deliverable deleted' })
@@ -632,6 +641,116 @@ exports.deleteDeliverable = async (req, res) => {
     handleError(res, err)
   }
 }
+
+// ============ DELIVERABLE REVIEW ============
+
+async function loadDeliverableForReview(req) {
+  const { projectId, id } = req.params
+  const project = await assertOrgProject(projectId, req.user.orgId)
+  const deliverable = await prisma.orgDeliverable.findUnique({
+    where: { id },
+    include: { attachments: { orderBy: { createdAt: 'desc' } }, comments: { orderBy: { createdAt: 'asc' } } },
+  })
+  if (!deliverable || deliverable.projectId !== projectId) {
+    const err = new Error('Deliverable not found')
+    err.status = 404
+    throw err
+  }
+  return { project, deliverable }
+}
+
+async function actorName(userId) {
+  const user = await prisma.orgUser.findUnique({ where: { id: userId }, select: { name: true } })
+  return user?.name || null
+}
+
+exports.getDeliverable = async (req, res) => {
+  try {
+    const { project, deliverable } = await loadDeliverableForReview(req)
+    res.json({ deliverable, project: { id: project.id, name: project.name, progressPct: project.progressPct } })
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+exports.submitDeliverable = async (req, res) => {
+  try {
+    const { project, deliverable } = await loadDeliverableForReview(req)
+    if (!['NOT_SUBMITTED', 'CHANGES_REQUESTED'].includes(deliverable.reviewStatus)) {
+      return res.status(409).json({ message: 'هذا المخرج مقدَّم للاعتماد مسبقًا' })
+    }
+    const name = await actorName(req.user.userId)
+    const updated = await prisma.orgDeliverable.update({
+      where: { id: deliverable.id },
+      data: {
+        reviewStatus: 'PENDING',
+        submittedAt: new Date(),
+        submittedByName: name,
+        reviewNote: null,
+        version: deliverable.reviewStatus === 'CHANGES_REQUESTED' ? { increment: 1 } : undefined,
+      },
+    })
+    const managers = await prisma.orgUser.findMany({
+      where: { orgId: req.user.orgId, role: 'ORG_UPPER_MGMT', isActive: true },
+      select: { id: true },
+    })
+    await createForUsers(managers.map((user) => user.id), 'ORG', {
+      title: 'مخرج بانتظار اعتمادك',
+      message: `قدّم ${name || 'مدخل البيانات'} المخرج «${deliverable.name}» في مشروع «${project.name}»`,
+      type: 'APPROVAL',
+      link: `/org/projects/${project.id}/deliverables/${deliverable.id}`,
+    })
+    res.json({ success: true, deliverable: updated })
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+async function decideDeliverable(req, res, decision) {
+  try {
+    const { project, deliverable } = await loadDeliverableForReview(req)
+    if (deliverable.reviewStatus !== 'PENDING') {
+      return res.status(409).json({ message: 'هذا المخرج ليس بانتظار الاعتماد' })
+    }
+    const reason = String(req.body?.reason || '').trim()
+    if (decision === 'CHANGES_REQUESTED' && !reason) {
+      return res.status(400).json({ message: 'سبب طلب التعديل مطلوب' })
+    }
+    const name = await actorName(req.user.userId)
+    const updated = await prisma.orgDeliverable.update({
+      where: { id: deliverable.id },
+      data: {
+        reviewStatus: decision,
+        reviewedAt: new Date(),
+        reviewedByName: name,
+        reviewNote: decision === 'CHANGES_REQUESTED' ? reason : null,
+        ...(decision === 'APPROVED' ? { status: 'COMPLETED', progressPct: 100 } : {}),
+      },
+    })
+    const progressPct = await recomputeProjectProgress('ORG', project.id)
+    const submitters = deliverable.submittedByName
+      ? await prisma.orgUser.findMany({
+          where: { orgId: req.user.orgId, name: deliverable.submittedByName },
+          select: { id: true },
+        })
+      : []
+    await createForUsers(submitters.map((user) => user.id), 'ORG', {
+      title: decision === 'APPROVED' ? 'تم اعتماد المخرج' : 'طلب تعديل على المخرج',
+      message:
+        decision === 'APPROVED'
+          ? `اعتمد ${name} المخرج «${deliverable.name}»`
+          : `طلب ${name} تعديل المخرج «${deliverable.name}»: ${reason}`,
+      type: 'APPROVAL',
+      link: `/org/projects/${project.id}/deliverables/${deliverable.id}`,
+    })
+    res.json({ success: true, deliverable: updated, progressPct })
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+exports.approveDeliverable = (req, res) => decideDeliverable(req, res, 'APPROVED')
+exports.requestDeliverableChanges = (req, res) => decideDeliverable(req, res, 'CHANGES_REQUESTED')
 
 // ============ DELIVERABLE ATTACHMENTS ============
 
