@@ -642,6 +642,67 @@ exports.deleteDeliverable = async (req, res) => {
   }
 }
 
+// ============ RISK AND CHANGE REQUEST PAGES ============
+
+const COMMENT_AUTHOR = { select: { id: true, name: true, role: true } }
+
+async function commentsFor(recordType, recordId) {
+  return prisma.orgRecordComment.findMany({
+    where: { recordType, recordId },
+    include: { author: COMMENT_AUTHOR },
+    orderBy: { createdAt: 'asc' },
+  })
+}
+
+exports.getRisk = async (req, res) => {
+  try {
+    const { projectId, id } = req.params
+    const project = await assertOrgProject(projectId, req.user.orgId)
+    const risk = await prisma.orgRisk.findUnique({ where: { id }, include: { actions: true } })
+    if (!risk || risk.projectId !== projectId) return res.status(404).json({ message: 'Risk not found' })
+    res.json({ risk, comments: await commentsFor('RISK', id), project: { id: project.id, name: project.name } })
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+exports.getChangeRequest = async (req, res) => {
+  try {
+    const { projectId, id } = req.params
+    const project = await assertOrgProject(projectId, req.user.orgId)
+    const request = await prisma.orgChangeRequest.findUnique({
+      where: { id },
+      include: { requester: { select: { name: true, email: true } }, attachments: true },
+    })
+    if (!request || request.projectId !== projectId) return res.status(404).json({ message: 'Change request not found' })
+    res.json({ request, comments: await commentsFor('CHANGE_REQUEST', id), project: { id: project.id, name: project.name } })
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+const COMMENT_TARGETS = { risks: ['RISK', () => prisma.orgRisk], 'change-requests': ['CHANGE_REQUEST', () => prisma.orgChangeRequest] }
+
+exports.createRecordComment = (kind) => async (req, res) => {
+  try {
+    const { projectId, id } = req.params
+    await assertOrgProject(projectId, req.user.orgId)
+    const target = COMMENT_TARGETS[kind]
+    if (!target) return res.status(404).json({ message: 'Not found' })
+    const record = await target[1]().findUnique({ where: { id }, select: { projectId: true } })
+    if (!record || record.projectId !== projectId) return res.status(404).json({ message: 'Record not found' })
+    const content = String(req.body?.content || '').trim()
+    if (!content) return res.status(400).json({ message: 'نص التعليق مطلوب' })
+    const comment = await prisma.orgRecordComment.create({
+      data: { content, recordType: target[0], recordId: id, projectId, authorId: req.user.userId },
+      include: { author: COMMENT_AUTHOR },
+    })
+    res.json({ success: true, comment })
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
 // ============ DELIVERABLE REVIEW ============
 
 async function loadDeliverableForReview(req) {
@@ -649,7 +710,10 @@ async function loadDeliverableForReview(req) {
   const project = await assertOrgProject(projectId, req.user.orgId)
   const deliverable = await prisma.orgDeliverable.findUnique({
     where: { id },
-    include: { attachments: { orderBy: { createdAt: 'desc' } }, comments: { orderBy: { createdAt: 'asc' } } },
+    include: {
+      attachments: { orderBy: { createdAt: 'desc' } },
+      comments: { orderBy: { createdAt: 'asc' }, include: { author: { select: { id: true, name: true, role: true } } } },
+    },
   })
   if (!deliverable || deliverable.projectId !== projectId) {
     const err = new Error('Deliverable not found')

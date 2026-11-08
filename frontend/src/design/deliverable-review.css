@@ -323,3 +323,183 @@
   background: #d5e9fe;
   color: #1a76d2;
 }
+
+/* Risks and change requests: tables, record pages and comments. */
+.dr-table--center th,
+.dr-table--center td {
+  text-align: center;
+}
+
+.dr-table--center th:first-child,
+.dr-table--center td:first-child {
+  text-align: right;
+}
+
+.dr-name small {
+  display: block;
+  margin-top: 2px;
+  color: #8e8f97;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.dr-row-link {
+  cursor: pointer;
+}
+
+.dr-row-link:hover td {
+  background: #fafafa;
+}
+
+.dr-avatar {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #d1f0e1;
+  color: #118a51;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dr-avatar--sm {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+
+.dr-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #27272a;
+  font-weight: 600;
+}
+
+.dr-record-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dr-record-title > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.dr-record-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #24b77d, #60c66d);
+  color: #fff;
+}
+
+.dr-record-icon--danger {
+  background: #f04438;
+}
+
+.dr-fact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8e8f97;
+}
+
+.dr-bullets {
+  margin: 0;
+  padding-inline-start: 20px;
+  color: #27272a;
+  font-size: 14px;
+  line-height: 24px;
+}
+
+.dr-actions--start {
+  justify-content: flex-start;
+}
+
+.dr-btn--danger {
+  border-color: #f04438;
+  background: #f04438;
+  color: #fff;
+}
+
+.dr-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dr-comments li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f0f0f1;
+}
+
+.dr-comments li > div {
+  flex: 1;
+}
+
+.dr-comments small,
+.dr-comment-form small {
+  display: block;
+  color: #8e8f97;
+  font-size: 11px;
+}
+
+.dr-comments strong,
+.dr-comment-form strong {
+  display: block;
+  font-size: 13px;
+}
+
+.dr-comments p {
+  margin: 6px 0 0;
+  color: #27272a;
+}
+
+.dr-comments time {
+  color: #8e8f97;
+  font-size: 12px;
+}
+
+.dr-comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dr-comment-form__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dr-comment-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dr-comment-form textarea {
+  padding: 10px 12px;
+  border: 1px solid #e7e8eb;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 400;
+  resize: none;
+  box-sizing: border-box;
+}

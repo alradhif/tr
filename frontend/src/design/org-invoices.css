@@ -362,3 +362,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+.org-invoices__receipt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px dashed #d0d1d6;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.org-invoices__receipt strong {
+  font-size: 13px;
+}
+
+.org-invoices__receipt small {
+  color: #8e8f97;
+  font-size: 11px;
+}

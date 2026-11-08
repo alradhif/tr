@@ -439,6 +439,7 @@ model OrgUser {
   scenarioAnalyses    OrgScenarioAnalysis[]
   strategyDocs        OrgStrategyDocument[]
   orgContracts        OrgContract[]
+  recordComments      OrgRecordComment[]
   projectAttach       OrgProjectAttachment[]
 
   @@index([orgId])
@@ -560,6 +561,7 @@ model OrgProject {
   teamMembers      OrgProjectTeamMember[]
   contracts        OrgContract[]
   payments         OrgProjectPayment[]
+  recordComments   OrgRecordComment[]
   risks            OrgRisk[]
   deliverables     OrgDeliverable[]
   changeRequests   OrgChangeRequest[]
@@ -613,6 +615,8 @@ model OrgProjectPayment {
   dueDate       DateTime
   paidAt        DateTime?
   paymentReference String?
+  receiptUrl       String?
+  receiptName      String?
   recordedByName   String?
   orgId         String
   org           OrgAccount        @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -627,6 +631,23 @@ model OrgProjectPayment {
   @@index([projectId])
   @@index([companyId])
   @@map("org_project_payments")
+}
+
+// Discussion on a project's risk or change request.
+model OrgRecordComment {
+  id         String     @id @default(uuid())
+  content    String
+  recordType String
+  recordId   String
+  projectId  String
+  project    OrgProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     OrgUser    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt  DateTime   @default(now())
+
+  @@index([recordType, recordId])
+  @@index([projectId])
+  @@map("org_record_comments")
 }
 
 model OrgContract {

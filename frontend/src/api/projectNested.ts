@@ -81,6 +81,7 @@ export type DeliverableReview = {
   reviewedByName?: string | null
   reviewNote?: string | null
   attachments: Array<{ id: string; fileName: string; fileUrl: string; fileSize?: number | null; createdAt: string }>
+  comments: RecordComment[]
 }
 
 export function getOrgDeliverable(token: string, projectId: string, id: string) {
@@ -103,5 +104,73 @@ export function requestOrgDeliverableChanges(token: string, projectId: string, i
     method: 'POST',
     token,
     body: JSON.stringify({ reason }),
+  })
+}
+
+export type RecordComment = {
+  id: string
+  content: string
+  createdAt: string
+  author?: { id: string; name: string; role?: string } | null
+}
+
+export type OrgRiskDetail = {
+  id: string
+  name: string
+  description?: string | null
+  probability: string
+  impact: string
+  status: string
+  responsibleName?: string | null
+  actions: Array<{ id: string; action: string; responsibleName?: string | null }>
+}
+
+export type OrgChangeRequestDetail = {
+  id: string
+  title: string
+  description?: string | null
+  priority: string
+  status: string
+  impactOnCost?: string | null
+  impactOnSchedule?: string | null
+  submittedBy?: string | null
+  submittedDate?: string | null
+  createdAt: string
+  requester?: { name: string; email: string } | null
+}
+
+export function getOrgRisk(token: string, projectId: string, id: string) {
+  return apiRequest<{ risk: OrgRiskDetail; comments: RecordComment[]; project: { id: string; name: string } }>(
+    `/org/projects/${projectId}/risks/${id}`,
+    { method: 'GET', token },
+  )
+}
+
+export function getOrgChangeRequest(token: string, projectId: string, id: string) {
+  return apiRequest<{ request: OrgChangeRequestDetail; comments: RecordComment[]; project: { id: string; name: string } }>(
+    `/org/projects/${projectId}/change-requests/${id}`,
+    { method: 'GET', token },
+  )
+}
+
+export function addOrgRecordComment(
+  token: string,
+  projectId: string,
+  kind: 'risks' | 'change-requests',
+  id: string,
+  content: string,
+) {
+  return apiRequest(`/org/projects/${projectId}/${kind}/${id}/comments`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ content }),
+  })
+}
+
+export function addOrgDeliverableComment(token: string, projectId: string, id: string, content: string) {
+  return apiRequest(`/org/projects/${projectId}/deliverables/${id}/comments`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ content }),
   })
 }

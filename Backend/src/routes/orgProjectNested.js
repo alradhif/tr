@@ -32,6 +32,9 @@ router.delete('/:projectId/contracts/:id', ...isUpperMgmt, ctrl.deleteContract)
 // ============ RISKS ============
 router.get('/:projectId/risks', ...isOrgAny, ctrl.getRisks)
 router.post('/:projectId/risks', ...isOrgAnyWrite, ctrl.createRisk)
+router.get('/:projectId/risks/:id', ...isOrgAny, ctrl.getRisk)
+router.post('/:projectId/risks/:id/comments', ...isOrgAny, ctrl.createRecordComment('risks'))
+router.post('/:projectId/change-requests/:id/comments', ...isOrgAny, ctrl.createRecordComment('change-requests'))
 router.patch('/:projectId/risks/:id', ...isOrgAnyWrite, ctrl.updateRisk)
 router.delete('/:projectId/risks/:id', ...isUpperMgmt, ctrl.deleteRisk)
 
@@ -85,6 +88,7 @@ router.delete(
 // ============ CHANGE REQUESTS ============
 router.get('/:projectId/change-requests', ...isOrgAny, ctrl.getChangeRequests)
 router.post('/:projectId/change-requests', ...isOrgAnyWrite, ctrl.createChangeRequest)
+router.get('/:projectId/change-requests/:id', ...isOrgAny, ctrl.getChangeRequest)
 router.patch('/:projectId/change-requests/:id/approve', ...isUpperMgmt, changeRequestDecision('ORG', 'APPROVED'))
 router.patch('/:projectId/change-requests/:id/reject', ...isUpperMgmt, changeRequestDecision('ORG', 'REJECTED'))
 router.patch('/:projectId/change-requests/:id/review', ...isUpperMgmt, changeRequestDecision('ORG', 'SENT_FOR_REVIEW'))

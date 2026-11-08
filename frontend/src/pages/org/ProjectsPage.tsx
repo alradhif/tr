@@ -3,11 +3,12 @@ import { message } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { getProjects } from '../../api/orgProjects'
+import { getProjects, type OrgProject } from '../../api/orgProjects'
 import type { OrgRole } from '../../auth/orgAuth'
 import { getOrgToken } from '../../auth/orgAuth'
 import { canCreateDraft } from '../../auth/permissions'
 import { ProjectsListView } from '../../components/senior/ProjectsListView'
+import { MultiSelectFilter, SingleSelectFilter } from '../../super-admin-ui/components/ui/filters'
 
 type ProjectUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
 type ProjectFilter = 'all' | 'onTrack' | 'delayed' | 'completed' | 'draft' | 'pending' | 'approved' | 'rejected'
@@ -20,6 +21,9 @@ type ProjectRow = {
   uiStatus: ProjectUiStatus
   outputsCount: number
   approvedOutputs: string
+  goals: string[]
+  company: string
+  year: string
 }
 
 function mapStatus(raw: string, endDate?: string | null): ProjectUiStatus {
@@ -51,6 +55,9 @@ export function OrgProjectsPage() {
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [goalFilter, setGoalFilter] = useState<string[]>([])
+  const [companyFilter, setCompanyFilter] = useState<string[]>([])
+  const [yearFilter, setYearFilter] = useState('all')
 
   useEffect(() => {
     const token = getOrgToken()
@@ -71,6 +78,11 @@ export function OrgProjectsPage() {
             approvalStatus: p.approvalStatus ?? 'DRAFT',
             uiStatus: mapStatus(p.status, p.endDate),
             outputsCount: p._count?.deliverables ?? p.deliverables?.length ?? 0,
+            goals: ((p as OrgProject & { goalLinks?: Array<{ goal?: { title: string } }> }).goalLinks ?? [])
+              .map((link) => link.goal?.title ?? '')
+              .filter(Boolean),
+            company: p.executingCompany?.name ?? 'بدون شركة',
+            year: (p.startDate ?? '').slice(0, 4),
             approvedOutputs: `${(p.deliverables ?? []).filter((d) => (d as { reviewStatus?: string }).reviewStatus === 'APPROVED').length} من ${p.deliverables?.length ?? 0}`,
           })),
         )
@@ -101,8 +113,15 @@ export function OrgProjectsPage() {
   )
 
   const filteredRows = useMemo(
-    () => rows.filter((row) => matchesFilter(row, activeFilter)),
-    [rows, activeFilter],
+    () =>
+      rows.filter(
+        (row) =>
+          matchesFilter(row, activeFilter) &&
+          (goalFilter.length === 0 || row.goals.some((goal) => goalFilter.includes(goal))) &&
+          (companyFilter.length === 0 || companyFilter.includes(row.company)) &&
+          (yearFilter === 'all' || row.year === yearFilter),
+      ),
+    [rows, activeFilter, goalFilter, companyFilter, yearFilter],
   )
 
   return (
@@ -120,6 +139,31 @@ export function OrgProjectsPage() {
       createLabel={canCreateDraft(role) ? (role === 'upper' ? t('addProject') : t('addProjectDraft')) : undefined}
       onCreate={() => navigate('/org/projects/new')}
       onOpen={(key) => navigate(`/org/projects/${key}`)}
+      toolbarExtra={
+        <div className="org-projects-filters">
+          <MultiSelectFilter
+            label="الهدف"
+            selected={goalFilter}
+            options={[...new Set(rows.flatMap((row) => row.goals))].map((value) => ({ value, label: value }))}
+            onApply={setGoalFilter}
+          />
+          <MultiSelectFilter
+            label="المنفذ"
+            selected={companyFilter}
+            options={[...new Set(rows.map((row) => row.company))].map((value) => ({ value, label: value }))}
+            onApply={setCompanyFilter}
+          />
+          <SingleSelectFilter
+            label="الفترة"
+            value={yearFilter}
+            options={[
+              { value: 'all', label: 'الكل' },
+              ...[...new Set(rows.map((row) => row.year).filter(Boolean))].sort().map((value) => ({ value, label: value })),
+            ]}
+            onChange={setYearFilter}
+          />
+        </div>
+      }
       filtersOpen={filtersOpen}
       onToggleFilters={() => setFiltersOpen((open) => !open)}
       activeFilter={activeFilter}

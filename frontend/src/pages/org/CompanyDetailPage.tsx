@@ -11,10 +11,9 @@ import {
   Trash2,
   User,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
-import { CompanyLogoPicker } from '../../components/ui/CompanyLogoPicker'
-import { companiesAssets, matchCompanyLogo } from '@/assets'
+import { CompanyLogoPicker, CompanyMark } from '../../components/ui/CompanyLogoPicker'
 import { ApiError } from '../../api/client'
 import {
   deleteCompany,
@@ -252,11 +251,6 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
     }
   }
 
-  const logo = useMemo(
-    () => (company ? company.logoUrl ?? matchCompanyLogo(company.name) ?? companiesAssets.company : companiesAssets.company),
-    [company],
-  )
-
   if (!loading && !company) {
     return (
       <div className="dashboard-page cd-page" dir="rtl">
@@ -318,7 +312,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
             <div className="cd-main-card">
               <div className="cd-intro">
                 <span className="cd-logo cd-logo--img">
-                  <img src={logo} alt={company.name} className="cd-logo-img" />
+                  <CompanyMark name={company.name} logoUrl={company.logoUrl} className="cd-logo-img" />
                 </span>
                 <div>
                   <h2 className="cd-company-name">{company.name}</h2>
@@ -460,6 +454,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
             </div>
             <CompanyLogoPicker
               src={draftLogo.preview}
+              name={draftName}
               onPick={(file, preview) => setDraftLogo({ file, preview })}
               onRemove={() => setDraftLogo({ file: null, preview: null })}
             />

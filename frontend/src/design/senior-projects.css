@@ -224,3 +224,9 @@
   font-weight: 700;
   text-align: center;
 }
+
+.org-projects-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

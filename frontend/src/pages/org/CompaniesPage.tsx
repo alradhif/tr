@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, ChevronLeft, HelpCircle, ListFilter, Plus } from 'lucide-react'
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom'
-import { companiesAssets, matchCompanyLogo } from '@/assets'
+import { CompanyMark } from '../../components/ui/CompanyLogoPicker'
 import { ApiError } from '../../api/client'
 import { getCompanies, type ExecutingCompany } from '../../api/org'
 import { getProjects, type OrgProject } from '../../api/orgProjects'
@@ -146,11 +146,7 @@ export function OrgCompaniesPage() {
               >
                 <div className="sc-company-cell">
                   <span className="sc-logo-box">
-                    <img
-                      src={row.company.logoUrl ?? matchCompanyLogo(row.company.name) ?? companiesAssets.company}
-                      alt={row.company.name}
-                      className="sc-logo-img"
-                    />
+                    <CompanyMark name={row.company.name} logoUrl={row.company.logoUrl} />
                   </span>
                   <div className="sc-company-info">
                     <p className="sc-company-name">{row.company.name}</p>

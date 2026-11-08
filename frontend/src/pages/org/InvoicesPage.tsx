@@ -3,7 +3,14 @@ import { message } from 'antd'
 import { CheckCircle2, ChevronDown, ChevronLeft, Clock, Info, Receipt, TriangleAlert } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { createOrgPayment, getOrgPayments, recordOrgPayment, type OrgPayment, type PaymentDirection } from '../../api/orgPayments'
+import {
+  createOrgPayment,
+  getOrgPayments,
+  recordOrgPayment,
+  uploadOrgPaymentReceipt,
+  type OrgPayment,
+  type PaymentDirection,
+} from '../../api/orgPayments'
 import { getProjects, type OrgProject } from '../../api/orgProjects'
 import type { OrgRole } from '../../auth/orgAuth'
 import { getOrgToken } from '../../auth/orgAuth'
@@ -295,6 +302,11 @@ export function OrgInvoicesPage() {
                                           {payment.paidAt ? (
                                             <span className="org-invoices__date">
                                               تاريخ التسجيل {iso(payment.paidAt)} · {payment.recordedByName ?? '—'}
+                                              {payment.receiptUrl ? (
+                                                <a href={payment.receiptUrl} download={payment.receiptName ?? 'receipt'} onClick={(event) => event.stopPropagation()}>
+                                                  {' '}· الإيصال
+                                                </a>
+                                              ) : null}
                                             </span>
                                           ) : isUpperManagement(role) ? (
                                             <button type="button" className="org-invoices__record" onClick={() => setRecording(payment)}>
@@ -363,6 +375,7 @@ function RecordPaymentDialog({
 }) {
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10))
   const [reference, setReference] = useState('')
+  const [receipt, setReceipt] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const sameInvoice = siblings.filter((item) => !item.paidAt && item.id !== payment.id && item.invoiceNumber === payment.invoiceNumber)
@@ -375,6 +388,7 @@ function RecordPaymentDialog({
     setError('')
     try {
       await recordOrgPayment(token, payment.id, { paidAt, reference: reference.trim() })
+      if (receipt) await uploadOrgPaymentReceipt(token, payment.id, receipt)
       onSaved()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'تعذر التسجيل، لم يتغير شيء')
@@ -416,6 +430,16 @@ function RecordPaymentDialog({
       <label className="sa-dialog__field">
         رقم المرجع / الحوالة *
         <input value={reference} placeholder="مثال: TRX-2026-0457" onChange={(event) => setReference(event.target.value)} />
+      </label>
+      <label className="org-invoices__receipt">
+        <strong>{receipt ? receipt.name : 'إرفاق إيصال الدفع (اختياري)'}</strong>
+        <small>حتى 5 ميجابايت · PNG أو JPG أو PDF</small>
+        <input
+          type="file"
+          hidden
+          accept="image/png,image/jpeg,application/pdf"
+          onChange={(event) => setReceipt(event.target.files?.[0] ?? null)}
+        />
       </label>
       {error ? (
         <p className="org-invoices__error">

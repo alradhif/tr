@@ -111,6 +111,7 @@ export function OrgAddCompanyPage() {
             <h2 className="department-card__title">معلومات الشركة</h2>
             <CompanyLogoPicker
               src={logo?.preview ?? null}
+              name={name}
               onPick={(file, preview) => setLogo({ file, preview })}
               onRemove={() => setLogo(null)}
             />

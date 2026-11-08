@@ -419,15 +419,16 @@ export function SettingsPage() {
             </div>
             <div className="senior-settings__profile-grid">
               <SettingsField
-                label="المسمى الوظيفي"
-                value={profileDraft.jobTitle}
-                onChange={(value) => setProfileDraft((draft) => ({ ...draft, jobTitle: value }))}
-              />
-              <SettingsField
                 label="الاسم الكامل"
                 value={profileDraft.name}
                 onChange={(value) => setProfileDraft((draft) => ({ ...draft, name: value }))}
               />
+              <SettingsField
+                label="المسمى الوظيفي"
+                value={profileDraft.jobTitle}
+                onChange={(value) => setProfileDraft((draft) => ({ ...draft, jobTitle: value }))}
+              />
+              <SettingsField label="البريد الالكتروني" value={user?.email || ''} dir="ltr" readOnly />
               <SettingsField
                 label="رقم الجوال"
                 value={profileDraft.phone}
@@ -435,7 +436,6 @@ export function SettingsPage() {
                 type="tel"
                 onChange={(value) => setProfileDraft((draft) => ({ ...draft, phone: value }))}
               />
-              <SettingsField label="البريد الالكتروني" value={user?.email || ''} dir="ltr" readOnly />
             </div>
           </section>
         ) : null}

@@ -729,7 +729,15 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
 
     for (const risk of MOCK_RISKS) {
       const existing = await prisma.orgRisk.findFirst({ where: { projectId: project.id, name: risk.name } })
-      if (!existing) await prisma.orgRisk.create({ data: { ...risk, projectId: project.id } })
+      if (!existing) {
+        await prisma.orgRisk.create({
+          data: {
+            ...risk,
+            projectId: project.id,
+            actions: { create: [{ action: 'تحصين البنية المعنية ومراجعتها' }, { action: 'اختبار خطة الاستجابة' }, { action: 'تجهيز خطة بديلة' }] },
+          },
+        })
+      }
     }
     for (const request of MOCK_CHANGE_REQUESTS) {
       const existing = await prisma.orgChangeRequest.findFirst({ where: { projectId: project.id, title: request.title } })

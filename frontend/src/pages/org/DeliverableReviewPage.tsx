@@ -4,6 +4,7 @@ import { FileText } from 'lucide-react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import {
+  addOrgDeliverableComment,
   approveOrgDeliverable,
   getOrgDeliverable,
   requestOrgDeliverableChanges,
@@ -14,6 +15,7 @@ import type { OrgRole } from '../../auth/orgAuth'
 import { getOrgToken } from '../../auth/orgAuth'
 import { isDataEntry, isUpperManagement } from '../../auth/permissions'
 import { ReviewBadge } from '../../components/project/DeliverablesApprovalTab'
+import { RecordComments } from '../../components/project/RecordComments'
 import { SubpageHeader } from '../../components/ui'
 import { SaDialog } from '../../super-admin-ui/components/ui/SaDialog'
 import '../../design/deliverable-review.css'
@@ -170,6 +172,16 @@ export function OrgDeliverableReviewPage() {
                 ))}
               </ul>
             </section>
+            <RecordComments
+              title="سجل المخرج والملاحظات"
+              comments={deliverable.comments}
+              onAdd={async (content) => {
+                const token = getOrgToken()
+                if (!token) return
+                await addOrgDeliverableComment(token, projectId, deliverableId, content)
+                await load()
+              }}
+            />
           </>
         ) : null}
       </main>

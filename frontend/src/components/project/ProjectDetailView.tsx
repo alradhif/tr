@@ -44,6 +44,7 @@ import {
 import { CreatePresentationModal } from './CreatePresentationModal'
 import { ProjectAddModal, type ProjectAddKind } from './ProjectAddModals'
 import { DeliverablesApprovalTab, type ReviewStatus } from './DeliverablesApprovalTab'
+import { ChangeRequestsTable, RisksTable } from './RiskChangeTables'
 import { CatalogConfirmDialog } from '../../org-catalog/CatalogConfirmDialog'
 import { parsePhaseActivities } from '../../org-catalog/phaseActivities'
 import {
@@ -262,6 +263,8 @@ export function ProjectDetailView({
         impact: String(item.impact ?? '—'),
         status: String(item.status ?? '—'),
         responsible: String(item.responsibleName ?? '—'),
+        description: String(item.description ?? ''),
+        updated: formatDate(item.updatedAt ?? item.createdAt),
       })),
     [project],
   )
@@ -447,7 +450,21 @@ export function ProjectDetailView({
         }))}
       />
     ),
-    risks: (
+    risks: resolvedPortal === 'org' ? (
+      <RisksTable
+        base={`${basePath}/${id}/risks`}
+        canOpen={!jodaynKind}
+        rows={risks.map((row) => ({
+          key: String(row.key),
+          name: String(row.name),
+          subtitle: String(row.description),
+          impact: String(row.impact),
+          status: String(row.status),
+          responsible: String(row.responsible),
+          updated: String(row.updated),
+        }))}
+      />
+    ) : (
       <OrgProjectRecordList
         emptyKey="noRisksYet"
         rows={risks.map((row) => ({
@@ -497,7 +514,20 @@ export function ProjectDetailView({
         }))}
       />
     ),
-    changeRequests: (
+    changeRequests: resolvedPortal === 'org' ? (
+      <ChangeRequestsTable
+        base={`${basePath}/${id}/change-requests`}
+        canOpen={!jodaynKind}
+        rows={changeRequestRows.map((row) => ({
+          key: String(row.key),
+          title: String(row.title),
+          submittedBy: String(row.submittedBy),
+          priority: String(row.priority),
+          status: String(row.status),
+          date: String(row.submittedDate),
+        }))}
+      />
+    ) : (
       <OrgProjectRecordList
         emptyKey="noChangeRequestsYet"
         rows={changeRequestRows.map((row) => ({

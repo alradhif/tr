@@ -6,6 +6,10 @@ import { ProgressBar } from '../../ui/ProgressBar'
 import { useLiveField } from '../../../../features/portal/DashboardLiveContext'
 import { WidgetBodyGate } from '../../../../features/portal/WidgetBodyGate'
 import { formatAmount } from '../../../../features/jodayn-finance/FinanceParts'
+import { getOrgRole } from '../../../../auth/orgAuth'
+
+/** Upper management decides; data entry only follows what is waiting. */
+const isDecider = () => getOrgRole() === 'upper'
 
 const toneOf = (pct: number): 'danger' | 'warning' | 'success' => (pct < 40 ? 'danger' : pct < 70 ? 'warning' : 'success')
 
@@ -41,14 +45,14 @@ export function PendingApprovalsCountWidget() {
   return (
     <Card className="widget-kpi-compact widget-active-projects">
       <div className="widget-icon-header">
-        <p className="widget-title widget-kpi-compact__title">بانتظار اعتمادك</p>
+        <p className="widget-title widget-kpi-compact__title">{isDecider() ? 'بانتظار اعتمادك' : 'بانتظار الاعتماد'}</p>
       </div>
       <WidgetBodyGate isEmpty={items == null}>
         <div className="widget-stat-block widget-stat-inline org-pending-count">
           <span className="widget-stat-value">{items?.length}</span>
           <span className="widget-stat-label">مخرجات</span>
           <Badge variant="warning" icon={<Clock size={12} />}>
-            تحتاج قرارك
+            {isDecider() ? 'تحتاج قرارك' : 'قيد المراجعة'}
           </Badge>
         </div>
       </WidgetBodyGate>
@@ -64,7 +68,9 @@ export function PendingApprovalsListWidget() {
     <Card>
       <div className="widget-header">
         <div className="widget-icon-header">
-          <h3 className="widget-header__title">مخرجات بانتظار اعتمادك ({items.length})</h3>
+          <h3 className="widget-header__title">
+            {isDecider() ? 'مخرجات بانتظار اعتمادك' : 'مخرجات بانتظار الاعتماد'} ({items.length})
+          </h3>
         </div>
       </div>
       <WidgetBodyGate isEmpty={items.length === 0}>

@@ -11,6 +11,8 @@ export type OrgPayment = {
   paidAt?: string | null
   paymentReference?: string | null
   recordedByName?: string | null
+  receiptUrl?: string | null
+  receiptName?: string | null
   project: { id: string; name: string }
   company?: { id: string; name: string } | null
 }
@@ -44,6 +46,12 @@ export function recordOrgPayment(token: string, id: string, data: { paidAt: stri
     token,
     body: JSON.stringify(data),
   })
+}
+
+export function uploadOrgPaymentReceipt(token: string, id: string, file: File) {
+  const body = new FormData()
+  body.append('receipt', file)
+  return apiRequest<{ success: boolean; payment: OrgPayment }>(`/org/payments/${id}/receipt`, { method: 'POST', token, body })
 }
 
 export function deleteOrgPayment(token: string, id: string) {

@@ -1,4 +1,8 @@
+const multer = require('multer')
 const prisma = require('../lib/prisma')
+
+const RECEIPT_TYPES = ['image/png', 'image/jpeg', 'application/pdf']
+const receiptUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }).single('receipt')
 
 const PAYMENT_INCLUDE = {
   project: { select: { id: true, name: true } },
@@ -106,6 +110,33 @@ exports.recordPayment = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
+}
+
+// An optional receipt, kept as a data URL beside the payment it proves.
+exports.uploadReceipt = (req, res) => {
+  receiptUpload(req, res, async (uploadErr) => {
+    try {
+      if (uploadErr) {
+        return res.status(400).json({ message: uploadErr.code === 'LIMIT_FILE_SIZE' ? 'حجم الإيصال يجب ألا يتجاوز 5 ميجابايت' : uploadErr.message })
+      }
+      if (!req.file || !RECEIPT_TYPES.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: 'الرجاء رفع ملف PNG أو JPG أو PDF' })
+      }
+      const existing = await getOwnedPayment(req, res)
+      if (!existing) return
+      const payment = await prisma.orgProjectPayment.update({
+        where: { id: existing.id },
+        data: {
+          receiptUrl: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+          receiptName: req.file.originalname,
+        },
+        include: PAYMENT_INCLUDE,
+      })
+      res.json({ success: true, payment })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
 }
 
 exports.deletePayment = async (req, res) => {
