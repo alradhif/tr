@@ -248,11 +248,11 @@ async function seedDatabase() {
 
   // ── Packages ─────────────────────────────────────────────────
   const packageSeeds = [
-    { name: 'FREE', label: 'Free', packageType: 'اساسية', price: 0, duration: 365, billingCycle: 'YEARLY', storageGb: 5, maxUsers: 5, maxProjects: 3, features: ['إدارة الحسابات'] },
-    { name: 'DEMO', label: 'Demo', packageType: 'اساسية', price: 0, duration: 30, billingCycle: 'MONTHLY', storageGb: 10, maxUsers: 10, maxProjects: 5, features: ['إدارة الحسابات', 'تصدير البيانات'] },
-    { name: 'BASIC', label: 'Basic', packageType: 'متقدمة', price: 999, duration: 365, billingCycle: 'YEARLY', storageGb: 50, maxUsers: 25, maxProjects: 15, features: ['إدارة الحسابات', 'تصدير البيانات'] },
-    { name: 'PREMIUM', label: 'Premium', packageType: 'متقدمة', price: 2499, duration: 365, billingCycle: 'YEARLY', storageGb: 200, maxUsers: 50, maxProjects: 40, features: ['إدارة الحسابات', 'تصدير البيانات', 'إدارة الفوترة'] },
-    { name: 'ENTERPRISE', label: 'Enterprise', packageType: 'مؤسسية', price: 5000, duration: 365, billingCycle: 'YEARLY', storageGb: 1024, maxUsers: 100, maxProjects: 100, features: ['إدارة الحسابات', 'تصدير البيانات', 'إدارة الفوترة'] },
+    { name: 'FREE', label: 'Free', packageType: 'اساسية', price: 0, duration: 365, billingCycle: 'YEARLY', storageGb: 5, maxUsers: 1, maxProjects: 3, features: ['إدارة الحسابات'] },
+    { name: 'DEMO', label: 'Demo', packageType: 'اساسية', price: 0, duration: 30, billingCycle: 'MONTHLY', storageGb: 10, maxUsers: 2, maxProjects: 5, features: ['إدارة الحسابات', 'تصدير البيانات'] },
+    { name: 'BASIC', label: 'Basic', packageType: 'متقدمة', price: 500, duration: 365, billingCycle: 'YEARLY', storageGb: 20, maxUsers: 10, maxProjects: 15, features: ['إدارة الحسابات', 'تصدير البيانات'] },
+    { name: 'PREMIUM', label: 'Premium', packageType: 'متقدمة', price: 2000, duration: 365, billingCycle: 'YEARLY', storageGb: 40, maxUsers: 25, maxProjects: 40, features: ['إدارة الحسابات', 'تصدير البيانات', 'إدارة الفوترة'] },
+    { name: 'ENTERPRISE', label: 'Enterprise', packageType: 'مؤسسية', price: 5000, duration: 365, billingCycle: 'YEARLY', storageGb: 50, maxUsers: 30, maxProjects: 100, features: ['إدارة الحسابات', 'تصدير البيانات', 'إدارة الفوترة'] },
   ]
   for (const seed of packageSeeds) {
     await prisma.package.upsert({

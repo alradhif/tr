@@ -25,13 +25,14 @@ export interface TenantUser {
   statusLabel: string
 }
 
-export type TenantStatus = 'active' | 'trial' | 'suspended'
+export type TenantStatus = 'active' | 'trial' | 'suspended' | 'pending'
 
 export interface TenantPackage {
   name: string
   features: string[]
   monthlyCost: string
   renewalDate: string
+  expiresAt?: string
 }
 
 export interface Tenant {
@@ -51,6 +52,7 @@ export interface Tenant {
   tenantType: TenantType
   accountType: string
   entityType?: string
+  domain?: string
   region: string
   usedStorage: string
   storageLimit: string
@@ -63,6 +65,7 @@ export interface Tenant {
 interface TenantContextValue {
   tenants: Tenant[]
   loading: boolean
+  loadFailed: boolean
   refreshTenants: () => Promise<void>
   addTenant: (tenant: Tenant) => void
   updateTenant: (id: string, updates: Partial<Tenant>) => void
@@ -75,6 +78,7 @@ const TenantContext = createContext<TenantContextValue | null>(null)
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const refreshTenants = useCallback(async () => {
     const token = getSuperAdminToken()
@@ -87,8 +91,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     try {
       const data = await getAccounts(token)
       setTenants(mapAccountsToTenants(data.orgs ?? [], data.clients ?? [], data.jodaynUsers ?? []))
+      setLoadFailed(false)
     } catch {
       // keep previous list on failure
+      setLoadFailed(true)
     } finally {
       setLoading(false)
     }
@@ -120,6 +126,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       value={{
         tenants,
         loading,
+        loadFailed,
         refreshTenants,
         addTenant,
         updateTenant,
@@ -147,6 +154,6 @@ export function useTenantById(id: string): Tenant | undefined {
 export function useTenantMutations() {
   const ctx = useContext(TenantContext)
   if (!ctx) throw new Error('useTenantMutations must be used inside <TenantProvider>')
-  const { addTenant, updateTenant, deleteTenant, getTenantById, refreshTenants, loading } = ctx
-  return { addTenant, updateTenant, deleteTenant, getTenantById, refreshTenants, loading }
+  const { addTenant, updateTenant, deleteTenant, getTenantById, refreshTenants, loading, loadFailed } = ctx
+  return { addTenant, updateTenant, deleteTenant, getTenantById, refreshTenants, loading, loadFailed }
 }

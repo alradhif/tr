@@ -233,3 +233,128 @@
     align-items: stretch;
   }
 }
+
+/* Tenants list, as in the Figma "إدارة المستأجرين" frame. */
+.tenants-body {
+  padding: 24px;
+  gap: 18px;
+}
+
+.tenants-add-btn {
+  align-self: flex-end;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #000;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tenants-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.tenants-stat-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 128px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  box-sizing: border-box;
+}
+
+.tenants-toolbar-row {
+  gap: 10px;
+}
+
+.tenants-search input {
+  height: 42px;
+  padding: 0 40px 0 12px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.tenants-chips-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tenants-result-count {
+  color: #6b6c72;
+  font-size: 13px;
+}
+
+.ui-card.tenants-table-card {
+  height: auto;
+  padding: 0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.tenants-table {
+  height: auto;
+}
+
+.tenants-table__row {
+  grid-template-columns: minmax(180px, 1.7fr) 1fr 1fr 1fr 1.2fr 56px;
+  height: 48px;
+  padding: 0 24px;
+  border-bottom: 0;
+}
+
+.tenants-table__row:nth-child(odd):not(.tenants-table__row--head) {
+  background: #fafafa;
+}
+
+.tenants-table__row--head {
+  background: #f5f5f6;
+}
+
+.tenants-table__row--head .tenants-table__cell {
+  color: #404044;
+  font-size: 14px;
+}
+
+.tenants-table__cell {
+  color: #0c0c0d;
+  font-size: 14px;
+  text-align: center;
+}
+
+.tenants-table__cell--name {
+  text-align: right;
+}
+
+.tenants-table__row--link {
+  cursor: pointer;
+}
+
+.tenants-table__row--link:hover {
+  background: #f5f5f6 !important;
+}
+
+.tenants-skeleton {
+  display: inline-block;
+  width: 64%;
+  height: 12px;
+  border-radius: 6px;
+  background: #ececee;
+}
+
+@media (max-width: 1100px) {
+  .tenants-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tenants-chips-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

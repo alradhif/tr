@@ -37,7 +37,7 @@ async function attachSubscriptions(accounts, accountType) {
     where: {
       accountType,
       accountId: { in: ids },
-      status: 'ACTIVE'
+      status: { in: ['ACTIVE', 'DEMO'] }
     },
     include: { package: true },
     orderBy: { createdAt: 'desc' }

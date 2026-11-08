@@ -1,11 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { CredentialsModal } from '../../../components/settings/CredentialsModal';
 import { ChevronLeft, Plus, Search } from 'lucide-react';
-import GridLayout, { WidthProvider, type Layout, type LayoutItem } from 'react-grid-layout/legacy';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
 import { Card } from '../ui/Card';
+import {
+  AppliedTags,
+  DateRangeFilter,
+  dateRangeLabel,
+  matchesDateRange,
+  MultiSelectFilter,
+  PageState,
+  Pagination,
+  StatusChips,
+  type DateRangeValue,
+} from '../ui/filters';
 import { Badge } from '../ui/Badge';
 import { PageHeader } from '../layout/PageHeader';
 import { AddTenantPage, type TenantFormData } from './AddTenantPage';
@@ -20,7 +28,7 @@ import {
 } from '../../../api/superAdmin';
 import { getSuperAdminToken } from '../../../auth/superAdminAuth';
 import { clientToTenant, jodaynToTenant, orgToTenant, tenantToRow } from '../../lib/mapAccounts';
-import { isTenantType, type TenantType } from '../../lib/tenantTypes';
+import { isTenantType } from '../../lib/tenantTypes';
 import { dashboardDataAssets } from '@/assets';
 import { AssetIcon } from '../../../components/ui/AssetIcon';
 import {
@@ -31,12 +39,16 @@ import '../layout/layout.css';
 import '../dashboard/dashboard.css';
 import './tenants.css';
 
-const ResponsiveGrid = WidthProvider(GridLayout);
+const PAGE_SIZE = 8;
+const PLAN_ORDER = ['Enterprise', 'Premium', 'Basic', 'Demo', 'Free'];
 
-const statusVariant: Record<TenantRowStatus, 'success' | 'warning' | 'danger'> = {
+const plural = (count: number, one: string, many: string) => (count > 2 && count <= 10 ? many : one);
+
+const statusVariant: Record<TenantRowStatus, 'success' | 'warning' | 'danger' | 'info'> = {
   active: 'success',
   trial: 'warning',
   suspended: 'danger',
+  pending: 'info',
 };
 
 interface StatCardProps {
@@ -63,18 +75,7 @@ function StatCard({ iconSrc, label, value, unit }: StatCardProps) {
   );
 }
 
-type StatId = 'total' | 'active' | 'trial' | 'suspended';
-
-const DEFAULT_STATS_LAYOUT: LayoutItem[] = [
-  { i: 'total',     x: 9, y: 0, w: 3, h: 2, minW: 2, maxW: 6, minH: 2, maxH: 4 },
-  { i: 'active',    x: 6, y: 0, w: 3, h: 2, minW: 2, maxW: 6, minH: 2, maxH: 4 },
-  { i: 'trial',     x: 3, y: 0, w: 3, h: 2, minW: 2, maxW: 6, minH: 2, maxH: 4 },
-  { i: 'suspended', x: 0, y: 0, w: 3, h: 2, minW: 2, maxW: 6, minH: 2, maxH: 4 },
-];
-
-const DEFAULT_TABLE_LAYOUT: LayoutItem[] = [
-  { i: 'table', x: 0, y: 0, w: 12, h: 7, minW: 6, maxW: 12, minH: 3, maxH: 16 },
-];
+type StatusFilter = 'all' | TenantRowStatus;
 
 type TenantsView = 'list' | 'add' | 'review' | 'details';
 
@@ -106,7 +107,7 @@ export function TenantsPage() {
   const [search, setSearch] = useState('');
   const location = useLocation();
   const contextTenants = useTenants();
-  const { addTenant, refreshTenants } = useTenantMutations();
+  const { addTenant, refreshTenants, loading, loadFailed } = useTenantMutations();
   const [tenants, setTenants] = useState<TenantRow[]>([]);
 
   useEffect(() => {
@@ -114,17 +115,40 @@ export function TenantsPage() {
   }, [contextTenants]);
 
   
-  const [activeFilter, setActiveFilter] = useState<'all' | TenantType>('all');
-  const typeFilterTabs: Array<{ id: 'all' | TenantType; label: string }> = [
-    { id: 'all', label: 'الكل' },
-    { id: 'ORG', label: 'Organization' },
-    { id: 'CLIENT', label: 'Client' },
-    { id: 'JODAYN', label: 'Jodayn' },
-  ];
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [planFilter, setPlanFilter] = useState<string[]>([]);
+  const [expiryFilter, setExpiryFilter] = useState<DateRangeValue>({ kind: 'any' });
+  const [page, setPage] = useState(1);
+
   const query = search.trim().toLowerCase();
-  const visibleTenants = tenants
-    .filter((tenant) => activeFilter === 'all' || tenant.tenantType === activeFilter)
-    .filter((tenant) => !query || tenant.name.toLowerCase().includes(query));
+  const matchesSearchAndMenus = (tenant: TenantRow) =>
+    (!query || tenant.name.toLowerCase().includes(query) || tenant.domain?.toLowerCase().includes(query)) &&
+    (planFilter.length === 0 || planFilter.includes(tenant.plan)) &&
+    matchesDateRange(tenant.expiresAt, expiryFilter);
+  const visibleTenants = tenants.filter(
+    (tenant) => matchesSearchAndMenus(tenant) && (statusFilter === 'all' || tenant.status === statusFilter),
+  );
+  const pageCount = Math.max(1, Math.ceil(visibleTenants.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageTenants = visibleTenants.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const planOptions = useMemo(
+    () =>
+      PLAN_ORDER.map((plan) => ({
+        value: plan,
+        label: plan,
+        count: tenants.filter((tenant) => tenant.plan === plan).length,
+      })),
+    [tenants],
+  );
+
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setPlanFilter([]);
+    setExpiryFilter({ kind: 'any' });
+    setPage(1);
+  };
 
   // Global search links here with ?id=org-<id>; open that tenant directly.
   useEffect(() => {
@@ -140,36 +164,51 @@ export function TenantsPage() {
   
   
   
-  const isEditMode = false;
-  const [statsLayout, setStatsLayout] = useState<LayoutItem[]>(DEFAULT_STATS_LAYOUT);
-  const [tableLayout, setTableLayout] = useState<LayoutItem[]>(DEFAULT_TABLE_LAYOUT);
-
-  const handleStatsLayoutChange = useCallback(
-    (newLayout: Layout) => { if (isEditMode) setStatsLayout([...newLayout]); },
-    [isEditMode],
-  );
-
-  const handleTableLayoutChange = useCallback(
-    (newLayout: Layout) => { if (isEditMode) setTableLayout([...newLayout]); },
-    [isEditMode],
-  );
-
-  
   const summary = {
     total:     tenants.length,
     active:    tenants.filter((t) => t.status === 'active').length,
     trial:     tenants.filter((t) => t.status === 'trial').length,
     suspended: tenants.filter((t) => t.status === 'suspended').length,
+    pending:   tenants.filter((t) => t.status === 'pending').length,
   };
 
-  const statCards: Record<StatId, StatCardProps> = {
-    total:     { iconSrc: dashboardDataAssets.totalTenants, label: 'إجمالي المستأجرين', value: summary.total,     unit: 'مستأجر' },
-    active:    { iconSrc: dashboardDataAssets.active,       label: 'نشط',                value: summary.active,    unit: 'مستأجر نشط' },
-    trial:     { iconSrc: dashboardDataAssets.trial,        label: 'تجربة مجانية',       value: summary.trial,     unit: 'تجارب' },
-    suspended: { iconSrc: dashboardDataAssets.suspended,    label: 'معلق',               value: summary.suspended, unit: 'مستأجر' },
-  };
+  const statCards: Array<StatCardProps & { id: string }> = [
+    { id: 'total', iconSrc: dashboardDataAssets.totalTenants, label: 'إجمالي المستأجرين', value: summary.total, unit: plural(summary.total, 'مستأجرًا', 'مستأجرين') },
+    { id: 'active', iconSrc: dashboardDataAssets.active, label: 'نشط', value: summary.active, unit: plural(summary.active, 'مستأجرًا', 'مستأجرين') },
+    { id: 'trial', iconSrc: dashboardDataAssets.trial, label: 'تجربة مجانية', value: summary.trial, unit: plural(summary.trial, 'تجربة', 'تجارب') },
+    { id: 'suspended', iconSrc: dashboardDataAssets.suspended, label: 'معلّق', value: summary.suspended, unit: 'مستأجر' },
+  ];
 
-  
+  const statusChips: Array<{ id: StatusFilter; label: string; count: number }> = [
+    { id: 'all', label: 'الكل', count: summary.total },
+    { id: 'active', label: 'نشط', count: summary.active },
+    { id: 'trial', label: 'تجربة', count: summary.trial },
+    { id: 'suspended', label: 'معلّق', count: summary.suspended },
+    { id: 'pending', label: 'بانتظار التفعيل', count: summary.pending },
+  ];
+
+  const appliedTags = [
+    ...(statusFilter === 'all'
+      ? []
+      : [{
+          key: 'status',
+          label: `الحالة: ${statusChips.find((chip) => chip.id === statusFilter)?.label}`,
+          onRemove: () => setStatusFilter('all'),
+        }]),
+    ...planFilter.map((plan) => ({
+      key: plan,
+      label: `الباقة: ${plan}`,
+      onRemove: () => setPlanFilter((current) => current.filter((item) => item !== plan)),
+    })),
+    ...(expiryFilter.kind === 'any'
+      ? []
+      : [{
+          key: 'expiry',
+          label: `تاريخ الانتهاء: ${dateRangeLabel(expiryFilter)}`,
+          onRemove: () => setExpiryFilter({ kind: 'any' }),
+        }]),
+  ];
+
   const handleFormNext = (data: TenantFormData) => {
     setDraft(data);
     setView('review');
@@ -353,136 +392,144 @@ export function TenantsPage() {
           إضافة مستأجر جديد
         </button>
 
-        <div className="dashboard-grid tenants-stats-grid">
-          <ResponsiveGrid
-            className="dashboard-grid__layout"
-            layout={statsLayout}
-            cols={12}
-            rowHeight={54}
-            margin={[16, 16]}
-            containerPadding={[0, 0]}
-            isDraggable={isEditMode}
-            isResizable={isEditMode}
-            resizeHandles={['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne']}
-            onLayoutChange={handleStatsLayoutChange}
-            compactType={null}
-            useCSSTransforms
-          >
-            {(Object.keys(statCards) as StatId[]).map((id) => (
-              <div key={id} className="dashboard-grid__item">
-                <div
-                  dir="rtl"
-                  className={`widget-wrapper ${isEditMode ? 'widget-wrapper--edit' : ''}`}
-                >
-                  <StatCard {...statCards[id]} />
-                </div>
+        {loadFailed && tenants.length === 0 ? (
+          <PageState
+            tone="error"
+            title="تعذّر تحميل قائمة المستأجرين"
+            body="حدث خطأ في الاتصال بالخادم. أعد المحاولة بعد قليل."
+            actionLabel="إعادة المحاولة"
+            onAction={() => void refreshTenants()}
+          />
+        ) : !loading && tenants.length === 0 ? (
+          <PageState
+            title="لا يوجد مستأجرون بعد"
+            body="أضف أول جهة لتبدأ إدارة الاشتراكات والمستخدمين والباقات."
+            actionLabel="إضافة مستأجر جديد"
+            onAction={() => setView('add')}
+          />
+        ) : (
+          <>
+            <div className="tenants-stats">
+              {statCards.map(({ id, ...card }) => (
+                <StatCard key={id} {...card} />
+              ))}
+            </div>
+
+            <div className="tenants-toolbar-row">
+              <div className="tenants-search">
+                <Search size={16} strokeWidth={2.5} className="tenants-search__icon" />
+                <input
+                  type="search"
+                  placeholder="ابحث باسم الجهة أو النطاق"
+                  aria-label="بحث"
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
+                />
               </div>
-            ))}
-          </ResponsiveGrid>
-        </div>
+              <MultiSelectFilter
+                label="الباقة"
+                options={planOptions}
+                selected={planFilter}
+                onApply={(values) => {
+                  setPlanFilter(values);
+                  setPage(1);
+                }}
+              />
+              <DateRangeFilter
+                label="تاريخ الانتهاء"
+                value={expiryFilter}
+                onApply={(value) => {
+                  setExpiryFilter(value);
+                  setPage(1);
+                }}
+              />
+            </div>
 
-        <div className="tenants-toolbar-row">
-          <div className="tenants-search">
-            <Search size={16} strokeWidth={2.5} className="tenants-search__icon" />
-            <input
-              type="search"
-              placeholder="البحث"
-              aria-label="بحث"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
-          <div className="tenants-filter-tabs">
-            {typeFilterTabs.map((tab) => {
-              const count =
-                tab.id === 'all'
-                  ? tenants.length
-                  : tenants.filter((tenant) => tenant.tenantType === tab.id).length;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={`tenants-filter-tab ${
-                    activeFilter === tab.id ? 'tenants-filter-tab--active' : ''
-                  }`}
-                  onClick={() => setActiveFilter(tab.id)}
-                >
-                  {tab.label}({count})
-                </button>
-              );
-            })}
-          </div>
-        </div>
+            <div className="tenants-chips-row">
+              <StatusChips
+                chips={statusChips}
+                active={statusFilter}
+                onChange={(id) => {
+                  setStatusFilter(id);
+                  setPage(1);
+                }}
+              />
+              <span className="tenants-result-count">
+                عرض {pageTenants.length} من {tenants.length} {plural(tenants.length, 'مستأجرًا', 'مستأجرين')}
+              </span>
+            </div>
 
-        <div className="dashboard-grid tenants-table-grid">
-          <ResponsiveGrid
-            className="dashboard-grid__layout"
-            layout={tableLayout}
-            cols={12}
-            rowHeight={54}
-            margin={[16, 16]}
-            containerPadding={[0, 0]}
-            isDraggable={false}
-            isResizable={isEditMode}
-            resizeHandles={['s', 'w', 'e', 'sw', 'se']}
-            onLayoutChange={handleTableLayoutChange}
-            compactType={null}
-            useCSSTransforms
-          >
-            <div key="table" className="dashboard-grid__item">
-              <div
-                dir="rtl"
-                className={`widget-wrapper ${isEditMode ? 'widget-wrapper--edit' : ''}`}
-              >
-                <Card className="tenants-table-card">
-                  <div className="tenants-table">
-                    <div className="tenants-table__row tenants-table__row--head">
-                      <span className="tenants-table__cell tenants-table__cell--name">الجهة</span>
-                      <span className="tenants-table__cell">نوع المستأجر</span>
-                      <span className="tenants-table__cell">الحالة</span>
-                      <span className="tenants-table__cell">الباقة</span>
-                      <span className="tenants-table__cell">المستخدمون</span>
-                      <span className="tenants-table__cell">تاريخ الانتهاء</span>
-                      <span className="tenants-table__cell tenants-table__cell--nav" aria-hidden />
-                    </div>
+            <AppliedTags tags={appliedTags} onClearAll={clearFilters} />
 
-                    <div className="tenants-table__body">
-                      {visibleTenants.map((tenant) => (
-                        <div className="tenants-table__row" key={tenant.id}>
-                          <span className="tenants-table__cell tenants-table__cell--name">
-                            {tenant.name}
-                          </span>
-                          <span className="tenants-table__cell">{tenant.typeLabel || '—'}</span>
+            {!loading && visibleTenants.length === 0 ? (
+              <PageState
+                title="لا توجد نتائج مطابقة"
+                body={
+                  query
+                    ? `لم نجد مستأجرًا يطابق «${search.trim()}» مع الفلاتر الحالية. جرّب اسمًا آخر أو امسح البحث.`
+                    : 'لم نجد مستأجرًا يطابق الفلاتر الحالية.'
+                }
+                actionLabel="مسح البحث والفلاتر"
+                onAction={clearFilters}
+              />
+            ) : (
+              <Card className="tenants-table-card">
+                <div className="tenants-table">
+                  <div className="tenants-table__row tenants-table__row--head">
+                    <span className="tenants-table__cell tenants-table__cell--name">الجهة</span>
+                    <span className="tenants-table__cell">الحالة</span>
+                    <span className="tenants-table__cell">الباقة</span>
+                    <span className="tenants-table__cell">المستخدمون</span>
+                    <span className="tenants-table__cell">تاريخ الانتهاء</span>
+                    <span className="tenants-table__cell tenants-table__cell--nav" aria-hidden />
+                  </div>
+                  {loading && tenants.length === 0
+                    ? Array.from({ length: PAGE_SIZE }, (_, index) => (
+                        <div className="tenants-table__row" key={index}>
+                          {Array.from({ length: 5 }, (__, cell) => (
+                            <span className="tenants-table__cell" key={cell}>
+                              <span className="tenants-skeleton" />
+                            </span>
+                          ))}
+                          <span />
+                        </div>
+                      ))
+                    : pageTenants.map((tenant) => (
+                        <div
+                          className="tenants-table__row tenants-table__row--link"
+                          key={tenant.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleOpenDetails(tenant.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') handleOpenDetails(tenant.id);
+                          }}
+                        >
+                          <span className="tenants-table__cell tenants-table__cell--name">{tenant.name}</span>
                           <span className="tenants-table__cell">
-                            <Badge
-                              variant={statusVariant[tenant.status]}
-                              icon={<span className="tenants-status-dot" />}
-                            >
+                            <Badge variant={statusVariant[tenant.status]} icon={<span className="tenants-status-dot" />}>
                               {tenant.statusLabel}
                             </Badge>
                           </span>
                           <span className="tenants-table__cell">{tenant.plan}</span>
-                          <span className="tenants-table__cell">{tenant.users}</span>
+                          <span className="tenants-table__cell">
+                            {tenant.userLimit ? `${tenant.users} من ${tenant.userLimit}` : tenant.users}
+                          </span>
                           <span className="tenants-table__cell">{tenant.expiresAt}</span>
                           <span className="tenants-table__cell tenants-table__cell--nav">
-                            <button
-                              type="button"
-                              className="tenants-table__nav-btn"
-                              aria-label="عرض التفاصيل"
-                              onClick={() => handleOpenDetails(tenant.id)}
-                            >
-                              <ChevronLeft size={14} />
-                            </button>
+                            <ChevronLeft size={20} aria-hidden />
                           </span>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          </ResponsiveGrid>
-        </div>
+                </div>
+                <Pagination page={currentPage} pageSize={PAGE_SIZE} total={visibleTenants.length} onChange={setPage} />
+              </Card>
+            )}
+          </>
+        )}
       </div>
       {createdCredentials ? (
         <CredentialsModal

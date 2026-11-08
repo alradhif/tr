@@ -5,7 +5,7 @@ export const tenantsSummary = {
   suspended: 3,
 };
 
-export type TenantRowStatus = 'active' | 'trial' | 'suspended';
+export type TenantRowStatus = 'active' | 'trial' | 'suspended' | 'pending';
 
 export interface TenantRow {
   id: string;
@@ -16,6 +16,8 @@ export interface TenantRow {
   statusLabel: string;
   plan: string;
   users: number;
+  userLimit?: number;
+  domain?: string;
   expiresAt: string;
 }
 

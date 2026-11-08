@@ -5,7 +5,23 @@ import { tenantTypeLabel, type TenantType } from './tenantTypes'
 
 function statusFromActive(isActive: boolean): { status: TenantRowStatus; statusLabel: string } {
   if (isActive) return { status: 'active', statusLabel: 'نشط' }
-  return { status: 'suspended', statusLabel: 'معلق' }
+  return { status: 'suspended', statusLabel: 'معلّق' }
+}
+
+/** A tenant waits for activation until a user signs in, and is on trial while on the Demo package. */
+function accountStatus(account: OrgAccount | ClientAccount): { status: TenantRowStatus; statusLabel: string } {
+  if (!account.isActive) return statusFromActive(false)
+  if ((account.userCount ?? 0) > 0 && (account.activeUsers ?? 0) === 0) {
+    return { status: 'pending', statusLabel: 'بانتظار التفعيل' }
+  }
+  if (account.subscription?.package?.name === 'DEMO') return { status: 'trial', statusLabel: 'تجربة' }
+  return statusFromActive(true)
+}
+
+function isoDate(value?: string | null) {
+  if (!value) return '—'
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? '—' : d.toISOString().slice(0, 10)
 }
 
 function formatJoin(createdAt?: string) {
@@ -43,6 +59,7 @@ function mapSubscription(sub?: OrgAccount['subscription'] | null) {
     features: Array.isArray(pkg?.features) ? pkg.features : [],
     monthlyCost: price,
     renewalDate: formatDate(sub?.endDate),
+    expiresAt: isoDate(sub?.endDate),
   }
 }
 
@@ -57,7 +74,7 @@ function portalType(value: string | undefined, fallback: TenantType): TenantType
 }
 
 export function orgToTenant(org: OrgAccount): Tenant {
-  const { status, statusLabel } = statusFromActive(org.isActive)
+  const { status, statusLabel } = accountStatus(org)
   const tenantType = portalType(org.tenantType, 'ORG')
   return {
     id: `org-${org.id}`,
@@ -67,6 +84,7 @@ export function orgToTenant(org: OrgAccount): Tenant {
     joinDuration: formatJoin(org.createdAt),
     lastActivity: '—',
     entityName: org.name,
+    domain: org.domain ?? undefined,
     crNumber: dash(org.crNumber),
     sector: dash(org.sector?.name ?? org.sectorId),
     adminName: dash(org.adminName),
@@ -87,7 +105,7 @@ export function orgToTenant(org: OrgAccount): Tenant {
 }
 
 export function clientToTenant(client: ClientAccount): Tenant {
-  const { status, statusLabel } = statusFromActive(client.isActive)
+  const { status, statusLabel } = accountStatus(client)
   const tenantType = portalType(client.tenantType, 'CLIENT')
   return {
     id: `client-${client.id}`,
@@ -156,7 +174,9 @@ export function tenantToRow(tenant: Tenant): TenantRow {
     statusLabel: tenant.statusLabel,
     plan: tenant.package.name,
     users: tenant.activeUsers,
-    expiresAt: tenant.package.renewalDate,
+    userLimit: tenant.userLimit,
+    domain: tenant.domain,
+    expiresAt: tenant.package.expiresAt ?? '—',
   }
 }
 
@@ -165,9 +185,10 @@ export function mapAccountsToTenants(
   clients: ClientAccount[],
   jodaynUsers: JodaynAccount[] = [],
 ): Tenant[] {
-  return [
-    ...orgs.map(orgToTenant),
-    ...clients.map(clientToTenant),
-    ...jodaynUsers.map(jodaynToTenant),
-  ]
+  // Jodayn is one tenant however many staff accounts it has.
+  const [firstJodayn] = jodaynUsers
+  const jodayn = firstJodayn
+    ? [{ ...jodaynToTenant(firstJodayn), name: 'جودين', entityName: 'جودين', activeUsers: jodaynUsers.length }]
+    : []
+  return [...jodayn, ...orgs.map(orgToTenant), ...clients.map(clientToTenant)]
 }

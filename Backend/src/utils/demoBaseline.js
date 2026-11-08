@@ -1,3 +1,5 @@
+const crypto = require('crypto')
+const bcrypt = require('bcryptjs')
 const prisma = require('../lib/prisma')
 const { saveOrgProjectDetails, saveClientProjectDetails } = require('../lib/projectExtras')
 
@@ -514,6 +516,66 @@ async function seedProjectPayments(def, project, orgId, invoiceBase) {
   }
 }
 
+// Package, expiry and users for each synthetic tenant, so the Super Admin screens have real rows.
+const TENANT_PLANS = [
+  { name: 'وزارة التعليم', plan: 'ENTERPRISE', days: 430, users: 18 },
+  { name: 'هيئة الصحة العامة', plan: 'PREMIUM', days: 210, users: 21 },
+  { name: 'شركة نماء للتقنية', plan: 'DEMO', days: 26, users: 2 },
+  { name: 'جامعة الملك سعود', plan: 'BASIC', days: 160, users: 6 },
+  { name: 'بلدية جدة', plan: 'BASIC', days: 165, users: 9 },
+  { name: 'مؤسسة الوقف الخيري', plan: 'BASIC', days: -18, users: 4 },
+  { name: 'شركة ألفا للاستشارات', plan: 'PREMIUM', days: 95, users: 7 },
+  { name: 'شركة نجم الخليج', plan: 'PREMIUM', days: 112, users: 12, client: true },
+  { name: 'مؤسسة روافد التجارية', plan: 'DEMO', days: 31, users: 1, client: true },
+  { name: 'مجموعة السلام الطبية', plan: 'ENTERPRISE', days: 300, users: 14, client: true },
+  { name: 'شركة الأفق للمقاولات', plan: 'BASIC', days: 25, users: 5, pending: true, client: true },
+  { name: 'مؤسسة الرواد للاستشارات', plan: 'FREE', days: 200, users: 1, client: true },
+]
+
+async function seedTenantSubscriptions(admin) {
+  const password = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10)
+  const packages = new Map((await prisma.package.findMany()).map((pkg) => [pkg.name, pkg]))
+  for (const [tenantIndex, row] of TENANT_PLANS.entries()) {
+    const accountModel = row.client ? prisma.clientAccount : prisma.orgAccount
+    const account = await accountModel.findFirst({ where: { name: row.name } })
+    if (!account) continue
+    const pkg = packages.get(row.plan)
+    const accountType = row.client ? 'CLIENT' : 'ORG'
+    const existing = await prisma.accountSubscription.findFirst({ where: { accountType, accountId: account.id } })
+    if (!existing) {
+      await prisma.accountSubscription.create({
+        data: {
+          accountType,
+          accountId: account.id,
+          packageId: pkg.id,
+          startDate: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000),
+          endDate: new Date(Date.now() + row.days * 24 * 60 * 60 * 1000),
+          paidAmount: pkg.price,
+          status: row.plan === 'DEMO' ? 'DEMO' : 'ACTIVE',
+          createdBy: admin.id,
+        },
+      })
+    }
+    const userModel = row.client ? prisma.clientUser : prisma.orgUser
+    const scope = row.client ? { clientId: account.id } : { orgId: account.id }
+    for (let index = 0; index < row.users; index += 1) {
+      const email = `user${index + 1}.t${tenantIndex + 1}@example.com`
+      const name = `${index === 0 ? 'مدير' : 'موظف'} ${row.name}`
+      const role = `${row.client ? 'CLIENT' : 'ORG'}_${index === 0 ? 'UPPER_MGMT' : 'DATA_ENTRY'}`
+      await findOrCreateUser(userModel, email, {
+        name, email, password, role, ...scope,
+        pendingActivation: Boolean(row.pending),
+        lastLoginAt: row.pending ? null : new Date(Date.now() - (index + 1) * 26 * 60 * 60 * 1000),
+      })
+    }
+  }
+}
+
+async function findOrCreateUser(model, email, data) {
+  const existing = await model.findUnique({ where: { email } })
+  return existing || model.create({ data })
+}
+
 async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgUpper, orgEntry, clientUpper, department, company }) {
   const findOrCreate = findOrCreateFactory()
   // The demo organization is government, so its invoices page tracks what it pays.
@@ -742,6 +804,8 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
       createdBy: admin.id,
     })
   }
+
+  await seedTenantSubscriptions(admin)
 
   for (const { dueInDays, ...invoice } of INVOICES) {
     const vatAmount = Math.round(invoice.amount * 0.15)

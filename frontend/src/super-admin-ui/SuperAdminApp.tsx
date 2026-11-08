@@ -195,10 +195,12 @@ function SuperAdminAppInner() {
 
 export function SuperAdminApp() {
   return (
-    <PackageProvider>
-      <TenantProvider>
-        <SuperAdminAppInner />
-      </TenantProvider>
-    </PackageProvider>
+    <div className="sa-font">
+      <PackageProvider>
+        <TenantProvider>
+          <SuperAdminAppInner />
+        </TenantProvider>
+      </PackageProvider>
+    </div>
   )
 }
