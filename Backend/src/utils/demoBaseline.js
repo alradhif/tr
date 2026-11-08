@@ -533,10 +533,12 @@ async function seedProjectPayments(def, project, orgId, invoiceBase) {
     await prisma.orgProjectPayment.create({
       data: {
         title,
-        invoiceNumber: `PAY-${invoiceBase + index}`,
+        invoiceNumber: `INV-2026-${invoiceBase}`,
         amount: Math.round(budget / INSTALLMENT_TITLES.length),
         dueDate,
         paidAt: isSettled ? dueDate : null,
+        paymentReference: isSettled ? `TRX-${invoiceBase + index}` : null,
+        recordedByName: isSettled ? 'أحمد محمد' : null,
         orgId,
         projectId: project.id,
         companyId: project.executingCompanyId,

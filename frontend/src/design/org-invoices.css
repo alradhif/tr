@@ -223,3 +223,142 @@
   background: #d1f0e1;
   color: #0e7a47;
 }
+
+/* Invoice tracking: one invoice holds several payments. */
+.org-invoices__heading {
+  margin: 0;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+}
+
+.org-invoices__lead {
+  margin: 4px 0 0;
+  color: #6b6c72;
+  font-size: 14px;
+}
+
+.org-invoices__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.org-invoices__selects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.org-invoices__cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.org-invoices__cards small {
+  color: #8e8f97;
+  font-size: 12px;
+}
+
+.org-invoices__card--late .jinv-card__value,
+.org-invoices__card--late .jinv-card__unit,
+.org-invoices__card--late small {
+  color: #f04438;
+}
+
+.org-invoices__details section + section {
+  margin-top: 14px;
+}
+
+.org-invoices__details h3 {
+  margin: 8px 0;
+  color: #0c0c0d;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.org-invoices__details ul {
+  border-radius: 10px;
+  background: #fff;
+}
+
+.org-invoices__details li {
+  grid-template-columns: 100px 120px 160px 110px minmax(180px, 1fr);
+  padding: 10px 14px;
+}
+
+.org-invoices__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fde9ce;
+  color: #b4690e;
+}
+
+.org-invoices__state.is-paid {
+  background: #d1f0e1;
+  color: #118a51;
+}
+
+.org-invoices__state.is-overdue {
+  background: #feedec;
+  color: #d92d20;
+}
+
+.org-invoices__record {
+  justify-self: end;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: #0c0c0d;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.org-invoices__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f5f5f6;
+}
+
+.org-invoices__summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.org-invoices__summary dt {
+  color: #8e8f97;
+  font-size: 13px;
+}
+
+.org-invoices__summary dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.org-invoices__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #f04438;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .org-invoices__cards {
+    grid-template-columns: 1fr;
+  }
+}

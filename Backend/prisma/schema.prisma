@@ -612,6 +612,8 @@ model OrgProjectPayment {
   amount        Decimal
   dueDate       DateTime
   paidAt        DateTime?
+  paymentReference String?
+  recordedByName   String?
   orgId         String
   org           OrgAccount        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   projectId     String

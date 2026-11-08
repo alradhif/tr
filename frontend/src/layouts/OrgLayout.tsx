@@ -49,7 +49,7 @@ export function OrgLayout() {
           { key: '/org/departments', label: t('departments'), icon: <DepartmentsIcon /> },
           {
             key: '/org/invoices',
-            label: t('invoices'),
+            label: 'تتبع الفواتير',
             icon: <img src={invoicesIcon} alt="" width={20} height={20} className="sidebar__nav-icon sidebar__nav-icon--dark" />,
           },
         ]}

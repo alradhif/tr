@@ -84,13 +84,22 @@ async function getOwnedPayment(req, res) {
   return payment
 }
 
-exports.setPaymentPaid = async (req, res) => {
+// A payment is recorded whole, once: there is no partial payment and no undo.
+exports.recordPayment = async (req, res) => {
   try {
     const existing = await getOwnedPayment(req, res)
     if (!existing) return
+    if (existing.paidAt) return res.status(409).json({ message: 'هذه الدفعة مسجلة مسبقًا' })
+    const paidAt = new Date(req.body?.paidAt)
+    const reference = String(req.body?.reference || '').trim()
+    if (Number.isNaN(paidAt.getTime()) || paidAt.getTime() > Date.now() + 24 * 60 * 60 * 1000) {
+      return res.status(400).json({ message: 'تاريخ الدفع غير صحيح' })
+    }
+    if (!reference) return res.status(400).json({ message: 'رقم المرجع مطلوب' })
+    const recorder = await prisma.orgUser.findUnique({ where: { id: req.user.userId }, select: { name: true } })
     const payment = await prisma.orgProjectPayment.update({
       where: { id: existing.id },
-      data: { paidAt: req.body.paid === false ? null : new Date() },
+      data: { paidAt, paymentReference: reference, recordedByName: recorder?.name || null },
       include: PAYMENT_INCLUDE,
     })
     res.json({ success: true, payment })

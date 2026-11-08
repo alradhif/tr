@@ -9,6 +9,8 @@ export type OrgPayment = {
   amount: number | string
   dueDate: string
   paidAt?: string | null
+  paymentReference?: string | null
+  recordedByName?: string | null
   project: { id: string; name: string }
   company?: { id: string; name: string } | null
 }
@@ -36,11 +38,11 @@ export function createOrgPayment(token: string, data: OrgPaymentPayload) {
   })
 }
 
-export function setOrgPaymentPaid(token: string, id: string, paid: boolean) {
-  return apiRequest<{ success: boolean; payment: OrgPayment }>(`/org/payments/${id}/paid`, {
-    method: 'PATCH',
+export function recordOrgPayment(token: string, id: string, data: { paidAt: string; reference: string }) {
+  return apiRequest<{ success: boolean; payment: OrgPayment }>(`/org/payments/${id}/record`, {
+    method: 'POST',
     token,
-    body: JSON.stringify({ paid }),
+    body: JSON.stringify(data),
   })
 }
 
