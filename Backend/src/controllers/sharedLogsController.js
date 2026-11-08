@@ -110,10 +110,14 @@ exports.getActivityLogs = async (req, res) => {
     if (actorType) where.actorType = actorType
     if (superAdminId) where.superAdminId = superAdminId
 
-    const logs = await prisma.activityLog.findMany({
+    const rows = await prisma.activityLog.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Number(req.query.limit) || 500, 1000)
     })
+    const { performerNames } = require('./superAdminPlatformController')
+    const names = await performerNames(rows.map((row) => row.userId))
+    const logs = rows.map((row) => ({ ...row, performerName: names.get(row.userId) || null }))
 
     res.json({ count: logs.length, logs })
   } catch (err) {

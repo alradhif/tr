@@ -144,6 +144,39 @@ function MultiSelectMenu({
   );
 }
 
+/** One choice that applies immediately. */
+export function SingleSelectFilter({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: MultiOption[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <FilterShell label={label} value={options.find((option) => option.value === value)?.label ?? ''}>
+      {(close) =>
+        options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`sa-filter__option${option.value === value ? ' sa-filter__option--checked' : ''}`}
+            onClick={() => {
+              onChange(option.value);
+              close();
+            }}
+          >
+            <span className="sa-filter__option-label">{option.label}</span>
+          </button>
+        ))
+      }
+    </FilterShell>
+  );
+}
+
 export type DateRangeValue =
   | { kind: 'any' }
   | { kind: 'within'; days: number }

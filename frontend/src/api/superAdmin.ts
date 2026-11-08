@@ -420,6 +420,13 @@ export type PlatformUser = {
   lastLoginAt?: string | null
 }
 
+export function getActivityLogs(token: string) {
+  return apiRequest<{ logs: Array<Record<string, unknown>> }>('/activity-logs?limit=500', {
+    method: 'GET',
+    token,
+  })
+}
+
 export function getAuditLogs(token: string) {
   return apiRequest<{ logs: Array<Record<string, unknown>> }>('/audit-logs?limit=500', {
     method: 'GET',

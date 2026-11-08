@@ -63,13 +63,13 @@ function buildStatCards(packages: PackageModel[], totalUsers: number, activeTena
       iconSrc: dashboardDataAssets.totalUsers,
       label: 'إجمالي المستخدمين',
       value: totalUsers,
-      unit: 'مستخدم',
+      unit: 'مستخدمًا',
     },
     {
       iconSrc: dashboardDataAssets.activeEntities,
       label: 'الجهات النشطة',
       value: activeTenants,
-      unit: 'جهة',
+      unit: 'جهات',
     },
   ];
 }
@@ -95,6 +95,11 @@ export function SubscriptionsPage() {
 
   const [view, setView] = useState<SubscriptionsView>('list');
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+
+  const openPackage = (id: string) => {
+    setSelectedPackageId(id);
+    setView('details');
+  };
 
   const selectedPackage = packages.find((pkg) => pkg.id === selectedPackageId) ?? null;
 
@@ -179,10 +184,7 @@ export function SubscriptionsPage() {
 
   return (
     <div className="dashboard-page">
-      <PageHeader
-        title="الاشتراكات والباقات"
-        subtitle="إدارة باقات الاشتراك وصلاحياتها"
-      />
+      <PageHeader title="الاشتراكات والباقات" />
 
       <div className="tenants-body" dir="rtl">
         <div className="subscriptions-title-row">
@@ -205,7 +207,7 @@ export function SubscriptionsPage() {
               <span className="tenants-table__cell tenants-table__cell--name">اسم الباقة</span>
               <span className="tenants-table__cell">السعر</span>
               <span className="tenants-table__cell">المدة</span>
-              <span className="tenants-table__cell">مساحة التخزين (GB)</span>
+              <span className="tenants-table__cell">مساحة التخزين</span>
               <span className="tenants-table__cell">عدد المستخدمين</span>
               <span className="tenants-table__cell">الحالة</span>
               <span className="tenants-table__cell">عدد المستأجرين</span>
@@ -214,14 +216,25 @@ export function SubscriptionsPage() {
 
             <div className="tenants-table__body">
               {packages.map((pkg) => (
-                <div className="tenants-table__row subscriptions-table__row" key={pkg.id}>
+                <div
+                  className="tenants-table__row tenants-table__row--link subscriptions-table__row"
+                  key={pkg.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openPackage(pkg.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') openPackage(pkg.id);
+                  }}
+                >
                   <span className="tenants-table__cell tenants-table__cell--name">
                     {pkg.name}
                   </span>
                   <span className="tenants-table__cell">{pkg.price}</span>
                   <span className="tenants-table__cell">{pkg.duration}</span>
-                  <span className="tenants-table__cell">{formatStorageValue(pkg.storage)}</span>
-                  <span className="tenants-table__cell">{pkg.users}</span>
+                  <span className="tenants-table__cell">GB {formatStorageValue(pkg.storage)}</span>
+                  <span className="tenants-table__cell">
+                    حتى {pkg.userLimit} {pkg.userLimit > 2 && pkg.userLimit <= 10 ? 'مستخدمين' : 'مستخدمًا'}
+                  </span>
                   <span className="tenants-table__cell">
                     <Badge
                       variant={pkg.status === 'active' ? 'success' : 'danger'}
@@ -232,17 +245,7 @@ export function SubscriptionsPage() {
                   </span>
                   <span className="tenants-table__cell">{pkg.tenants}</span>
                   <span className="tenants-table__cell tenants-table__cell--nav">
-                    <button
-                      type="button"
-                      className="tenants-table__nav-btn"
-                      aria-label="عرض التفاصيل"
-                      onClick={() => {
-                        setSelectedPackageId(pkg.id);
-                        setView('details');
-                      }}
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
+                    <ChevronLeft size={20} aria-hidden />
                   </span>
                 </div>
               ))}

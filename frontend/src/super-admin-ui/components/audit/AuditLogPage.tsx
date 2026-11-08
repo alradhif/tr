@@ -1,43 +1,59 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Clock, Repeat, Search } from 'lucide-react';
-import GridLayout, { WidthProvider, type Layout, type LayoutItem } from 'react-grid-layout/legacy';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Clock, MessageSquareText, Search, X } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
+import {
+  AppliedTags,
+  MultiSelectFilter,
+  PageState,
+  Pagination,
+  SingleSelectFilter,
+} from '../ui/filters';
 import { PageHeader } from '../layout/PageHeader';
-import { type AuditLogEntry, type AuditLogSeverity } from '../../data/auditLog';
-import { getAuditLogs, getAuditSummary, type AuditSummary } from '../../../api/superAdmin';
+import { getActivityLogs, getAuditLogs, getAuditSummary, type AuditSummary } from '../../../api/superAdmin';
 import { getSuperAdminToken } from '../../../auth/superAdminAuth';
 import '../layout/layout.css';
 import '../dashboard/dashboard.css';
 import '../tenants/tenants.css';
 import './audit.css';
 
-const ResponsiveGrid = WidthProvider(GridLayout);
+type Severity = 'success' | 'warning' | 'info';
+type ActionKind = 'create' | 'delete' | 'status' | 'update' | 'login' | 'loginFailed';
 
-const severityIcon: Record<AuditLogSeverity, typeof Clock> = {
+const severityIcon: Record<Severity, typeof Clock> = {
   success: Clock,
   warning: AlertTriangle,
-  info: Repeat,
+  info: MessageSquareText,
 };
 
-function mapSeverity(action: string): AuditLogSeverity {
-  if (action === 'DELETE') return 'warning';
-  if (action === 'CREATE') return 'success';
-  return 'info';
-}
+const KIND_LABEL: Record<ActionKind, string> = {
+  create: 'إنشاء',
+  delete: 'حذف',
+  status: 'تعليق / إعادة تفعيل',
+  update: 'تعديل',
+  login: 'تسجيل دخول ناجح',
+  loginFailed: 'محاولة دخول فاشلة',
+};
 
-const ACTION_LABEL: Record<string, string> = { CREATE: 'إنشاء', UPDATE: 'تعديل', DELETE: 'حذف' };
-const TABLE_LABEL: Record<string, string> = {
-  org_accounts: 'حساب جهة',
-  client_accounts: 'حساب عميل',
-  org_users: 'مستخدم جهة',
-  client_users: 'مستخدم عميل',
-  jodayn_users: 'مستخدم جودين',
+const KIND_SEVERITY: Record<ActionKind, Severity> = {
+  create: 'info',
+  delete: 'warning',
+  status: 'info',
+  update: 'info',
+  login: 'success',
+  loginFailed: 'warning',
+};
+
+const SUBJECT_LABEL: Record<string, string> = {
+  org_accounts: 'مستأجر',
+  client_accounts: 'مستأجر',
+  org_users: 'مستخدم',
+  client_users: 'مستخدم',
+  jodayn_users: 'مستخدم',
   packages: 'باقة',
-  credentials: 'بيانات الدخول',
+  credentials: 'بيانات دخول',
 };
+
 const ACTOR_LABEL: Record<string, string> = {
   SUPER_ADMIN: 'سوبر أدمن',
   JODAYN: 'جودين',
@@ -45,205 +61,219 @@ const ACTOR_LABEL: Record<string, string> = {
   CLIENT: 'عميل',
 };
 
-type AuditFilterId = 'all' | 'CREATE' | 'UPDATE' | 'DELETE';
-type AuditRow = AuditLogEntry & { action: string; createdAt: string; search: string };
+const PERIODS = [
+  { value: '7', label: 'آخر 7 أيام' },
+  { value: '30', label: 'آخر 30 يومًا' },
+  { value: '90', label: 'آخر 90 يومًا' },
+  { value: 'all', label: 'كل الوقت' },
+];
 
-function formatTime(value: unknown) {
-  if (!value) return '—';
-  const d = new Date(String(value));
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleString('ar-SA');
+const PAGE_SIZE = 6;
+
+interface AuditRow {
+  id: string;
+  kind: ActionKind;
+  title: string;
+  meta: string;
+  actor: string;
+  performer: string;
+  subject: string;
+  ip: string;
+  createdAt: string;
+  search: string;
 }
 
-const DEFAULT_STATS_LAYOUT: LayoutItem[] = [
-  { i: 'today', x: 9, y: 0, w: 3, h: 2, minW: 2, maxW: 6, minH: 2, maxH: 4 },
-  { i: 'deletions', x: 6, y: 0, w: 3, h: 2, minW: 2, maxW: 6, minH: 2, maxH: 4 },
-  { i: 'suspicious', x: 3, y: 0, w: 3, h: 2, minW: 2, maxW: 6, minH: 2, maxH: 4 },
-  { i: 'mostActive', x: 0, y: 0, w: 3, h: 2, minW: 2, maxW: 6, minH: 2, maxH: 4 },
-];
+function timeLabel(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return 'الآن';
+  if (minutes < 60) return minutes === 1 ? 'منذ دقيقة' : `منذ ${minutes} دقيقة`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours === 1 ? 'منذ ساعة' : hours === 2 ? 'منذ ساعتين' : `منذ ${hours} ساعات`;
+  const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  if (hours < 48) return `أمس ${time}`;
+  return date.toLocaleDateString('ar-SA-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long' });
+}
 
-const DEFAULT_LOG_LAYOUT: LayoutItem[] = [
-  { i: 'log', x: 0, y: 0, w: 12, h: 8, minW: 6, maxW: 12, minH: 3, maxH: 20 },
-];
+function auditKind(action: string, oldData: Record<string, unknown>, newData: Record<string, unknown>): ActionKind {
+  if (action === 'CREATE') return 'create';
+  if (action === 'DELETE') return 'delete';
+  return 'isActive' in newData || 'isActive' in oldData ? 'status' : 'update';
+}
+
+function auditTitle(kind: ActionKind, table: string, subject: string, newData: Record<string, unknown>) {
+  const noun = SUBJECT_LABEL[table] ?? table;
+  const name = subject ? ` «${subject}»` : '';
+  if (kind === 'status') return `${newData.isActive === false ? 'تعليق' : 'إعادة تفعيل'} حساب${name}`;
+  const verb = kind === 'create' ? 'إنشاء' : kind === 'delete' ? 'حذف' : 'تعديل';
+  return `${verb} ${noun}${name}`;
+}
 
 export function AuditLogPage() {
-  const [activeFilter, setActiveFilter] = useState<AuditFilterId>('all');
-  const [entries, setEntries] = useState<AuditRow[]>([]);
+  const [rows, setRows] = useState<AuditRow[]>([]);
   const [summary, setSummary] = useState<AuditSummary | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reload, setReload] = useState(0);
   const [search, setSearch] = useState('');
-  const isEditMode = false;
-  const [statsLayout, setStatsLayout] = useState<LayoutItem[]>(DEFAULT_STATS_LAYOUT);
-  const [logLayout, setLogLayout] = useState<LayoutItem[]>(DEFAULT_LOG_LAYOUT);
+  const [kinds, setKinds] = useState<string[]>([]);
+  const [actors, setActors] = useState<string[]>([]);
+  const [period, setPeriod] = useState('30');
+  const [page, setPage] = useState(1);
+  const [opened, setOpened] = useState<AuditRow | null>(null);
 
   useEffect(() => {
     const token = getSuperAdminToken();
     if (!token) return;
     let cancelled = false;
-    Promise.all([getAuditLogs(token), getAuditSummary(token)])
-      .then(([res, sum]) => {
+    Promise.all([getAuditLogs(token), getActivityLogs(token), getAuditSummary(token)])
+      .then(([audit, activity, auditSummary]) => {
         if (cancelled) return;
-        setSummary(sum);
-        setEntries(
-          (res.logs ?? []).map((log, index) => {
-            const action = String(log.action ?? 'UPDATE');
-            const tableName = String(log.tableName ?? '—');
-            const performer = String(log.performerName ?? '—');
-            const actor = ACTOR_LABEL[String(log.actorType ?? '')] ?? String(log.actorType ?? '');
-            const newData = (log.newData ?? {}) as Record<string, unknown>;
-            const oldData = (log.oldData ?? {}) as Record<string, unknown>;
-            const subject = String(newData.name ?? oldData.name ?? newData.email ?? log.recordId ?? '');
-            const title = `${ACTION_LABEL[action] ?? action} ${TABLE_LABEL[tableName] ?? tableName}${subject ? ` «${subject}»` : ''}`;
-            const meta = `${tableName} · ${performer} · ${actor}`;
+        setSummary(auditSummary);
+        const fromAudit = (audit.logs ?? []).map((log): AuditRow => {
+          const newData = (log.newData ?? {}) as Record<string, unknown>;
+          const oldData = (log.oldData ?? {}) as Record<string, unknown>;
+          const subject = String(newData.name ?? oldData.name ?? newData.email ?? '');
+          const kind = auditKind(String(log.action), oldData, newData);
+          const title = auditTitle(kind, String(log.tableName), subject, newData);
+          const performer = String(log.performerName ?? '—');
+          const actor = ACTOR_LABEL[String(log.actorType)] ?? String(log.actorType ?? '');
+          return {
+            id: String(log.id),
+            kind,
+            title,
+            meta: `${performer} · ${actor}`,
+            actor,
+            performer,
+            subject: SUBJECT_LABEL[String(log.tableName)] ?? String(log.tableName),
+            ip: '',
+            createdAt: String(log.createdAt),
+            search: `${title} ${performer}`.toLowerCase(),
+          };
+        });
+        const fromActivity = (activity.logs ?? [])
+          .filter((log) => ['LOGIN', 'FIRST_LOGIN', 'LOGIN_FAILED'].includes(String(log.action)))
+          .map((log): AuditRow => {
+            const failed = log.action === 'LOGIN_FAILED';
+            const actor = ACTOR_LABEL[String(log.actorType)] ?? String(log.actorType ?? '');
+            const ip = log.ipAddress ? String(log.ipAddress) : '';
+            const performer = String(log.performerName ?? 'حساب غير معروف');
+            const title = failed ? 'محاولة دخول فاشلة' : 'تسجيل دخول ناجح';
             return {
-              id: String(log.id ?? index),
+              id: String(log.id),
+              kind: failed ? 'loginFailed' : 'login',
               title,
-              meta,
-              time: formatTime(log.createdAt),
-              severity: mapSeverity(action),
-              action,
-              createdAt: String(log.createdAt ?? ''),
-              search: `${title} ${meta}`.toLowerCase(),
+              meta: [`${performer} · ${actor}`, ip && `IP ${ip}`].filter(Boolean).join(' · '),
+              actor,
+              performer,
+              subject: 'جلسة دخول',
+              ip,
+              createdAt: String(log.createdAt),
+              search: `${title} ${performer} ${ip}`.toLowerCase(),
             };
-          }),
-        );
+          });
+        setRows([...fromAudit, ...fromActivity].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+        setLoadError(false);
       })
-      .catch((err) => {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : 'تعذر تحميل سجل التدقيق');
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reload]);
 
-  const auditLogSummary = useMemo(() => {
-    const today = new Date().toDateString();
-    return {
-      actionsToday: entries.filter((e) => new Date(e.createdAt).toDateString() === today).length,
-      deletions: entries.filter((e) => e.action === 'DELETE').length,
-      suspiciousAttempts: summary?.failedLogins ?? 0,
-      mostActiveEntity: {
-        name: summary?.mostActive?.name ?? '—',
-        actionsCount: summary?.mostActive?.count ?? 0,
-        role: summary ? `آخر ${summary.periodDays} أيام` : '',
-      },
-    };
-  }, [entries, summary]);
-
-  const auditFilterTabs: Array<{ id: AuditFilterId; label: string; count: number }> = [
-    { id: 'all', label: 'كل الإجراءات', count: entries.length },
-    { id: 'CREATE', label: 'إنشاء', count: entries.filter((e) => e.action === 'CREATE').length },
-    { id: 'UPDATE', label: 'تعديل', count: entries.filter((e) => e.action === 'UPDATE').length },
-    { id: 'DELETE', label: 'حذف', count: entries.filter((e) => e.action === 'DELETE').length },
-  ];
+  const inPeriod = useMemo(() => {
+    if (period === 'all') return rows;
+    const since = Date.now() - Number(period) * 24 * 60 * 60 * 1000;
+    return rows.filter((row) => new Date(row.createdAt).getTime() >= since);
+  }, [rows, period]);
 
   const query = search.trim().toLowerCase();
-  const auditLogEntries = entries
-    .filter((e) => activeFilter === 'all' || e.action === activeFilter)
-    .filter((e) => !query || e.search.includes(query));
-
-  const handleStatsLayoutChange = useCallback(
-    (newLayout: Layout) => {
-      if (!isEditMode) return;
-      setStatsLayout([...newLayout]);
-    },
-    [isEditMode],
+  const visible = inPeriod.filter(
+    (row) =>
+      (kinds.length === 0 || kinds.includes(row.kind)) &&
+      (actors.length === 0 || actors.includes(row.actor)) &&
+      (!query || row.search.includes(query)),
   );
+  const pages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pages);
+  const pageRows = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const handleLogLayoutChange = useCallback(
-    (newLayout: Layout) => {
-      if (!isEditMode) return;
-      setLogLayout([...newLayout]);
-    },
-    [isEditMode],
-  );
+  const today = new Date().toDateString();
+  const actionsToday = rows.filter((row) => new Date(row.createdAt).toDateString() === today).length;
+  const deletions = inPeriod.filter((row) => row.kind === 'delete').length;
+
+  const kindOptions = (Object.keys(KIND_LABEL) as ActionKind[]).map((kind) => ({
+    value: kind,
+    label: KIND_LABEL[kind],
+    count: inPeriod.filter((row) => row.kind === kind).length,
+  }));
+  const actorOptions = Object.values(ACTOR_LABEL).map((actor) => ({
+    value: actor,
+    label: actor,
+    count: inPeriod.filter((row) => row.actor === actor).length,
+  }));
+
+  const clearFilters = () => {
+    setSearch('');
+    setKinds([]);
+    setActors([]);
+    setPeriod('30');
+    setPage(1);
+  };
+  const tags = [
+    ...kinds.map((kind) => ({
+      key: kind,
+      label: `نوع الإجراء: ${KIND_LABEL[kind as ActionKind]}`,
+      onRemove: () => setKinds((current) => current.filter((item) => item !== kind)),
+    })),
+    ...actors.map((actor) => ({
+      key: actor,
+      label: `الجهة: ${actor}`,
+      onRemove: () => setActors((current) => current.filter((item) => item !== actor)),
+    })),
+  ];
 
   return (
     <div className="dashboard-page">
-      <PageHeader
-        title="سجل التدقيق"
-        subtitle="سجل كامل بجميع الإجراءات على المنصة"
-      />
+      <PageHeader title="سجل التدقيق" />
 
       <div className="tenants-body" dir="rtl">
-        <div className="dashboard-grid tenants-stats-grid">
-          <ResponsiveGrid
-            className="dashboard-grid__layout"
-            layout={statsLayout}
-            cols={12}
-            rowHeight={54}
-            margin={[16, 16]}
-            containerPadding={[0, 0]}
-            isDraggable={isEditMode}
-            isResizable={isEditMode}
-            resizeHandles={['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne']}
-            onLayoutChange={handleStatsLayoutChange}
-            compactType={null}
-            useCSSTransforms
-          >
-            <div key="today" className="dashboard-grid__item">
-              <div
-                dir="rtl"
-                className={`widget-wrapper ${isEditMode ? 'widget-wrapper--edit' : ''}`}
-              >
-                <Card className="audit-stat-card">
-                  <p className="widget-title">إجراءات اليوم</p>
-                  <div className="widget-stat-block widget-stat-inline">
-                    <span className="widget-stat-value">{auditLogSummary.actionsToday}</span>
-                    <span className="widget-stat-label audit-stat-card__label--bold">إجراءات</span>
-                  </div>
-                </Card>
-              </div>
+        <div className="tenants-stats">
+          <Card className="tenants-stat-card">
+            <p className="widget-title">إجراءات اليوم</p>
+            <div className="widget-stat-block widget-stat-inline">
+              <span className="widget-stat-value">{actionsToday}</span>
+              <span className="widget-stat-label">إجراءات</span>
             </div>
-
-            <div key="deletions" className="dashboard-grid__item">
-              <div
-                dir="rtl"
-                className={`widget-wrapper ${isEditMode ? 'widget-wrapper--edit' : ''}`}
-              >
-                <Card className="audit-stat-card">
-                  <p className="widget-title">عمليات الحذف</p>
-                  <div className="widget-stat-block">
-                    <span className="widget-stat-value">{auditLogSummary.deletions}</span>
-                  </div>
-                </Card>
-              </div>
+          </Card>
+          <Card className="tenants-stat-card">
+            <p className="widget-title">عمليات الحذف</p>
+            <div className="widget-stat-block widget-stat-inline">
+              <span className="widget-stat-value">{deletions}</span>
             </div>
-
-            <div key="suspicious" className="dashboard-grid__item">
-              <div
-                dir="rtl"
-                className={`widget-wrapper ${isEditMode ? 'widget-wrapper--edit' : ''}`}
-              >
-                <Card className="audit-stat-card">
-                  <p className="widget-title">محاولات دخول مشبوهة</p>
-                  <div className="widget-bottom-row">
-                    <span className="widget-stat-value">{auditLogSummary.suspiciousAttempts}</span>
-                    <Badge variant="danger" icon={<AlertTriangle size={12} />}>
-                      <strong>من عناوين IP</strong>
-                    </Badge>
-                  </div>
-                </Card>
-              </div>
+          </Card>
+          <Card className="tenants-stat-card">
+            <p className="widget-title">محاولات دخول مشبوهة</p>
+            <div className="widget-bottom-row audit-suspicious">
+              <span className="widget-stat-value">{summary?.failedLogins ?? 0}</span>
+              <Badge variant="danger" icon={<AlertTriangle size={12} />}>
+                آخر {summary?.periodDays ?? 7} أيام
+              </Badge>
             </div>
-
-            <div key="mostActive" className="dashboard-grid__item">
-              <div
-                dir="rtl"
-                className={`widget-wrapper ${isEditMode ? 'widget-wrapper--edit' : ''}`}
-              >
-                <Card className="audit-stat-card">
-                  <p className="widget-title">أكثر جهة نشاطًا</p>
-                  <div className="widget-stat-block">
-                    <span className="audit-stat-card__entity">{auditLogSummary.mostActiveEntity.name}</span>
-                    <span className="audit-stat-card__submeta">
-                      {auditLogSummary.mostActiveEntity.actionsCount} إجراءات · {auditLogSummary.mostActiveEntity.role}
-                    </span>
-                  </div>
-                </Card>
-              </div>
+          </Card>
+          <Card className="tenants-stat-card">
+            <p className="widget-title">أكثر جهة نشاطًا</p>
+            <div>
+              <span className="audit-stat-card__entity">{summary?.mostActive?.name ?? '—'}</span>
+              <span className="audit-stat-card__submeta">{summary?.mostActive?.count ?? 0} إجراءات</span>
             </div>
-          </ResponsiveGrid>
+          </Card>
         </div>
 
         <div className="tenants-toolbar-row">
@@ -251,82 +281,143 @@ export function AuditLogPage() {
             <Search size={16} strokeWidth={2.5} className="tenants-search__icon" />
             <input
               type="search"
-              placeholder="البحث"
+              placeholder="ابحث بالإجراء أو اسم المستخدم"
               aria-label="بحث"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
             />
           </div>
-          <div className="tenants-filter-tabs">
-            {auditFilterTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={`tenants-filter-tab ${
-                  activeFilter === tab.id ? 'tenants-filter-tab--active' : ''
-                }`}
-                onClick={() => setActiveFilter(tab.id)}
-              >
-                {tab.label}({tab.count})
-              </button>
-            ))}
-          </div>
+          <MultiSelectFilter
+            label="نوع الإجراء"
+            options={kindOptions}
+            selected={kinds}
+            onApply={(values) => {
+              setKinds(values);
+              setPage(1);
+            }}
+          />
+          <MultiSelectFilter
+            label="الجهة"
+            options={actorOptions}
+            selected={actors}
+            onApply={(values) => {
+              setActors(values);
+              setPage(1);
+            }}
+          />
+          <SingleSelectFilter
+            label="الفترة"
+            options={PERIODS}
+            value={period}
+            onChange={(value) => {
+              setPeriod(value);
+              setPage(1);
+            }}
+          />
         </div>
 
-        <div className="dashboard-grid tenants-table-grid">
-          <ResponsiveGrid
-            className="dashboard-grid__layout"
-            layout={logLayout}
-            cols={12}
-            rowHeight={54}
-            margin={[16, 16]}
-            containerPadding={[0, 0]}
-            isDraggable={false}
-            isResizable={isEditMode}
-            resizeHandles={['s', 'w', 'e', 'sw', 'se']}
-            onLayoutChange={handleLogLayoutChange}
-            compactType={null}
-            useCSSTransforms
-          >
-            <div key="log" className="dashboard-grid__item">
-              <div
-                dir="rtl"
-                className={`widget-wrapper ${isEditMode ? 'widget-wrapper--edit' : ''}`}
-              >
-                <Card className="audit-log-card">
-                  <div className="audit-log-card__header">
-                    <span className="audit-log-card__count">{auditLogEntries.length}</span>
-                    <h2 className="audit-log-card__title">سجل الإجراءات</h2>
-                  </div>
-                  <div className="audit-log-list">
-                    {loadError ? <p style={{ color: '#b91c1c', padding: 16 }}>{loadError}</p> : null}
-                    {!loadError && auditLogEntries.length === 0 ? (
-                      <p style={{ color: '#a1a1aa', padding: 16, textAlign: 'center' }}>لا توجد إجراءات مسجلة</p>
-                    ) : null}
-                    {auditLogEntries.map((entry) => {
-                      const Icon = severityIcon[entry.severity];
-                      return (
-                        <div className="audit-log-row" key={entry.id}>
-                          <div className="audit-log-row__main">
-                            <span className={`audit-log-row__icon audit-log-row__icon--${entry.severity}`}>
-                              <Icon size={16} strokeWidth={2.25} />
-                            </span>
-                            <div className="audit-log-row__text">
-                              <p className="audit-log-row__title">{entry.title}</p>
-                              <p className="audit-log-row__meta">{entry.meta}</p>
-                            </div>
-                          </div>
-                          <span className="audit-log-row__time">{entry.time}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Card>
+        <span className="tenants-result-count">
+          عرض {pageRows.length} من {visible.length} سجلًا
+        </span>
+        <AppliedTags tags={tags} onClearAll={clearFilters} />
+
+        {loadError ? (
+          <PageState
+            tone="error"
+            title="تعذّر تحميل سجل التدقيق"
+            body="حدث خطأ في الاتصال بالخادم. أعد المحاولة بعد قليل."
+            actionLabel="إعادة المحاولة"
+            onAction={() => {
+              setLoading(true);
+              setReload((count) => count + 1);
+            }}
+          />
+        ) : !loading && visible.length === 0 ? (
+          <PageState
+            title="لا توجد نتائج مطابقة"
+            body="لم نجد إجراءات تطابق البحث أو الفلاتر الحالية."
+            actionLabel="مسح البحث والفلاتر"
+            onAction={clearFilters}
+          />
+        ) : (
+          <>
+            <Card className="audit-log-card">
+              <div className="audit-log-card__header">
+                <h2 className="audit-log-card__title">سجل الإجراءات</h2>
+                <span className="audit-log-card__count">{pageRows.length}</span>
               </div>
-            </div>
-          </ResponsiveGrid>
-        </div>
+              <div className="audit-log-list">
+                {loading ? <p className="audit-loading">جاري التحميل...</p> : null}
+                {pageRows.map((row) => {
+                  const severity = KIND_SEVERITY[row.kind];
+                  const Icon = severityIcon[severity];
+                  return (
+                    <button type="button" className="audit-log-row" key={row.id} onClick={() => setOpened(row)}>
+                      <span className={`audit-log-row__icon audit-log-row__icon--${severity}`}>
+                        <Icon size={22} strokeWidth={1.75} />
+                      </span>
+                      <span className="audit-log-row__text">
+                        <span className="audit-log-row__title">{row.title}</span>
+                        <span className="audit-log-row__meta">{row.meta}</span>
+                      </span>
+                      <span className="audit-log-row__time">{timeLabel(row.createdAt)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+            <Pagination page={currentPage} pageSize={PAGE_SIZE} total={visible.length} onChange={setPage} />
+          </>
+        )}
       </div>
+
+      {opened ? (
+        <div className="audit-drawer-backdrop" role="presentation" onClick={() => setOpened(null)}>
+          <aside
+            className="audit-drawer"
+            dir="rtl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="تفاصيل الإجراء"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <h2>تفاصيل الإجراء</h2>
+              <button type="button" aria-label="إغلاق" onClick={() => setOpened(null)}>
+                <X size={18} />
+              </button>
+            </header>
+            <dl>
+              {[
+                ['الإجراء', opened.title],
+                ['نوع العنصر', opened.subject],
+                ['المنفّذ', `${opened.performer} · ${opened.actor}`],
+                [
+                  'الوقت',
+                  new Date(opened.createdAt).toLocaleString('ar-SA-u-ca-gregory-nu-latn', {
+                    dateStyle: 'long',
+                    timeStyle: 'short',
+                  }),
+                ],
+                ...(opened.ip ? [['عنوان IP', opened.ip]] : []),
+                ['الرقم المرجعي', `AUD-${opened.id.slice(0, 8).toUpperCase()}`],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="audit-drawer__note">
+              <strong>سجل للقراءة فقط</strong>
+              لا يمكن تعديل سجلات التدقيق أو حذفها.
+            </p>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

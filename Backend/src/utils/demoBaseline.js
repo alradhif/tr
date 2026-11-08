@@ -571,6 +571,49 @@ async function seedTenantSubscriptions(admin) {
   }
 }
 
+// A month of synthetic platform activity for the audit log and dashboard.
+const AUDIT_SEED = [
+  { hours: 3, action: 'DELETE', table: 'org_accounts', name: 'كلية الرياض التقنية' },
+  { hours: 26, action: 'CREATE', table: 'org_accounts', name: 'هيئة الصحة العامة' },
+  { hours: 30, action: 'UPDATE', table: 'org_accounts', name: 'مؤسسة الوقف الخيري', isActive: false },
+  { hours: 52, action: 'CREATE', table: 'packages', name: 'Premium' },
+  { hours: 75, action: 'UPDATE', table: 'packages', name: 'Basic' },
+  { hours: 100, action: 'CREATE', table: 'org_users', name: 'سارة خالد' },
+  { hours: 130, action: 'UPDATE', table: 'client_accounts', name: 'مؤسسة الرواد للاستشارات', isActive: false },
+  { hours: 160, action: 'CREATE', table: 'client_accounts', name: 'شركة نجم الخليج' },
+  { hours: 220, action: 'UPDATE', table: 'org_accounts', name: 'جامعة الملك سعود' },
+  { hours: 300, action: 'CREATE', table: 'org_accounts', name: 'بلدية جدة' },
+]
+
+async function seedAuditActivity(admin, orgUser) {
+  if (await prisma.auditLog.count({ where: { tableName: 'org_accounts', performedBy: admin.id } })) return
+  const hoursAgo = (hours) => new Date(Date.now() - hours * 60 * 60 * 1000)
+  for (const row of AUDIT_SEED) {
+    const newData = row.isActive === undefined ? { name: row.name } : { name: row.name, isActive: row.isActive }
+    await prisma.auditLog.create({
+      data: {
+        action: row.action,
+        tableName: row.table,
+        recordId: crypto.randomUUID(),
+        ...(row.action === 'DELETE' ? { oldData: { name: row.name } } : { newData }),
+        performedBy: admin.id,
+        actorType: 'SUPER_ADMIN',
+        createdAt: hoursAgo(row.hours),
+      },
+    })
+  }
+  for (const [index, hours] of [1, 1.2, 1.4].entries()) {
+    await prisma.activityLog.create({
+      data: { userId: orgUser.id, actorType: 'ORG', action: 'LOGIN_FAILED', details: 'WRONG_PASSWORD', createdAt: hoursAgo(hours + index / 100) },
+    })
+  }
+  for (const hours of [0.5, 5, 28, 76]) {
+    await prisma.activityLog.create({
+      data: { userId: orgUser.id, actorType: 'ORG', action: 'LOGIN', createdAt: hoursAgo(hours) },
+    })
+  }
+}
+
 async function findOrCreateUser(model, email, data) {
   const existing = await model.findUnique({ where: { email } })
   return existing || model.create({ data })
@@ -806,6 +849,7 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
   }
 
   await seedTenantSubscriptions(admin)
+  await seedAuditActivity(admin, orgUpper)
 
   for (const { dueInDays, ...invoice } of INVOICES) {
     const vatAmount = Math.round(invoice.amount * 0.15)

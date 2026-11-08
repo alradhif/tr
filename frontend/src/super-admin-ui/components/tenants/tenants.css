@@ -358,3 +358,7 @@
     align-items: flex-start;
   }
 }
+
+.tenants-table__row.subscriptions-table__row:not(.tenants-table__row--head) {
+  height: 72px;
+}
