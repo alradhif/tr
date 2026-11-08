@@ -16,6 +16,9 @@ type PhaseRow = {
   startRaw?: string
   endRaw?: string
   activities?: string[]
+  /** Approved deliverables of this phase; when given, they set its progress. */
+  approved?: number
+  total?: number
 }
 
 type DeliverableRow = {
@@ -88,8 +91,10 @@ export function OrgProjectStagesView({
           number: index + 1,
           title: phase.title,
           date: [phase.startDate, phase.endDate].filter(Boolean).join(' — '),
-          progress: phaseProgress(phase.startRaw, phase.endRaw),
+          progress: phase.total ? Math.round(((phase.approved ?? 0) / phase.total) * 100) : phaseProgress(phase.startRaw, phase.endRaw),
           status,
+          approved: phase.approved,
+          total: phase.total,
           startRaw: phase.startRaw,
           endRaw: phase.endRaw,
           activities: phase.activities ?? [],
@@ -161,7 +166,10 @@ export function OrgProjectStagesView({
                 <div className="project-stages__number">{stage.number}</div>
                 <div>
                   <h2>{stage.title}</h2>
-                  <p>{stage.date}</p>
+                  <p>
+                    {stage.date}
+                    {stage.total ? ` · المعتمد ${stage.approved} من ${stage.total}` : ''}
+                  </p>
                 </div>
               </div>
               <div className="project-stages__summary">

@@ -213,3 +213,14 @@
     padding: 8px 12px;
   }
 }
+
+.sp-table-head.sp-grid--approved,
+.sp-table-row.sp-grid--approved {
+  grid-template-columns: minmax(0, 1fr) 140px 150px 150px 60px;
+}
+
+.sp-col-approved {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}

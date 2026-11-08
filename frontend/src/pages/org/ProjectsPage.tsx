@@ -19,6 +19,7 @@ type ProjectRow = {
   approvalStatus: string
   uiStatus: ProjectUiStatus
   outputsCount: number
+  approvedOutputs: string
 }
 
 function mapStatus(raw: string, endDate?: string | null): ProjectUiStatus {
@@ -70,6 +71,7 @@ export function OrgProjectsPage() {
             approvalStatus: p.approvalStatus ?? 'DRAFT',
             uiStatus: mapStatus(p.status, p.endDate),
             outputsCount: p._count?.deliverables ?? p.deliverables?.length ?? 0,
+            approvedOutputs: `${(p.deliverables ?? []).filter((d) => (d as { reviewStatus?: string }).reviewStatus === 'APPROVED').length} من ${p.deliverables?.length ?? 0}`,
           })),
         )
       } catch (err) {
@@ -111,6 +113,7 @@ export function OrgProjectsPage() {
         progress: row.progress,
         status: row.uiStatus,
         approvalStatus: row.approvalStatus,
+        approvedOutputs: row.approvedOutputs,
       }))}
       loading={loading}
       totalOutputs={rows.reduce((sum, row) => sum + row.outputsCount, 0)}

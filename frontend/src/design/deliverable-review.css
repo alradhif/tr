@@ -311,3 +311,15 @@
 .goal-approval--done {
   background: #e8f8f0;
 }
+
+.dr-hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dr-badge--info {
+  background: #d5e9fe;
+  color: #1a76d2;
+}

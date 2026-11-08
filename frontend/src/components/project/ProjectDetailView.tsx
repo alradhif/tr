@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import '../../design/deliverable-review.css'
 import { message } from 'antd'
 import { Check, Plus, Presentation, RotateCcw, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -333,6 +334,17 @@ export function ProjectDetailView({
     email: item.email ? String(item.email) : '',
     side: item.source === 'CLIENT' ? 'CLIENT' : 'VENDOR',
   }))
+  const approvedOutputs = deliverables.filter((row) => row.reviewStatus === 'APPROVED').length
+  const pendingOutputs = deliverables.filter((row) => row.reviewStatus === 'PENDING').length
+  const submittedOutputs = deliverables.filter((row) => row.reviewStatus !== 'NOT_SUBMITTED').length
+  const executionLabel =
+    approvedOutputs === deliverables.length
+      ? 'مكتمل'
+      : submittedOutputs === deliverables.length
+        ? 'اكتمل الرفع'
+        : submittedOutputs === 0
+          ? 'لم يبدأ'
+          : 'على المسار'
   const progress = project?.progressPct ?? 0
   const budget = Number(project?.budget ?? 0)
 
@@ -358,6 +370,13 @@ export function ProjectDetailView({
           startRaw: phase.startRaw ? String(phase.startRaw) : undefined,
           endRaw: phase.endRaw ? String(phase.endRaw) : undefined,
           activities: phase.activities as string[],
+          ...(resolvedPortal === 'org'
+            ? (() => {
+                const names = (phase.activities as string[]).map((activity) => activity.split(' | ')[0])
+                const own = deliverables.filter((row) => names.includes(String(row.description)))
+                return { approved: own.filter((row) => row.reviewStatus === 'APPROVED').length, total: own.length }
+              })()
+            : {}),
         }))}
       />
     ),
@@ -1019,6 +1038,15 @@ export function ProjectDetailView({
                   <Badge variant={approvalBadgeVariant(approvalStatus)}>
                     {t(approvalLabelKey(approvalStatus))}
                   </Badge>
+                </div>
+              ) : null}
+              {resolvedPortal === 'org' && deliverables.length > 0 ? (
+                <div className="dr-hero-badges">
+                  <span className="dr-badge dr-badge--info">التنفيذ: {executionLabel}</span>
+                  {pendingOutputs > 0 ? <span className="dr-badge dr-badge--pending">الاعتماد: بانتظار {pendingOutputs}</span> : null}
+                  <span className="dr-badge dr-badge--approved">
+                    المعتمد {approvedOutputs} من {deliverables.length}
+                  </span>
                 </div>
               ) : null}
               {approvalStatus === 'DRAFT' && rejectionReason ? (

@@ -14,6 +14,8 @@ export type ProjectListRow = {
   progress: number
   status: ProjectListStatus
   approvalStatus: string
+  /** Approved deliverables, as "7 من 10". Adds the column when present. */
+  approvedOutputs?: string
 }
 
 export type ProjectListFilter = { key: string; label: string; count: number }
@@ -75,6 +77,7 @@ export function ProjectsListView({
   const avgProgress = rows.length ? Math.round(rows.reduce((sum, row) => sum + row.progress, 0) / rows.length) : 0
   const delayed = rows.filter((row) => row.status === 'delayed' || row.status === 'stalled').length
   const completed = rows.filter((row) => row.status === 'completed').length
+  const showApproved = rows.some((row) => row.approvedOutputs !== undefined)
 
   return (
     <div className="dashboard-page sc-page sp-page" dir="rtl">
@@ -131,10 +134,11 @@ export function ProjectsListView({
             />
 
             <div className="sc-table-wrap">
-              <div className="sp-table-head">
+              <div className={`sp-table-head${showApproved ? ' sp-grid--approved' : ''}`}>
                 <span className="sp-col-name">اسم المشروع</span>
                 <span className="sp-col-progress">نسبة التقدم</span>
-                <span className="sp-col-status">الحالة</span>
+                {showApproved ? <span className="sp-col-approved">المخرجات المعتمدة</span> : null}
+                <span className="sp-col-status">{showApproved ? 'حالة التنفيذ' : 'الحالة'}</span>
                 <span className="sp-col-action" />
               </div>
               <ul className="sc-table-body">
@@ -151,7 +155,7 @@ export function ProjectsListView({
                   return (
                     <li
                       key={row.key}
-                      className={`sp-table-row ${index % 2 === 0 ? 'sc-row-even' : 'sc-row-odd'}`}
+                      className={`sp-table-row ${index % 2 === 0 ? 'sc-row-even' : 'sc-row-odd'}${showApproved ? ' sp-grid--approved' : ''}`}
                       onClick={() => onOpen(row.key)}
                     >
                       <div className="sp-col-name sp-name-cell">
@@ -170,6 +174,7 @@ export function ProjectsListView({
                           </div>
                         </div>
                       </div>
+                      {showApproved ? <div className="sp-col-approved">{row.approvedOutputs}</div> : null}
                       <div className="sp-col-status">
                         <span className={`sp-status sp-status--${meta.tone}`}>
                           <InfoIcon />

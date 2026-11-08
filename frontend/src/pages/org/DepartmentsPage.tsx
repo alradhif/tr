@@ -146,6 +146,14 @@ export function OrgDepartmentsPage() {
             ))}
           </div>
         ) : null}
+        {filter !== 'all' ? (
+          <p className="departments-filter-result">
+            عرض {visible.length} من {rows.length} إدارات
+            <button type="button" onClick={() => setFilter('all')}>
+              مسح التصفية
+            </button>
+          </p>
+        ) : null}
         <div className="departments-table-wrap departments-table-wrap--screenshot-one">
           <table className="departments-table departments-table--screenshot-one">
             <thead>

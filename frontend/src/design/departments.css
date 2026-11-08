@@ -310,3 +310,22 @@
   gap: 8px;
   margin-top: 6px;
 }
+
+.departments-filter-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  color: #6b6c72;
+  font-size: 13px;
+}
+
+.departments-filter-result button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #4aa23d;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
