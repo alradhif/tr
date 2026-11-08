@@ -89,11 +89,7 @@ function DashboardPage({ role }: { role: UserRole }) {
   return (
     <DashboardLiveProvider value={live} loadState={loadState} refresh={() => void loadLive()}>
       <div className={`dashboard-page${isEditMode ? ' dashboard-page--editing' : ''}`}>
-        <Header
-          role={role}
-          isEditMode={isEditMode}
-          onToggleEdit={() => setIsEditMode((prev) => !prev)}
-        />
+        <Header />
         <div className="dashboard-body">
           <div
             className={`dashboard-body__grid-area ${

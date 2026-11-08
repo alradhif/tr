@@ -12,11 +12,11 @@ export function TotalRevenueWidget() {
         <TrendingUp size={16} aria-hidden style={{ transform: 'scaleX(-1)' }} />
       </span>
       <div className="widget-icon-header">
-        <p className="widget-title widget-kpi-compact__title">إجمالي الايرادات</p>
+        <p className="widget-title widget-kpi-compact__title">إجمالي الإيرادات السنوية</p>
       </div>
       <WidgetBodyGate isEmpty={value == null}>
         <div className="widget-stat-block widget-stat-inline">
-          <span className="widget-stat-value">{Number(value || 0).toLocaleString('ar-SA')}</span>
+          <span className="widget-stat-value">{Number(value || 0).toLocaleString('en-US')}</span>
           <span className="widget-stat-label">ر.س</span>
         </div>
       </WidgetBodyGate>

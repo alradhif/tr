@@ -613,109 +613,129 @@ async function buildJodaynDashboard() {
   }
 }
 
+const AUDIT_ACTION = { CREATE: 'إنشاء', UPDATE: 'تعديل', DELETE: 'حذف' }
+const AUDIT_SUBJECT = {
+  org_accounts: 'مستأجر',
+  client_accounts: 'مستأجر',
+  org_users: 'مستخدم',
+  client_users: 'مستخدم',
+  jodayn_users: 'مستخدم',
+  packages: 'باقة',
+  credentials: 'بيانات دخول',
+}
+
+function auditTitle(log) {
+  const name = log.newData?.name || log.oldData?.name || ''
+  return `${AUDIT_ACTION[log.action] || log.action} ${AUDIT_SUBJECT[log.tableName] || log.tableName}${name ? ` ${name}` : ''}`
+}
+
+const STATUS_COLORS = { active: '#17B26A', trial: '#F79009', suspended: '#F04438' }
+const MONTH_NAMES = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']
+
 async function buildSuperAdminDashboard() {
   const now = new Date()
   const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
-  const [
-    activeOrgs,
-    activeClients,
-    inactiveOrgs,
-    inactiveClients,
-    endingSubs,
-    packageGroups,
-    recentOrgs,
-    recentClients,
-    auditLogs,
-  ] = await Promise.all([
-    prisma.orgAccount.count({ where: { isActive: true } }),
-    prisma.clientAccount.count({ where: { isActive: true } }),
-    prisma.orgAccount.count({ where: { isActive: false } }),
-    prisma.clientAccount.count({ where: { isActive: false } }),
-    prisma.accountSubscription.findMany({
-      where: { status: 'ACTIVE', endDate: { lte: in30, gte: now } },
-      include: { package: true },
-    }),
-    prisma.accountSubscription.groupBy({
-      by: ['packageId'],
-      where: { status: 'ACTIVE' },
-      _count: { packageId: true },
-    }),
-    prisma.orgAccount.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 6,
-      select: { id: true, name: true, isActive: true },
-    }),
-    prisma.clientAccount.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 6,
-      select: { id: true, name: true, isActive: true },
-    }),
-    prisma.auditLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 8,
-      select: { id: true, action: true, tableName: true, createdAt: true },
-    }),
+  const [orgs, clients, subscriptions, packages, auditLogs, pendingOrgUsers, pendingClientUsers] = await Promise.all([
+    prisma.orgAccount.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true, name: true, isActive: true, createdAt: true } }),
+    prisma.clientAccount.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true, name: true, isActive: true, createdAt: true } }),
+    prisma.accountSubscription.findMany({ where: { status: { in: ['ACTIVE', 'DEMO'] } } }),
+    prisma.package.findMany({ select: { id: true, name: true, label: true } }),
+    prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 3 }),
+    prisma.orgUser.findFirst({ where: { pendingActivation: true }, orderBy: { createdAt: 'desc' }, select: { name: true, createdAt: true, org: { select: { name: true } } } }),
+    prisma.clientUser.findFirst({ where: { pendingActivation: true }, orderBy: { createdAt: 'desc' }, select: { name: true, createdAt: true, client: { select: { name: true } } } }),
   ])
 
-  const projectStats = await platformProjectStats()
+  const packageById = new Map(packages.map((pkg) => [pkg.id, pkg]))
+  const subByAccount = new Map(subscriptions.map((sub) => [sub.accountId, sub]))
+  const accounts = [
+    ...orgs.map((account) => ({ ...account, ref: `org-${account.id}` })),
+    ...clients.map((account) => ({ ...account, ref: `client-${account.id}` })),
+  ].map((account) => {
+    const sub = subByAccount.get(account.id)
+    const trial = packageById.get(sub?.packageId)?.name === 'DEMO'
+    const status = !account.isActive ? 'suspended' : trial ? 'trial' : 'active'
+    return { ...account, sub, status }
+  })
+  const STATUS_LABEL = { active: 'نشط', trial: 'تجربة', suspended: 'معلّق' }
+  const countOf = (status) => accounts.filter((account) => account.status === status).length
 
-  const packages = await prisma.package.findMany({ select: { id: true, name: true } })
-  const pkgName = new Map(packages.map((p) => [p.id, p.name]))
-  const planTotal = packageGroups.reduce((s, g) => s + g._count.packageId, 0) || 1
-  const planColors = {
-    FREE: '#A1A1AA',
-    DEMO: '#2E90FA',
-    BASIC: '#17B26A',
-    PREMIUM: '#F79009',
-    ENTERPRISE: '#7A5AF8',
-  }
+  const planCounts = new Map()
+  for (const sub of subscriptions) planCounts.set(sub.packageId, (planCounts.get(sub.packageId) || 0) + 1)
+  const planTotal = subscriptions.length || 1
+  const planColors = { FREE: '#A1A1AA', DEMO: '#8E8F97', BASIC: '#F04438', PREMIUM: '#F79009', ENTERPRISE: '#0C0C0D' }
+
+  // Tenants on the platform at the end of each of the last 7 months, by current status.
+  const tenantsByStatusMonth = Array.from({ length: 7 }, (_, index) => {
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() - 5 + index, 0, 23, 59, 59)
+    const counted = accounts.filter((account) => new Date(account.sub?.startDate || account.createdAt) <= monthEnd)
+    const of = (status) => counted.filter((account) => account.status === status).length
+    return { month: MONTH_NAMES[monthEnd.getMonth()], active: of('active'), trial: of('trial'), suspended: of('suspended') }
+  })
+
+  const trialEnding = accounts
+    .filter((account) => account.status === 'trial' && account.sub)
+    .sort((a, b) => new Date(a.sub.endDate) - new Date(b.sub.endDate))[0]
+  const pendingUser = pendingOrgUsers || pendingClientUsers
+  const suspended = accounts.find((account) => account.status === 'suspended')
+  const tenantAlerts = [
+    trialEnding && {
+      id: `trial-${trialEnding.id}`,
+      type: 'renewal',
+      title: `تجربة «${trialEnding.name}» تنتهي في ${new Date(trialEnding.sub.endDate).toISOString().slice(0, 10)}`,
+      subtitle: 'Demo',
+      time: relativeTimeLabel(trialEnding.sub.createdAt, now),
+    },
+    pendingUser && {
+      id: 'unused-invite',
+      type: 'unused-invite',
+      title: 'دعوة تفعيل لم تُستخدم بعد',
+      subtitle: `${pendingUser.name} · ${pendingUser.org?.name || pendingUser.client?.name || ''}`,
+      time: relativeTimeLabel(pendingUser.createdAt, now),
+    },
+    suspended && {
+      id: `suspended-${suspended.id}`,
+      type: 'trial-expired',
+      title: `اشتراك «${suspended.name}» معلّق`,
+      subtitle: packageById.get(suspended.sub?.packageId)?.label || '—',
+      time: relativeTimeLabel(suspended.createdAt, now),
+    },
+  ].filter(Boolean)
+
+  const projectStats = await platformProjectStats()
 
   return {
     live: true,
     portal: 'superadmin',
-    activeTenants: activeOrgs + activeClients,
-    subscriptionsEndingSoon: endingSubs.length,
-    tenantStatusBreakdown: [
-      { name: 'نشط', value: activeOrgs + activeClients, color: '#17B26A' },
-      { name: 'معلق', value: inactiveOrgs + inactiveClients, color: '#F04438' },
-    ],
-    tenantsByPlan: packageGroups.map((g) => {
-      const name = pkgName.get(g.packageId) || '—'
-      return {
-        label: name,
-        value: Math.round((g._count.packageId / planTotal) * 1000) / 10,
-        color: planColors[name] || '#71717A',
-        count: g._count.packageId,
-      }
-    }),
-    latestTenants: [
-      ...recentOrgs.map((o) => ({
-        id: `org-${o.id}`,
-        name: o.name,
-        status: o.isActive ? 'active' : 'suspended',
-        statusLabel: o.isActive ? 'نشط' : 'معلق',
-      })),
-      ...recentClients.map((c) => ({
-        id: `client-${c.id}`,
-        name: c.name,
-        status: c.isActive ? 'active' : 'suspended',
-        statusLabel: c.isActive ? 'نشط' : 'معلق',
-      })),
-    ].slice(0, 8),
-    latestActions: auditLogs.map((log) => ({
-      id: log.id,
-      title: `${log.action} — ${log.tableName}`,
+    activeTenants: countOf('active'),
+    subscriptionsEndingSoon: subscriptions.filter((sub) => sub.endDate >= now && sub.endDate <= in30).length,
+    totalRevenue: subscriptions.reduce((total, sub) => total + Number(sub.paidAmount || 0), 0),
+    tenantStatusBreakdown: ['suspended', 'trial', 'active'].map((status) => ({
+      name: STATUS_LABEL[status],
+      value: countOf(status),
+      color: STATUS_COLORS[status],
     })),
-    tenantAlerts: endingSubs.slice(0, 8).map((s) => ({
-      id: s.id,
-      type: 'renewal',
-      title: `اشتراك ${pkgName.get(s.packageId) || ''} ينتهي خلال 30 يوماً`,
-      subtitle: s.accountType,
-      time: new Date(s.endDate).toLocaleDateString('ar-SA'),
+    tenantsByStatusMonth,
+    tenantsByPlan: [...planCounts.entries()]
+      .map(([packageId, count]) => {
+        const pkg = packageById.get(packageId)
+        return {
+          label: pkg?.label || pkg?.name || '—',
+          value: Math.round((count / planTotal) * 1000) / 10,
+          color: planColors[pkg?.name] || '#71717A',
+          count,
+        }
+      })
+      .sort((a, b) => b.count - a.count),
+    latestTenants: accounts.slice(0, 3).map((account) => ({
+      id: account.ref,
+      name: account.name,
+      status: account.status,
+      statusLabel: STATUS_LABEL[account.status],
     })),
+    latestActions: auditLogs.map((log) => ({ id: log.id, title: auditTitle(log) })),
+    tenantAlerts,
     ...projectStats,
-    // Explicitly NOT setting totalRevenue / subscriptionsRevenueByMonth
   }
 }
 

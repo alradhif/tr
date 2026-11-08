@@ -2,33 +2,58 @@ import { Card } from '../../ui/Card'
 import { useLiveField } from '../../../../features/portal/DashboardLiveContext'
 import { WidgetBodyGate } from '../../../../features/portal/WidgetBodyGate'
 
+const SERIES = [
+  { key: 'active', label: 'نشط', color: '#50B055' },
+  { key: 'trial', label: 'تجربة', color: '#F7A63A' },
+  { key: 'suspended', label: 'معلق', color: '#F04438' },
+] as const
+
+/** Tenants per month, stacked by status (Figma: "المستأجرون حسب الحالة شهريًا"). */
 export function SubscriptionsRevenueChartWidget() {
-  const months = useLiveField('revenueByMonth') ?? []
-  const max = Math.max(...months.map((item) => item.amount), 1)
+  const months = useLiveField('tenantsByStatusMonth') ?? []
+  const total = (month: (typeof months)[number]) => SERIES.reduce((sum, series) => sum + month[series.key], 0)
+  const top = Math.max(2, ...months.map(total))
+  const ceiling = Math.ceil(top / 2) * 2
+  const ticks = [ceiling, Math.round((ceiling * 2) / 3), Math.round(ceiling / 3), 0]
 
   return (
     <Card className="widget-risks-chart">
       <div className="widget-risks-chart__header">
         <div className="widget-icon-header">
-          <p className="widget-title">الاشتراكات والإيرادات</p>
+          <p className="widget-title">المستأجرون حسب الحالة شهريًا</p>
+        </div>
+        <div className="sa-status-chart__legend">
+          {SERIES.map((series) => (
+            <span key={series.key}>
+              <i style={{ background: series.color }} />
+              {series.label}
+            </span>
+          ))}
         </div>
       </div>
       <WidgetBodyGate isEmpty={months.length === 0}>
-        <div className="widget-risks-chart__plot" style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 160, padding: '8px 4px 0' }}>
-          {months.map((item) => (
-            <div key={item.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0 }}>
-              <div
-                title={`${item.month}: ${item.amount.toLocaleString('ar-SA')}`}
-                style={{
-                  width: '70%',
-                  height: `${Math.max(4, (item.amount / max) * 120)}px`,
-                  borderRadius: 6,
-                  background: '#2E90FA',
-                }}
-              />
-              <span style={{ fontSize: 11, color: '#71717a' }}>{item.month}</span>
-            </div>
-          ))}
+        <div className="sa-status-chart" dir="ltr">
+          <div className="sa-status-chart__ticks">
+            {ticks.map((tick) => (
+              <span key={tick}>{tick}</span>
+            ))}
+          </div>
+          <div className="sa-status-chart__plot">
+            {months.map((month) => (
+              <div className="sa-status-chart__month" key={month.month}>
+                <div className="sa-status-chart__bar" style={{ height: `${(total(month) / ceiling) * 100}%` }}>
+                  {SERIES.filter((series) => month[series.key] > 0).map((series) => (
+                    <i
+                      key={series.key}
+                      title={`${series.label}: ${month[series.key]}`}
+                      style={{ flexGrow: month[series.key], background: series.color }}
+                    />
+                  ))}
+                </div>
+                <span>{month.month}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </WidgetBodyGate>
     </Card>

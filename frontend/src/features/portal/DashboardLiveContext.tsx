@@ -63,6 +63,7 @@ export type LiveDashboardData = {
   pendingInvoices?: number
   totalRevenue?: number
   revenueByMonth?: Array<{ month: string; amount: number }>
+  tenantsByStatusMonth?: Array<{ month: string; active: number; trial: number; suspended: number }>
 }
 
 const DashboardLiveContext = createContext<LiveDashboardData | null>(null)

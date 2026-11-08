@@ -548,7 +548,7 @@ async function seedTenantSubscriptions(admin) {
           accountType,
           accountId: account.id,
           packageId: pkg.id,
-          startDate: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000),
+          startDate: new Date(Date.now() - (60 + tenantIndex * 16) * 24 * 60 * 60 * 1000),
           endDate: new Date(Date.now() + row.days * 24 * 60 * 60 * 1000),
           paidAmount: pkg.price,
           status: row.plan === 'DEMO' ? 'DEMO' : 'ACTIVE',

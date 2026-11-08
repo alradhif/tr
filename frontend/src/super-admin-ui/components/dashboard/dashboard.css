@@ -432,3 +432,74 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Super Admin: tenants per month, stacked by status. */
+.sa-status-chart__legend {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b6c72;
+}
+
+.sa-status-chart__legend i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-inline-end: 5px;
+  border-radius: 50%;
+}
+
+.sa-status-chart {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  min-height: 190px;
+  margin-top: 12px;
+}
+
+.sa-status-chart__ticks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-bottom: 24px;
+  color: #8e8f97;
+  font-size: 11px;
+}
+
+.sa-status-chart__plot {
+  display: flex;
+  flex: 1;
+  justify-content: space-around;
+  gap: 8px;
+}
+
+.sa-status-chart__month {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 100%;
+  color: #6b6c72;
+  font-size: 11px;
+}
+
+.sa-status-chart__month span {
+  flex-shrink: 0;
+}
+
+.sa-status-chart__bar {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+  width: 20px;
+  max-height: calc(100% - 24px);
+}
+
+.sa-status-chart__bar i {
+  display: block;
+  min-height: 4px;
+  border-radius: 4px;
+}
