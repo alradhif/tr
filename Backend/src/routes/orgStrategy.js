@@ -63,6 +63,7 @@ router.post('/goals/:goalId/kpi-snapshots', ...isOrgAny, createKpiSnapshot)
 router.patch('/goals/:goalId/kpi-snapshots/:id', ...isOrgAny, updateKpiSnapshot)
 router.delete('/goals/:goalId/kpi-snapshots/:id', ...isUpperMgmt, deleteKpiSnapshot)
 
+router.post('/goals/:id/approve', ...isUpperMgmt, require('../controllers/orgStrategyController').approveGoal)
 router.get('/goals/:id', ...isOrgAny, getGoalById)
 router.patch('/goals/:id', ...isOrgAny, updateGoal)
 router.delete('/goals/:id', ...isUpperMgmt, deleteGoal)

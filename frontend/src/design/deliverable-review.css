@@ -283,3 +283,31 @@
     align-items: stretch;
   }
 }
+
+.goal-approval {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  border-radius: 20px;
+}
+
+.goal-approval h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.goal-approval p {
+  margin: 0;
+  color: #6b6c72;
+  font-size: 13px;
+}
+
+.goal-approval--done {
+  background: #e8f8f0;
+}

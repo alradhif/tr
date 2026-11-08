@@ -870,6 +870,8 @@ model OrgStrategicGoal {
   status               GoalStatus          @default(NOT_STARTED)
   progressPct          Int                 @default(0)
   achievementPct       Int                 @default(0)
+  approvedAt           DateTime?
+  approvedByName       String?
   isAiExtracted        Boolean             @default(true)
   aiSummary            String?
   documentId           String

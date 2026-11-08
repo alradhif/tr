@@ -39,6 +39,10 @@ export type StrategicGoal = {
   status?: string | null
   progressPct?: number
   achievementPct?: number
+  approvedAt?: string | null
+  approvedByName?: string | null
+  /** Approved deliverables across the goal's projects. */
+  executive?: { approved: number; total: number; pct: number }
   isAiExtracted?: boolean
   aiSummary?: string | null
   stages?: unknown[]
@@ -140,4 +144,8 @@ export function deleteGoal(token: string, id: string) {
     method: 'DELETE',
     token,
   })
+}
+
+export function approveGoal(token: string, id: string) {
+  return apiRequest<{ success: boolean; goal: StrategicGoal }>(`/org/strategy/goals/${id}/approve`, { method: 'POST', token })
 }

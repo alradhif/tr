@@ -119,6 +119,25 @@ exports.deleteDocument = async (req, res) => {
 
 // ============ STRATEGIC GOALS ============
 
+const GOAL_PROJECT_SELECT = {
+  id: true,
+  name: true,
+  status: true,
+  endDate: true,
+  progressPct: true,
+  executingCompany: { select: { name: true } },
+  deliverables: { select: { id: true, name: true, status: true, reviewStatus: true, createdAt: true } },
+  risks: { select: { id: true, status: true, probability: true, impact: true } },
+}
+
+// A goal's progress is the approved share of every deliverable in its projects, with no averages.
+function withExecutiveProgress(goal) {
+  const deliverables = (goal.projectLinks || []).flatMap((link) => link.project?.deliverables || [])
+  const approved = deliverables.filter((item) => item.reviewStatus === 'APPROVED').length
+  const pct = deliverables.length ? Math.round((approved / deliverables.length) * 100) : 0
+  return { ...goal, executive: { approved, total: deliverables.length, pct } }
+}
+
 exports.getGoals = async (req, res) => {
   try {
     const orgId = req.user.orgId
@@ -131,13 +150,13 @@ exports.getGoals = async (req, res) => {
       where,
       include: {
         stages: true,
-        projectLinks: true,
+        projectLinks: { include: { project: { select: GOAL_PROJECT_SELECT } } },
         kpiSnapshots: true
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    res.json({ count: goals.length, goals })
+    res.json({ count: goals.length, goals: goals.map(withExecutiveProgress) })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
@@ -290,7 +309,7 @@ exports.getGoalById = async (req, res) => {
       where: { id },
       include: {
         stages: true,
-        projectLinks: { include: { project: { select: { id: true, name: true } } } },
+        projectLinks: { include: { project: { select: GOAL_PROJECT_SELECT } } },
         kpiSnapshots: true,
         document: { select: { id: true, title: true } }
       }
@@ -299,7 +318,32 @@ exports.getGoalById = async (req, res) => {
     if (!goal) return res.status(404).json({ message: 'Goal not found' })
     if (goal.orgId !== orgId) return res.status(403).json({ message: 'Access denied' })
 
-    res.json({ goal })
+    res.json({ goal: withExecutiveProgress(goal) })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+// A goal can be approved once, and only when every deliverable of its projects is approved.
+exports.approveGoal = async (req, res) => {
+  try {
+    const goal = await prisma.orgStrategicGoal.findUnique({
+      where: { id: req.params.id },
+      include: { projectLinks: { include: { project: { select: GOAL_PROJECT_SELECT } } } },
+    })
+    if (!goal) return res.status(404).json({ message: 'Goal not found' })
+    if (goal.orgId !== req.user.orgId) return res.status(403).json({ message: 'Access denied' })
+    if (goal.approvedAt) return res.status(409).json({ message: 'هذا الهدف معتمد مسبقًا' })
+    const { executive } = withExecutiveProgress(goal)
+    if (executive.total === 0 || executive.approved < executive.total) {
+      return res.status(409).json({ message: 'يُتاح اعتماد الهدف بعد اعتماد جميع مخرجاته' })
+    }
+    const approver = await prisma.orgUser.findUnique({ where: { id: req.user.userId }, select: { name: true } })
+    const updated = await prisma.orgStrategicGoal.update({
+      where: { id: goal.id },
+      data: { approvedAt: new Date(), approvedByName: approver?.name || null, status: 'ACHIEVED', achievementPct: 100, progressPct: 100 },
+    })
+    res.json({ success: true, goal: updated })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }

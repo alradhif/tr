@@ -104,10 +104,9 @@ export function OrgGoalsPage() {
     }
   }, [t])
 
-  const avgAchievement =
-    goals.length === 0
-      ? 0
-      : Math.round(goals.reduce((sum, g) => sum + (g.achievementPct ?? 0), 0) / goals.length)
+  const approvedOutputs = goals.reduce((sum, g) => sum + (g.executive?.approved ?? 0), 0)
+  const totalOutputs = goals.reduce((sum, g) => sum + (g.executive?.total ?? 0), 0)
+  const executivePct = totalOutputs ? Math.round((approvedOutputs / totalOutputs) * 100) : 0
   const linkedProjects = goals.reduce((sum, g) => sum + (g.projectLinks?.length ?? 0), 0)
   const delayedGoals = goals.filter((g) => {
     if (!g.endDate) return false
@@ -141,16 +140,16 @@ export function OrgGoalsPage() {
           icon={<AssetIcon src={navigationAssets.goals} size={16} />}
         />
         <StatCard
-          label={t('avgAchievement')}
-          value={`${avgAchievement}%`}
+          label="التقدم التنفيذي"
+          value={`${executivePct}%`}
           icon={<AssetIcon src={dashboardDataAssets.active} size={16} />}
           badge={
-            <Badge variant="success" icon={<span className="tenants-status-dot" />}>
-              {t('onTrack')}
+            <Badge variant="warning" icon={<span className="tenants-status-dot" />}>
+              {approvedOutputs} من {totalOutputs} مخرجًا معتمدًا
             </Badge>
           }
         >
-          <ProgressBar value={avgAchievement} tone="success" className="goals-stat-card__bar" />
+          <ProgressBar value={executivePct} tone="warning" className="goals-stat-card__bar" />
         </StatCard>
         <StatCard
           label={t('linkedProjects')}
@@ -182,7 +181,7 @@ export function OrgGoalsPage() {
         {filteredGoals.map((goal) => {
           const uiStatus = mapGoalUiStatus(goal)
           const variant = statusVariant(uiStatus)
-          const progress = goal.achievementPct ?? goal.progressPct ?? 0
+          const progress = goal.executive?.pct ?? 0
           const projectCount = goal.projectLinks?.length ?? 0
           const projectNames = (goal.projectLinks ?? [])
             .map(projectLinkName)
@@ -200,13 +199,13 @@ export function OrgGoalsPage() {
                 </Badge>
               }
               metaItems={[
-                `${t('linkedProjects')}: ${projectCount}`,
+                `المعتمد ${goal.executive?.approved ?? 0} من ${goal.executive?.total ?? 0} مخرجًا`,
                 <>
                   <AssetIcon src={commonAssets.clock} size={13} />
                   {[formatDate(goal.startDate), formatDate(goal.endDate)].join(' – ')}
                 </>,
               ]}
-              progress={{ value: progress, tone: variant, label: t('achievementRate') }}
+              progress={{ value: progress, tone: variant, label: 'التقدم التنفيذي' }}
               tags={
                 <>
                   {projectNames.slice(0, 2).map((name, index) => (

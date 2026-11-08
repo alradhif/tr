@@ -3,12 +3,14 @@ import { Plus } from 'lucide-react'
 import { message } from 'antd'
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
 import { useTranslation } from 'react-i18next'
+import '../../design/deliverable-review.css'
 import { useNavigate, useParams } from 'react-router-dom'
 import { commonAssets, dashboardDataAssets, navigationAssets } from '@/assets'
 import { AssetIcon } from '../../components/ui/AssetIcon'
 import { ApiError } from '../../api/client'
 import { getProjects, type OrgProject } from '../../api/orgProjects'
 import {
+  approveGoal,
   createGoalLink,
   deleteGoal,
   getGoalById,
@@ -20,6 +22,7 @@ import { canCreateDraft, isUpperManagement } from '../../auth/permissions'
 import { Badge, CatalogButton, SubpageHeader, type BadgeVariant } from '../../components/ui'
 import { CatalogConfirmDialog } from '../../org-catalog/CatalogConfirmDialog'
 import { ProgressBar } from '../../org-catalog/ProgressBar'
+import { SaDialog } from '../../super-admin-ui/components/ui/SaDialog'
 
 const TAG_DOTS = ['#17b26a', '#2e90fa', '#f79009', '#7a5af8']
 
@@ -76,6 +79,8 @@ export function OrgGoalDetailPage() {
   const [linking, setLinking] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmApprove, setConfirmApprove] = useState(false)
+  const [approving, setApproving] = useState(false)
   const role = getOrgRole()
 
   const load = async () => {
@@ -110,11 +115,6 @@ export function OrgGoalDetailPage() {
     return ui === 'delayed' || ui === 'stalled'
   }).length
 
-  const avgProgress =
-    linked.length === 0
-      ? 0
-      : Math.round(linked.reduce((sum, p) => sum + (p.progressPct ?? 0), 0) / linked.length)
-
   const openRisks = useMemo(() => {
     const counts = { high: 0, medium: 0, low: 0 }
     linked.forEach((project) => {
@@ -137,8 +137,9 @@ export function OrgGoalDetailPage() {
     [linked],
   )
 
-  const progress = goal?.achievementPct ?? goal?.progressPct ?? 0
-  const remaining = Math.max(0, 100 - progress)
+  const executive = goal?.executive ?? { approved: 0, total: 0, pct: 0 }
+  const progress = executive.pct
+  const readyToApprove = executive.total > 0 && executive.approved === executive.total
   const progressTone: BadgeVariant = progress >= 70 ? 'success' : progress >= 40 ? 'warning' : 'danger'
   const dateRange = [formatDate(goal?.startDate), formatDate(goal?.endDate)].join(' – ')
   const riskData = [
@@ -149,6 +150,22 @@ export function OrgGoalDetailPage() {
   const riskTotal = openRisks.high + openRisks.medium + openRisks.low
   const linkedIds = new Set(linked.map((p) => p.id))
   const availableProjects = projects.filter((p) => !linkedIds.has(p.id))
+
+  async function submitApproval() {
+    const token = getOrgToken()
+    if (!token || !goalId) return
+    setApproving(true)
+    try {
+      await approveGoal(token, goalId)
+      message.success('تم اعتماد الهدف')
+      setConfirmApprove(false)
+      await load()
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : t('loadError'))
+    } finally {
+      setApproving(false)
+    }
+  }
 
   async function openLinkModal() {
     const token = getOrgToken()
@@ -252,18 +269,20 @@ export function OrgGoalDetailPage() {
 
               <div className="ui-card goals-stat-card goals-avg-card">
                 <div className="widget-icon-header">
-                  <p className="widget-title goals-avg-card__title">{t('avgProgress')}</p>
+                  <p className="widget-title goals-avg-card__title">المخرجات المعتمدة</p>
                   <span className="widget-icon-badge">
                     <AssetIcon src={dashboardDataAssets.active} size={16} />
                   </span>
                 </div>
                 <div className="goals-avg-card__value-row">
-                  <span className="widget-stat-value goals-avg-card__value">{avgProgress}%</span>
+                  <span className="widget-stat-value goals-avg-card__value">
+                    {executive.approved} من {executive.total}
+                  </span>
                   <Badge variant="success" icon={<span className="tenants-status-dot" />}>
-                    {t('onTrack')}
+                    {progress}%
                   </Badge>
                 </div>
-                <ProgressBar value={avgProgress} tone="success" className="goals-avg-card__bar" />
+                <ProgressBar value={progress} tone="success" className="goals-avg-card__bar" />
               </div>
 
               <div className="ui-card goals-stat-card goals-risks-card">
@@ -310,8 +329,10 @@ export function OrgGoalDetailPage() {
 
             <div className="ui-card goals-kpi-card">
               <div className="goals-kpi-card__top">
-                <h3 className="goals-kpi-card__title">{t('kpiTitle')}</h3>
-                <span className="goals-kpi-card__pill">{t('remainingToGoal', { pct: remaining })}</span>
+                <h3 className="goals-kpi-card__title">التقدم التنفيذي للهدف</h3>
+                <span className="goals-kpi-card__pill">
+                  المعتمد {executive.approved} من {executive.total} مخرجًا
+                </span>
               </div>
               <div className="goals-kpi-card__value-row">
                 <span className="goals-kpi-card__value">
@@ -333,6 +354,40 @@ export function OrgGoalDetailPage() {
                 ) : null}
               </div>
             </div>
+
+            {goal.approvedAt ? (
+              <div className="ui-card goal-approval goal-approval--done">
+                <div>
+                  <h3>
+                    اعتماد الهدف الإستراتيجي <Badge variant="success">معتمد</Badge>
+                  </h3>
+                  <p>
+                    اعتمده {goal.approvedByName ?? '—'} في {formatDate(goal.approvedAt)}. لا يمكن إلغاء اعتماد الهدف.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="ui-card goal-approval">
+                <div>
+                  <h3>
+                    اعتماد الهدف الإستراتيجي{' '}
+                    <Badge variant={readyToApprove ? 'warning' : 'neutral'}>
+                      {readyToApprove ? 'جاهز للاعتماد' : 'غير جاهز'}
+                    </Badge>
+                  </h3>
+                  <p>
+                    {readyToApprove
+                      ? `اكتملت جميع المخرجات المرتبطة (${executive.total} من ${executive.total} معتمدة). راجع النتيجة ثم اعتمد الهدف.`
+                      : `يُتاح الاعتماد بعد اعتماد جميع مخرجات الهدف (${executive.approved} من ${executive.total} حتى الآن).`}
+                  </p>
+                </div>
+                {role && isUpperManagement(role) ? (
+                  <CatalogButton disabled={!readyToApprove} onClick={() => setConfirmApprove(true)}>
+                    اعتماد الهدف
+                  </CatalogButton>
+                ) : null}
+              </div>
+            )}
 
             <div className="goals-split">
               <div className="ui-card goals-split-card">
@@ -473,6 +528,16 @@ export function OrgGoalDetailPage() {
         }}
         onCancel={() => setConfirmDelete(false)}
       />
+      {confirmApprove ? (
+        <SaDialog
+          title="اعتماد الهدف الإستراتيجي؟"
+          body={`سيُعتمد هدف «${goal?.title}» بنسبة إنجاز 100% (${executive.total} من ${executive.total} مخرجًا معتمدًا)، ويُغلق الهدف. لا يمكن إلغاء الاعتماد بعد التأكيد.`}
+          confirmLabel="تأكيد اعتماد الهدف"
+          busy={approving}
+          onClose={() => setConfirmApprove(false)}
+          onConfirm={() => void submitApproval()}
+        />
+      ) : null}
     </div>
   )
 }
