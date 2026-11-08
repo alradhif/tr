@@ -217,6 +217,21 @@ function RenewalDateField({ value }: { value: string }) {
   );
 }
 
+/** The two-step progress shown above the add-tenant and review screens. */
+export function TenantStepper({ step }: { step: 1 | 2 }) {
+  const steps = ['معلومات الجهة', 'المراجعة والتأكيد'];
+  return (
+    <ol className="tenant-stepper">
+      {steps.map((label, index) => (
+        <li key={label} className={index + 1 === step ? 'tenant-stepper__step--active' : undefined}>
+          <span>{index + 1}</span>
+          {label}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPageProps) {
   const availablePackages: Package[] = usePackages();
   const defaultPkg = availablePackages[0];
@@ -319,27 +334,25 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
 
   return (
     <div className="dashboard-page">
-      <PageHeader
-        title="إضافة مستأجر جديد"
-        breadcrumbs={[{ label: 'إدارة المستأجرين', onClick: onCancel }]}
-      />
+      <PageHeader title="إدارة المستأجرين" subtitle="جميع الجهات المسجلة على منصة track+" />
 
       <div className="tenant-form-body" dir="rtl">
-        <h2 className="tenant-form-section-title">معلومات الجهة</h2>
+        <h1 className="tenant-form-page-title">إضافة مستأجر جديد</h1>
+        <TenantStepper step={1} />
 
         {}
         <div className="tenant-form-card">
           <div className="tenant-form-card__header">معلومات المستأجر الأساسية</div>
 
           <FormField
-            label="اسم الجهة"
+            label="اسم الجهة *"
             error={errors.entityName}
             touched={isTouched('entityName')}
           >
             <input
               type="text"
               className={inputClass('entityName')}
-              placeholder="مثال: وزارة التعليم"
+              placeholder="مثال: شركة رؤية المستقبل"
               value={formData.entityName}
               onChange={handleInputChange('entityName')}
               onBlur={handleBlur('entityName')}
@@ -361,7 +374,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
           </FormField>
 
           <div className="tenant-form-grid-2">
-            <FormField label="نوع الجهة">
+            <FormField label="نوع الجهة *">
               <SelectField
                 value={formData.entityType}
                 options={ENTITY_TYPE_OPTIONS}
@@ -392,7 +405,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
 
           <div className="tenant-form-grid-2">
             <FormField
-              label="المعرّف الموحد / السجل"
+              label="الرقم الموحد / السجل التجاري (اختياري)"
               error={errors.unifiedId}
               touched={isTouched('unifiedId')}
             >
@@ -411,14 +424,14 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
             </FormField>
 
             <FormField
-              label="النطاق الفرعي للمستأجر"
+              label="النطاق الفرعي *"
               error={errors.subdomain}
               touched={isTouched('subdomain')}
             >
               <input
                 type="text"
                 className={inputClass('subdomain')}
-                placeholder="example.trackplus.com"
+                placeholder="qassim ← qassim.trackplus.com"
                 value={formData.subdomain}
                 onChange={handleInputChange('subdomain')}
                 onBlur={handleBlur('subdomain')}
@@ -432,14 +445,14 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
           <div className="tenant-form-card__header">مدير الحساب</div>
 
           <FormField
-            label="الاسم الكامل"
+            label="الاسم الكامل *"
             error={errors.managerName}
             touched={isTouched('managerName')}
           >
             <input
               type="text"
               className={inputClass('managerName')}
-              placeholder="مثال: أحمد محمد"
+              placeholder="مثال: سلمان العتيبي"
               value={formData.managerName}
               onChange={handleInputChange('managerName')}
               onBlur={handleBlur('managerName')}
@@ -447,14 +460,14 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
           </FormField>
 
           <FormField
-            label="البريد الإلكتروني"
+            label="البريد الإلكتروني *"
             error={errors.managerEmail}
             touched={isTouched('managerEmail')}
           >
             <input
               type="email"
               className={inputClass('managerEmail')}
-              placeholder="name@domain.com"
+              placeholder="name@entity.gov.sa"
               value={formData.managerEmail}
               onChange={handleInputChange('managerEmail')}
               onBlur={handleBlur('managerEmail')}
@@ -463,7 +476,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
 
           <div className="tenant-form-grid-2">
             <FormField
-              label="رقم الجوال"
+              label="رقم الجوال *"
               error={errors.managerPhone}
               touched={isTouched('managerPhone')}
             >
@@ -471,18 +484,18 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
                 type="tel"
                 inputMode="numeric"
                 className={inputClass('managerPhone')}
-                placeholder="05XXXXXXXX (10 أرقام)"
+                placeholder="05XXXXXXXX"
                 value={formData.managerPhone}
                 onChange={handleInputChange('managerPhone')}
                 onBlur={handleBlur('managerPhone')}
               />
             </FormField>
 
-            <FormField label="المسمى الوظيفي">
+            <FormField label="المسمى الوظيفي (اختياري)">
               <input
                 type="text"
                 className="tenant-form-input"
-                placeholder="مثال: مدير النظام"
+                placeholder="مثال: مدير تقنية المعلومات"
                 value={formData.managerTitle}
                 onChange={handleInputChange('managerTitle')}
               />
@@ -494,7 +507,12 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
         <div className="tenant-form-card">
           <div className="tenant-form-card__header">الباقة والحدود</div>
 
-          <FormField label="نوع الباقة">
+          <div className="tenant-form-info" role="note">
+            <strong>الحدود تُعبّأ من الباقة</strong>
+            يمكن تعديل حد المستخدمين والتخزين لهذا المستأجر فقط دون تغيير الباقة نفسها.
+          </div>
+
+          <FormField label="نوع الباقة *">
             <div className="tenant-form-select-wrap">
               <select
                 value={formData.planId}
@@ -512,7 +530,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
 
           <div className="tenant-form-grid-2">
             <FormField
-              label="حد عدد المستخدمين"
+              label="حد عدد المستخدمين *"
               error={errors.userLimit}
               touched={isTouched('userLimit')}
             >
@@ -528,7 +546,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
             </FormField>
 
             <FormField
-              label="حد التخزين (GB)"
+              label="حد التخزين (GB) *"
               error={errors.storageLimit}
               touched={isTouched('storageLimit')}
             >
@@ -546,7 +564,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
 
           <div className="tenant-form-grid-2">
             <FormField
-              label="تاريخ بداية الاشتراك"
+              label="تاريخ بداية الاشتراك *"
               error={errors.subscriptionStart}
               touched={isTouched('subscriptionStart')}
             >
@@ -599,7 +617,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
             onClick={handleNext}
             aria-disabled={!isValid}
           >
-            التالي
+            التالي: المراجعة
           </button>
         </div>
       </div>

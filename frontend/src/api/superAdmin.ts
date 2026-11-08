@@ -92,6 +92,7 @@ export type Sector = {
 }
 
 export type PlatformPackage = {
+  currentUsers?: number
   id: string
   name: string
   label?: string | null
@@ -114,6 +115,7 @@ export type PackageInput = {
   storageGb?: number
   features?: string[]
   price?: number
+  duration?: number
   maxUsers?: number
   maxProjects?: number
   isActive?: boolean

@@ -28,14 +28,14 @@ function formatJoin(createdAt?: string) {
   if (!createdAt) return '—'
   const d = new Date(createdAt)
   if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('ar-SA')
+  return d.toLocaleDateString('ar-SA-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 function formatDate(value?: string | null) {
   if (!value) return '—'
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('ar-SA')
+  return d.toLocaleDateString('ar-SA-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 function packageLabel(name?: string | null, label?: string | null) {

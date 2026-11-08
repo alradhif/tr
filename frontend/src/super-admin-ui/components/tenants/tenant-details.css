@@ -821,3 +821,60 @@
   color: #8e8f97;
   font-size: 12px;
 }
+
+/* Tenant details, as in the Figma "تفاصيل المستأجر" frame. */
+.td-body {
+  padding: 24px;
+  gap: 18px;
+}
+
+.td-joined {
+  margin: 4px 0 0;
+  color: #8e8f97;
+  font-size: 14px;
+}
+
+.td-kpi-card {
+  gap: 10px;
+  min-height: 118px;
+  border: 0;
+  border-radius: 20px;
+  box-shadow: none;
+}
+
+.td-kpi-card .td-kpi-card__label {
+  color: #8e8f97;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.td-kpi-card .td-status-pill {
+  align-self: flex-start;
+}
+
+.td-plan {
+  padding: 22px 24px;
+  border-radius: 20px;
+  background: linear-gradient(100deg, #0c2233 0%, #0d3347 60%, #0a2d40 100%);
+  color: #fff;
+}
+
+.td-plan h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.td-plan p {
+  margin: 8px 0 12px;
+  color: rgb(255 255 255 / 75%);
+  font-size: 13px;
+}
+
+.td-plan__features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 13px;
+  font-weight: 700;
+}

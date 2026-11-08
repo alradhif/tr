@@ -1,11 +1,7 @@
 import {
   Download,
-  HardDrive,
   Users,
-  Activity,
-  CreditCard,
   RefreshCw,
-  CheckCircle2,
   Pencil,
   UserX,
   UserCheck,
@@ -47,23 +43,6 @@ const ROLE_CLASS: Record<TenantUser['role'], string> = {
 
 function RoleBadge({ role }: { role: TenantUser['role'] }) {
   return <span className={`td-role-badge ${ROLE_CLASS[role]}`}>{role}</span>;
-}
-
-function parseBytes(s: string): number {
-  const n = parseFloat(s.replace(/[^0-9.]/g, ''));
-  if (/TB|تيرابايت/i.test(s)) return n * 1024;
-  return n; 
-}
-
-function pct(used: number, total: number) {
-  if (!total) return 0;
-  return Math.min(100, Math.round((used / total) * 100));
-}
-
-function barClass(p: number) {
-  if (p >= 85) return 'td-progress-fill--red';
-  if (p >= 60) return 'td-progress-fill--yellow';
-  return 'td-progress-fill--green';
 }
 
 const AVATAR_COLORS = ['#dbeafe', '#d1f0e1', '#e9d5ff', '#fde9ce', '#f4f4f5'];
@@ -184,10 +163,6 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
 
   
 
-  const storagePct = details?.usage.storageLimitGb
-    ? pct(details.usage.storageBytes, details.usage.storageLimitGb * 1024 * 1024 * 1024)
-    : pct(parseBytes(tenant.usedStorage), parseBytes(tenant.storageLimit));
-  const userPct    = pct(tenant.activeUsers, tenant.userLimit);
   const isSuspended = tenant.status === 'suspended';
 
   const statusPillClass =
@@ -260,19 +235,9 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
           <div className="td-title-row">
             <div className="td-title-block">
               <h1 className="td-title">{tenant.name}</h1>
-              <div className="td-meta-row">
-                <span className="td-meta-item">
-                  #{tenant.id}
-                </span>
-                <span className="td-meta-sep" />
-                <span className="td-meta-item">
-                  {tenant.joinDuration}
-                </span>
-                <span className="td-meta-sep" />
-                <span className="td-meta-item">
-                  آخر نشاط: {tenant.lastActivity}
-                </span>
-              </div>
+              <p className="td-joined">
+                انضمت في {tenant.joinDuration} · آخر نشاط: {tenant.lastActivity}
+              </p>
             </div>
 
             <div className="td-actions">
@@ -289,114 +254,42 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
 
           {}
           <div className="td-kpi-row">
-
-            {}
             <div className="td-kpi-card">
-              <div className="td-kpi-card__header">
-                <span className="td-kpi-card__icon-badge">
-                  <HardDrive size={14} strokeWidth={2} />
-                </span>
-                <p className="td-kpi-card__label">التخزين المستخدم</p>
-              </div>
-              <p className="td-kpi-card__value">
-                {tenant.usedStorage}
-                <span className="td-kpi-card__sub"> / {tenant.storageLimit}</span>
-              </p>
-              <div className="td-kpi-card__progress">
-                <div className="td-progress-track">
-                  <div
-                    className={`td-progress-fill ${barClass(storagePct)}`}
-                    style={{ width: `${storagePct}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {}
-            <div className="td-kpi-card">
-              <div className="td-kpi-card__header">
-                <span className="td-kpi-card__icon-badge">
-                  <Users size={14} strokeWidth={2} />
-                </span>
-                <p className="td-kpi-card__label">المستخدمون النشطون</p>
-              </div>
-              <p className="td-kpi-card__value">
-                {tenant.activeUsers}
-                <span className="td-kpi-card__sub"> / {tenant.userLimit}</span>
-              </p>
-              <div className="td-kpi-card__progress">
-                <div className="td-progress-track">
-                  <div
-                    className={`td-progress-fill ${barClass(userPct)}`}
-                    style={{ width: `${userPct}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {}
-            <div className="td-kpi-card">
-              <div className="td-kpi-card__header">
-                <span className="td-kpi-card__icon-badge">
-                  <Activity size={14} strokeWidth={2} />
-                </span>
-                <p className="td-kpi-card__label">حالة الحساب</p>
-              </div>
+              <p className="td-kpi-card__label">الحالة</p>
               <span className={`td-status-pill ${statusPillClass}`}>
                 <span className="td-status-dot" />
                 {tenant.statusLabel}
               </span>
-              <p className="td-status-desc">
-                {isSuspended
-                  ? 'الحساب موقوف — المستخدمون لا يملكون وصولاً'
-                  : tenant.status === 'trial'
-                  ? 'فترة تجريبية — ميزات محدودة'
-                  : 'الحساب يعمل بشكل طبيعي'}
+              <p className="td-status-desc">منذ {tenant.joinDate}</p>
+            </div>
+            <div className="td-kpi-card">
+              <p className="td-kpi-card__label">المستخدمون</p>
+              <p className="td-kpi-card__value">
+                {tenant.activeUsers}
+                <span className="td-kpi-card__sub"> من {tenant.userLimit}</span>
+              </p>
+            </div>
+            <div className="td-kpi-card">
+              <p className="td-kpi-card__label">التخزين المستخدم</p>
+              <p className="td-kpi-card__value">
+                {tenant.usedStorage}
+                <span className="td-kpi-card__sub"> من {tenant.storageLimit}</span>
               </p>
             </div>
           </div>
 
-          {}
-          <div className="td-sub-banner">
-
-            {}
-            <div className="td-sub-banner__features">
-              <p className="td-sub-banner__features-title">المميزات المتاحة</p>
-              <div className="td-sub-banner__feature-list">
-                {tenant.package.features.map((f) => (
-                  <span key={f} className="td-sub-banner__feature">
-                    <CheckCircle2 size={13} strokeWidth={2.5} />
-                    {f}
-                  </span>
-                ))}
-                {tenant.package.features.length === 0 && (
-                  <span className="td-sub-banner__feature" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    لا توجد مميزات مضافة
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {}
-            <div className="td-sub-banner__info">
-              <span className="td-sub-banner__eyebrow">الاشتراك الحالي</span>
-              <h2 className="td-sub-banner__pkg-name">باقة {tenant.package.name}</h2>
-              <div className="td-sub-banner__details">
-                <span className="td-sub-banner__detail">
-                  <CreditCard size={13} strokeWidth={2} />
-                  التكلفة:&nbsp;
-                  <span className="td-sub-banner__detail-value">{tenant.package.monthlyCost}</span>
-                </span>
-                <span className="td-sub-banner__detail">
-                  <RefreshCw size={13} strokeWidth={2} />
-                  تاريخ التجديد:&nbsp;
-                  <span className="td-sub-banner__detail-value">{tenant.package.renewalDate}</span>
-                </span>
-              </div>
+          <div className="td-plan">
+            <h2>الباقة ({tenant.package.name})</h2>
+            <p>
+              {tenant.package.monthlyCost} · يتجدد في {tenant.package.renewalDate}
+            </p>
+            <div className="td-plan__features">
+              {tenant.package.features.map((feature) => (
+                <span key={feature}>✓ {feature}</span>
+              ))}
             </div>
           </div>
 
-          {}
           <div className="td-main-card">
 
             {}

@@ -37,6 +37,7 @@ export interface Package {
   status: 'active' | 'inactive';
   statusLabel: string;
   tenants: number;
+  currentUsers: number;
   userLimit: number;
   packageType: string;
   permissions: PackagePermission[];
@@ -60,6 +61,7 @@ function toUiPackage(pkg: PlatformPackage): Package {
     status: active ? 'active' : 'inactive',
     statusLabel: active ? 'نشطة' : 'غير نشطة',
     tenants: pkg.tenants ?? 0,
+    currentUsers: pkg.currentUsers ?? 0,
     userLimit: pkg.maxUsers,
     packageType: pkg.packageType || '—',
     permissions: PERMISSION_NAMES.map((name) => ({ name, granted: features.includes(name) })),

@@ -30,6 +30,9 @@ export interface PackageDetailsData {
   status: 'active' | 'inactive';
   statusLabel: string;
   userLimit: number;
+  tenants: number;
+  currentUsers: number;
+  price: string;
   packageType: string;
   permissions: PackagePermission[];
 }
@@ -63,7 +66,7 @@ export function PackageDetailsPage({ pkg, onBack, onEdit, onDelete }: PackageDet
   return (
     <div className="dashboard-page">
       <PageHeader
-        title={`باقة ${pkg.name}`}
+        title="الاشتراكات والباقات"
         breadcrumbs={[{ label: 'الاشتراكات والباقات', onClick: onBack }]}
       />
 
@@ -94,7 +97,7 @@ export function PackageDetailsPage({ pkg, onBack, onEdit, onDelete }: PackageDet
               <span className="package-details-icon-badge">
                 <FileText size={16} />
               </span>
-              <h2>{pkg.packageType && pkg.packageType !== "—" ? `باقة ${pkg.packageType}` : "تفاصيل الباقة"}</h2>
+              <h2>{pkg.name}</h2>
               {}
               <span
                 className={`package-status-pill${
@@ -109,9 +112,9 @@ export function PackageDetailsPage({ pkg, onBack, onEdit, onDelete }: PackageDet
 
           {}
           <div className="package-data-grid package-data-grid--full">
-            <DataCell icon={<Tag size={16} />} label="السعر" value={pkg.priceValue} />
+            <DataCell icon={<Tag size={16} />} label="السعر" value={pkg.price} />
             <DataCell icon={<Target size={16} />} label="المدة" value={pkg.duration} />
-            <DataCell icon={<Users size={16} />} label="عدد المستخدمين" value={pkg.users} />
+            <DataCell icon={<Users size={16} />} label="عدد المستأجرين" value={pkg.tenants} />
           </div>
 
           {}
@@ -119,9 +122,9 @@ export function PackageDetailsPage({ pkg, onBack, onEdit, onDelete }: PackageDet
 
           {}
           <div className="package-data-grid package-data-grid--full">
-            <DataCell icon={<CheckCircle2 size={16} />} label="حد المستخدمين" value={pkg.userLimit} />
+            <DataCell icon={<CheckCircle2 size={16} />} label="حد المستخدمين" value={`${pkg.userLimit} مستخدمًا`} />
             <DataCell icon={<HardDrive size={16} />} label="حد التخزين" value={pkg.storage} />
-            <DataCell icon={<Box size={16} />} label="نوع الباقة" value={pkg.packageType} />
+            <DataCell icon={<Box size={16} />} label="المستخدمون الحاليون" value={`${pkg.currentUsers} مستخدمًا`} />
           </div>
         </Card>
 

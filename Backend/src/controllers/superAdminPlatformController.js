@@ -604,13 +604,26 @@ function packageInput(body, partial) {
 }
 
 async function withTenantCounts(packages) {
-  const counts = await prisma.accountSubscription.groupBy({
-    by: ['packageId'],
+  const subscriptions = await prisma.accountSubscription.findMany({
     where: { status: { in: ['ACTIVE', 'DEMO'] } },
-    _count: { packageId: true },
+    select: { packageId: true, accountType: true, accountId: true },
   })
-  const byId = new Map(counts.map((row) => [row.packageId, row._count.packageId]))
-  return packages.map((pkg) => ({ ...pkg, tenants: byId.get(pkg.id) || 0 }))
+  const [orgUsers, clientUsers] = await Promise.all([
+    prisma.orgUser.groupBy({ by: ['orgId'], _count: { _all: true } }),
+    prisma.clientUser.groupBy({ by: ['clientId'], _count: { _all: true } }),
+  ])
+  const usersByAccount = new Map([
+    ...orgUsers.map((row) => [row.orgId, row._count._all]),
+    ...clientUsers.map((row) => [row.clientId, row._count._all]),
+  ])
+  return packages.map((pkg) => {
+    const own = subscriptions.filter((sub) => sub.packageId === pkg.id)
+    return {
+      ...pkg,
+      tenants: own.length,
+      currentUsers: own.reduce((total, sub) => total + (usersByAccount.get(sub.accountId) || 0), 0),
+    }
+  })
 }
 
 exports.listAllPackages = async (req, res) => {

@@ -126,3 +126,15 @@
 .subscriptions-table__row {
   grid-template-columns: minmax(160px, 1.4fr) 110px 100px 130px 130px 110px 110px 48px;
 }
+
+.package-form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .package-form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}

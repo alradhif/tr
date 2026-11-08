@@ -10,6 +10,7 @@ export interface NewPackageData {
   name: string;
   isActive: boolean;
   planType: string;
+  trialDays?: string;
   userLimit: string;
   storageLimit: string;
   period: string;
@@ -43,13 +44,14 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [planType, setPlanType] = useState(initialData?.planType ?? planTypeOptions[0]);
+  const [planType] = useState(initialData?.planType ?? planTypeOptions[0]);
   const [userLimit, setUserLimit] = useState(initialData?.userLimit ?? userLimitOptions[0]);
   const [storageLimit, setStorageLimit] = useState(
     initialData?.storageLimit.match(/\d+/)?.[0] ?? '',
   );
   const [period, setPeriod] = useState(initialData?.period ?? '');
   const [price, setPrice] = useState(initialData?.price ?? '');
+  const [trialDays, setTrialDays] = useState('');
   const [permissions, setPermissions] = useState<Record<string, boolean>>(
     Object.fromEntries(
       PERMISSION_OPTIONS.map((permission) => [
@@ -89,6 +91,7 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
       storageLimit,
       period,
       price,
+      trialDays,
       permissions: PERMISSION_OPTIONS.filter((permission) => permissions[permission]),
     });
     } catch (err) {
@@ -101,7 +104,7 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
   return (
     <div className="dashboard-page">
       <PageHeader
-        title={isEdit ? 'تعديل الباقة' : 'إضافة باقة جديدة'}
+        title={isEdit ? 'تعديل الباقة' : 'إضافة باقة'}
         breadcrumbs={[{ label: 'الاشتراكات والباقات', onClick: onCancel }]}
       />
 
@@ -114,7 +117,7 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
           </div>
 
           <div className="tenant-form-field">
-            <label>اسم الباقة</label>
+            <label>اسم الباقة *</label>
             <input
               type="text"
               className="tenant-form-input"
@@ -124,23 +127,37 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
             />
           </div>
 
-          <div className="tenant-form-field">
-            <label>نوع الباقة</label>
-            <div className="tenant-form-select-wrap">
-              <select value={planType} onChange={(event) => setPlanType(event.target.value)}>
-                {planTypeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="tenant-form-chevron" />
+          <div className="tenant-form-grid-2">
+            <div className="tenant-form-field">
+              <label>السعر (ر.س) *</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                inputMode="decimal"
+                className="tenant-form-input"
+                placeholder="مثال: 2,000"
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+              />
+            </div>
+            <div className="tenant-form-field">
+              <label>مدة التجربة بالأيام (اختياري)</label>
+              <input
+                type="number"
+                min="1"
+                inputMode="numeric"
+                className="tenant-form-input"
+                placeholder="مثال: 30"
+                value={trialDays}
+                onChange={(event) => setTrialDays(event.target.value)}
+              />
             </div>
           </div>
 
-          <div className="package-form-grid-4">
+          <div className="package-form-grid-3">
             <div className="tenant-form-field">
-              <label>حد المستخدمين</label>
+              <label>حد المستخدمين *</label>
               <div className="tenant-form-select-wrap">
                 <select value={userLimit} onChange={(event) => setUserLimit(event.target.value)}>
                   {userLimitOptions.map((option) => (
@@ -152,22 +169,20 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
                 <ChevronDown size={16} className="tenant-form-chevron" />
               </div>
             </div>
-
             <div className="tenant-form-field">
-              <label>حد التخزين (GB)</label>
+              <label>حد التخزين (GB) *</label>
               <input
                 type="number"
                 min="0"
                 inputMode="numeric"
                 className="tenant-form-input"
-                placeholder="مثال: 50"
+                placeholder="مثال: 40"
                 value={storageLimit}
                 onChange={(event) => setStorageLimit(event.target.value)}
               />
             </div>
-
             <div className="tenant-form-field">
-              <label>الفترة</label>
+              <label>مدة الاشتراك *</label>
               <div className="tenant-form-select-wrap">
                 <select
                   value={period}
@@ -175,7 +190,7 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
                   className={period === '' ? 'tenant-form-select--placeholder' : ''}
                 >
                   <option value="" disabled>
-                    مثال: شهري
+                    سنوي
                   </option>
                   {PERIOD_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -186,29 +201,10 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
                 <ChevronDown size={16} className="tenant-form-chevron" />
               </div>
             </div>
-
-            <div className="tenant-form-field">
-              <label>السعر</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                inputMode="decimal"
-                className="tenant-form-input"
-                placeholder="مثال: 999"
-                value={price}
-                onChange={(event) => setPrice(event.target.value)}
-              />
-            </div>
           </div>
 
           <div className="tenant-form-field">
-            <label>الصلاحيات</label>
-            <div className="tenant-form-select-wrap">
-              <input type="text" className="tenant-form-input" placeholder="مثال: إدارة البيانات" readOnly />
-              <ChevronDown size={16} className="tenant-form-chevron" />
-            </div>
-
+            <label>الصلاحيات المتاحة في الباقة</label>
             <div className="package-permissions-list">
               {PERMISSION_OPTIONS.map((permission) => (
                 <label className="package-permission-row" key={permission}>

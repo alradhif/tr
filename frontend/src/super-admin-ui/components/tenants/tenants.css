@@ -369,3 +369,70 @@
   font-size: 12px;
   line-height: 18px;
 }
+
+.tenant-form-page-title {
+  margin: 0;
+  color: #0c0c0d;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+}
+
+.tenant-stepper {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 0 0 8px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid #e7e8eb;
+  list-style: none;
+}
+
+.tenant-stepper li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #8e8f97;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tenant-stepper li + li::before {
+  content: '';
+  width: 64px;
+  height: 1px;
+  margin-inline-end: 16px;
+  background: #d0d1d6;
+}
+
+.tenant-stepper span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f5f5f6;
+  font-size: 12px;
+}
+
+.tenant-stepper__step--active {
+  color: #0c0c0d !important;
+}
+
+.tenant-stepper__step--active span {
+  background: #0c0c0d;
+  color: #fff;
+}
+
+.tenant-form-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid #2e90fa;
+  border-radius: 10px;
+  background: #d5e9fe;
+  color: #27272a;
+  font-size: 13px;
+}

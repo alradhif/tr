@@ -1,5 +1,5 @@
 import { CircleAlert } from 'lucide-react';
-import type { TenantFormData } from './AddTenantPage';
+import { TenantStepper, type TenantFormData } from './AddTenantPage';
 import { tenantTypeLabel } from '../../lib/tenantTypes';
 import { usePackages } from '../../context/PackageContext';
 import { PageHeader } from '../layout/PageHeader';
@@ -94,6 +94,8 @@ export function ReviewTenantPage({
 
       {}
       <div className="tenant-form-body" dir="rtl">
+        <h1 className="tenant-form-page-title">إضافة مستأجر جديد</h1>
+        <TenantStepper step={2} />
         <h2 className="rv-section-title">مراجعة وتأكيد معلومات الجهة</h2>
 
         {}

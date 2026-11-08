@@ -116,6 +116,7 @@ export function SubscriptionsPage() {
     storageGb: data.storageLimit ? Number(data.storageLimit) : undefined,
     maxUsers: Number(data.userLimit) || undefined,
     price: data.price !== '' ? Number(data.price) : undefined,
+    duration: Number(data.trialDays) > 0 ? Number(data.trialDays) : undefined,
     features: data.permissions,
     isActive: data.isActive,
   });
