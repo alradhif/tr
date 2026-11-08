@@ -172,6 +172,72 @@ function pickTodayAlerts(alerts, limit = 3) {
   return picked.slice(0, limit)
 }
 
+// What upper management acts on: deliverables awaiting approval, goal progress and payments.
+async function orgApprovalSummary(orgId) {
+  const now = new Date()
+  const [pending, goals, org, payments] = await Promise.all([
+    prisma.orgDeliverable.findMany({
+      where: { reviewStatus: 'PENDING', project: { orgId } },
+      orderBy: { submittedAt: 'asc' },
+      select: { id: true, name: true, projectId: true, submittedByName: true, project: { select: { name: true } } },
+    }),
+    prisma.orgStrategicGoal.findMany({
+      where: { orgId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        projectLinks: { select: { project: { select: { deliverables: { select: { reviewStatus: true } } } } } },
+      },
+    }),
+    prisma.orgAccount.findUnique({ where: { id: orgId }, select: { entityType: true } }),
+    prisma.orgProjectPayment.findMany({
+      where: { orgId },
+      orderBy: { dueDate: 'asc' },
+      select: { id: true, title: true, amount: true, dueDate: true, paidAt: true, project: { select: { name: true } }, company: { select: { name: true } } },
+    }),
+  ])
+
+  const goalsProgress = goals.map((goal) => {
+    const deliverables = goal.projectLinks.flatMap((link) => link.project.deliverables)
+    const approved = deliverables.filter((item) => item.reviewStatus === 'APPROVED').length
+    const total = deliverables.length
+    return { id: goal.id, title: goal.title, approved, total, pct: total ? Math.round((approved / total) * 100) : 0 }
+  })
+  const approved = goalsProgress.reduce((sum, goal) => sum + goal.approved, 0)
+  const total = goalsProgress.reduce((sum, goal) => sum + goal.total, 0)
+
+  const sum = (rows) => rows.reduce((value, row) => value + Number(row.amount), 0)
+  const open = payments.filter((payment) => !payment.paidAt)
+  const late = open.filter((payment) => payment.dueDate < now)
+
+  return {
+    pendingDeliverables: pending.map((item) => ({
+      id: item.id,
+      name: item.name,
+      projectId: item.projectId,
+      project: item.project.name,
+      submittedBy: item.submittedByName,
+    })),
+    goalsExecutive: { approved, total, pct: total ? Math.round((approved / total) * 100) : 0 },
+    goalsProgress,
+    invoiceSummary: {
+      direction: /خاص/.test(org?.entityType || '') ? 'COLLECT' : 'PAY',
+      settled: sum(payments) - sum(open),
+      remaining: sum(open),
+      overdue: sum(late),
+      followUps: open.slice(0, 3).map((payment) => ({
+        id: payment.id,
+        company: payment.company?.name || '—',
+        project: payment.project.name,
+        title: payment.title,
+        amount: Number(payment.amount),
+        overdue: payment.dueDate < now,
+      })),
+    },
+  }
+}
+
 async function buildProjectPortalDashboard(kind, accountId, options = {}) {
   const isOrg = kind === 'ORG'
   const isManager = isOrg
@@ -386,6 +452,7 @@ async function buildProjectPortalDashboard(kind, accountId, options = {}) {
     })),
     projectStatuses,
     todayAlerts,
+    ...(isOrg && accountId ? await orgApprovalSummary(accountId) : {}),
     deliverables: recentDeliverables.map((d) => ({
       id: d.id,
       projectId: d.projectId,

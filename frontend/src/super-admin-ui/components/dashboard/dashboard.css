@@ -503,3 +503,88 @@
   min-height: 4px;
   border-radius: 4px;
 }
+
+/* Organization dashboard: approvals, invoices and goals. */
+.org-pending-count {
+  gap: 8px;
+}
+
+.org-pending-count .ui-badge {
+  margin-inline-start: auto;
+}
+
+.org-invoices-mini {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.org-invoices-mini div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f5f5f6;
+}
+
+.org-invoices-mini span {
+  color: #8e8f97;
+  font-size: 12px;
+}
+
+.org-invoices-mini strong {
+  color: #0c0c0d;
+  font-size: 15px;
+}
+
+.org-invoices-mini--late strong {
+  color: #f04438;
+}
+
+.org-mini-title {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.org-goal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid #f0f0f1;
+  background: transparent;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+
+.org-goal-row__title {
+  color: #0c0c0d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.org-goal-row small {
+  color: #8e8f97;
+  font-size: 12px;
+}
+
+.org-goal-row__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.org-goal-row__bar .list-row__bar {
+  flex: 1;
+}
+
+.org-goal-row__bar b {
+  font-size: 12px;
+}

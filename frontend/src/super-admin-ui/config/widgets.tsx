@@ -16,6 +16,13 @@ import { OpenRisksDonutWidget } from '../components/dashboard/widgets/OpenRisksD
 import { RisksByLevelChartWidget } from '../components/dashboard/widgets/RisksByLevelChartWidget';
 import { ProjectStatusDonutWidget } from '../components/dashboard/widgets/ProjectStatusDonutWidget';
 import { TodayAlertsWidget } from '../components/dashboard/widgets/TodayAlertsWidget';
+import {
+  GoalsExecutiveWidget,
+  GoalsListWidget,
+  InvoicesSummaryWidget,
+  PendingApprovalsCountWidget,
+  PendingApprovalsListWidget,
+} from '../components/dashboard/widgets/OrgDashboardWidgets';
 import { ProjectInvoicesTotalWidget } from '../components/dashboard/widgets/ProjectInvoicesTotalWidget';
 import { DeliverablesListWidget } from '../components/dashboard/widgets/DeliverablesListWidget';
 import { ProjectsListWidget } from '../components/dashboard/widgets/ProjectsListWidget';
@@ -41,6 +48,11 @@ export type WidgetId =
   | 'project-status-donut'
   | 'today-alerts'
   | 'project-invoices-total'
+  | 'goals-executive'
+  | 'pending-approvals-count'
+  | 'pending-approvals-list'
+  | 'invoices-summary'
+  | 'goals-list'
   | 'deliverables-list'
   | 'projects-list';
 
@@ -161,6 +173,11 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetDefinition> = {
     minH: 4,
     component: ProjectStatusDonutWidget,
   },
+  'goals-executive': { id: 'goals-executive', title: 'التقدم التنفيذي للأهداف', minW: 3, minH: 2, component: GoalsExecutiveWidget },
+  'pending-approvals-count': { id: 'pending-approvals-count', title: 'بانتظار اعتمادك', minW: 3, minH: 2, component: PendingApprovalsCountWidget },
+  'pending-approvals-list': { id: 'pending-approvals-list', title: 'مخرجات بانتظار اعتمادك', minW: 4, minH: 3, component: PendingApprovalsListWidget },
+  'invoices-summary': { id: 'invoices-summary', title: 'تتبع الفواتير', minW: 4, minH: 3, component: InvoicesSummaryWidget },
+  'goals-list': { id: 'goals-list', title: 'الأهداف الإستراتيجية', minW: 4, minH: 3, component: GoalsListWidget },
   'project-invoices-total': {
     id: 'project-invoices-total',
     title: 'إجمالي فواتير المشاريع',
@@ -229,6 +246,34 @@ export const ADMIN_PORTAL_LAYOUT: LayoutItem[] = [
   { i: 'today-alerts', x: 0, y: 6, w: 12, h: 3, minW: 6, minH: 3 },
   { i: 'deliverables-list', x: 6, y: 9, w: 6, h: 3, minW: 4, minH: 3 },
   { i: 'projects-list', x: 0, y: 9, w: 6, h: 3, minW: 4, minH: 3 },
+];
+
+export const ORG_ACTIVE_WIDGET_IDS: WidgetId[] = [
+  'active-projects',
+  'goals-executive',
+  'pending-approvals-count',
+  'open-risks-donut',
+  'risks-by-level',
+  'project-status-donut',
+  'today-alerts',
+  'pending-approvals-list',
+  'projects-list',
+  'goals-list',
+  'invoices-summary',
+];
+
+export const ORG_PORTAL_LAYOUT: LayoutItem[] = [
+  { i: 'active-projects', x: 9, y: 0, w: 3, h: 2, minW: 3, minH: 2 },
+  { i: 'goals-executive', x: 6, y: 0, w: 3, h: 2, minW: 3, minH: 2 },
+  { i: 'pending-approvals-count', x: 3, y: 0, w: 3, h: 2, minW: 3, minH: 2 },
+  { i: 'open-risks-donut', x: 0, y: 0, w: 3, h: 2, minW: 3, minH: 2 },
+  { i: 'risks-by-level', x: 6, y: 2, w: 6, h: 4, minW: 5, minH: 4 },
+  { i: 'project-status-donut', x: 0, y: 2, w: 6, h: 4, minW: 4, minH: 4 },
+  { i: 'today-alerts', x: 0, y: 6, w: 12, h: 3, minW: 6, minH: 3 },
+  { i: 'pending-approvals-list', x: 6, y: 9, w: 6, h: 6, minW: 4, minH: 3 },
+  { i: 'projects-list', x: 0, y: 9, w: 6, h: 6, minW: 4, minH: 3 },
+  { i: 'goals-list', x: 6, y: 15, w: 6, h: 6, minW: 4, minH: 3 },
+  { i: 'invoices-summary', x: 0, y: 15, w: 6, h: 6, minW: 4, minH: 3 },
 ];
 
 /** Jodayn also tracks invoicing, so its first two rows hold five cards. */

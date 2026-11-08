@@ -8,6 +8,8 @@ import {
   ADMIN_PORTAL_LAYOUT,
   JODAYN_ACTIVE_WIDGET_IDS,
   JODAYN_PORTAL_LAYOUT,
+  ORG_ACTIVE_WIDGET_IDS,
+  ORG_PORTAL_LAYOUT,
 } from '../../super-admin-ui/config/widgets'
 import { EditGridIcon } from '../../super-admin-ui/components/layout/EditGridIcon'
 import {
@@ -53,8 +55,10 @@ export function PortalDashboard({
 }: PortalDashboardProps) {
   const { t } = useTranslation()
   // Every portal (Jodayn included, per the Figma dashboard frame) shows the project-portfolio widgets.
-  const widgetIds = portal === 'jodayn' ? JODAYN_ACTIVE_WIDGET_IDS : ADMIN_DEFAULT_ACTIVE_WIDGET_IDS
-  const portalLayout = portal === 'jodayn' ? JODAYN_PORTAL_LAYOUT : ADMIN_PORTAL_LAYOUT
+  const widgetIds =
+    portal === 'jodayn' ? JODAYN_ACTIVE_WIDGET_IDS : portal === 'org' ? ORG_ACTIVE_WIDGET_IDS : ADMIN_DEFAULT_ACTIVE_WIDGET_IDS
+  const portalLayout =
+    portal === 'jodayn' ? JODAYN_PORTAL_LAYOUT : portal === 'org' ? ORG_PORTAL_LAYOUT : ADMIN_PORTAL_LAYOUT
   const {
     isEditMode,
     setIsEditMode,

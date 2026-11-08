@@ -63,6 +63,16 @@ export type LiveDashboardData = {
   pendingInvoices?: number
   totalRevenue?: number
   revenueByMonth?: Array<{ month: string; amount: number }>
+  pendingDeliverables?: Array<{ id: string; name: string; projectId: string; project: string; submittedBy: string | null }>
+  goalsExecutive?: { approved: number; total: number; pct: number }
+  goalsProgress?: Array<{ id: string; title: string; approved: number; total: number; pct: number }>
+  invoiceSummary?: {
+    direction: 'PAY' | 'COLLECT'
+    settled: number
+    remaining: number
+    overdue: number
+    followUps: Array<{ id: string; company: string; project: string; title: string; amount: number; overdue: boolean }>
+  }
   tenantsByStatusMonth?: Array<{ month: string; active: number; trial: number; suspended: number }>
 }
 
