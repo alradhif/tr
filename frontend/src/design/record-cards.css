@@ -1,6 +1,9 @@
 /* Table/cards switch and the record cards shared by the organization lists. */
 .rc-toggle {
   display: inline-flex;
+  flex: none;
+  box-sizing: border-box;
+  height: 42px;
   gap: 2px;
   padding: 3px;
   border-radius: 18px;
@@ -12,8 +15,8 @@
   align-items: center;
   gap: 6px;
   justify-content: center;
-  width: 36px;
-  height: 30px;
+  width: 38px;
+  height: 36px;
   padding: 0;
   border: 0;
   border-radius: 16px;
@@ -37,6 +40,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 10px;
   margin: 0 0 16px;
 }
 
@@ -186,11 +190,6 @@
 }
 
 /* Status menu behind the "تصفية" button */
-.rc-stack.sc-toolbar,
-.rc-stack.departments-toolbar--screenshot-one {
-  align-items: flex-end;
-}
-
 .rc-filter {
   position: relative;
   display: flex;
@@ -221,7 +220,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 36px;
+  height: 42px;
   min-width: 104px;
   padding: 0 16px;
   border: 1px solid #0c0c0d;

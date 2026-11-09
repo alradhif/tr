@@ -106,35 +106,35 @@ export function OrgDepartmentsPage() {
           <div className="departments-page__heading departments-page__heading--screenshot-one">
             <h2>الإدارات</h2>
           </div>
-          <div className="departments-toolbar departments-toolbar--screenshot-one rc-stack">
+          <div className="departments-toolbar departments-toolbar--screenshot-one">
             {canCreateDraft(role) ? (
               <button className="departments-primary" type="button" onClick={() => navigate(`${portal.base}/new`)}>
                 <Plus size={19} />
                 <span>إضافة إدارة جديدة</span>
               </button>
             ) : null}
-            <StatusFilterMenu
-              title="حالة الإدارة"
-              allKey="all"
-              value={filter}
-              shown={visible.length}
-              total={rows.length}
-              noun="إدارات"
-              onChange={setFilter}
-              options={[
-                { key: 'all', label: 'الكل', count: rows.length },
-                ...(['track', 'delay', 'blocked', 'done'] as const).map((key) => ({
-                  key,
-                  label: STATUS_META[key],
-                  count: rows.filter((row) => matches(row, key)).length,
-                  dot: STATUS_DOT[key],
-                })),
-                { key: 'inactive', label: 'غير نشطة', count: rows.filter((row) => matches(row, 'inactive')).length, dot: '#8e8f97' },
-              ]}
-            />
           </div>
         </div>
         <div className="rc-view-bar">
+          <StatusFilterMenu
+            title="حالة الإدارة"
+            allKey="all"
+            value={filter}
+            shown={visible.length}
+            total={rows.length}
+            noun="إدارات"
+            onChange={setFilter}
+            options={[
+              { key: 'all', label: 'الكل', count: rows.length },
+              ...(['track', 'delay', 'blocked', 'done'] as const).map((key) => ({
+                key,
+                label: STATUS_META[key],
+                count: rows.filter((row) => matches(row, key)).length,
+                dot: STATUS_DOT[key],
+              })),
+              { key: 'inactive', label: 'غير نشطة', count: rows.filter((row) => matches(row, 'inactive')).length, dot: '#8e8f97' },
+            ]}
+          />
           <ViewToggle value={view} onChange={setView} />
         </div>
         {view === 'cards' ? (

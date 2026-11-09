@@ -105,36 +105,36 @@ export function OrgCompaniesPage() {
           <div className="sc-page-heading">
             <h2>الشركات</h2>
           </div>
-          <div className="sc-toolbar rc-stack">
+          <div className="sc-toolbar">
             {canCreateDraft(role) ? (
               <button type="button" className="sc-btn-primary" onClick={() => navigate('/org/companies/new')}>
                 <Plus size={18} />
                 <span>إضافة شركة جديدة</span>
               </button>
             ) : null}
-            <StatusFilterMenu
-              title="حالة الشركة"
-              allKey="all"
-              value={filter}
-              shown={visible.length}
-              total={rows.length}
-              noun="شركات"
-              onChange={setFilter}
-              options={[
-                { key: 'all', label: 'الكل', count: rows.length },
-                ...(['track', 'delay', 'blocked', 'done'] as const).map((key) => ({
-                  key,
-                  label: STATUS_META[key],
-                  count: rows.filter((row) => matches(row, key)).length,
-                  dot: STATUS_DOT[key],
-                })),
-                { key: 'inactive', label: 'غير نشطة', count: rows.filter((row) => matches(row, 'inactive')).length, dot: '#8e8f97' },
-              ]}
-            />
           </div>
         </div>
 
         <div className="rc-view-bar">
+          <StatusFilterMenu
+            title="حالة الشركة"
+            allKey="all"
+            value={filter}
+            shown={visible.length}
+            total={rows.length}
+            noun="شركات"
+            onChange={setFilter}
+            options={[
+              { key: 'all', label: 'الكل', count: rows.length },
+              ...(['track', 'delay', 'blocked', 'done'] as const).map((key) => ({
+                key,
+                label: STATUS_META[key],
+                count: rows.filter((row) => matches(row, key)).length,
+                dot: STATUS_DOT[key],
+              })),
+              { key: 'inactive', label: 'غير نشطة', count: rows.filter((row) => matches(row, 'inactive')).length, dot: '#8e8f97' },
+            ]}
+          />
           <ViewToggle value={view} onChange={setView} />
         </div>
 
