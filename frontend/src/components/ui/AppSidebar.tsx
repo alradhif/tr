@@ -204,22 +204,22 @@ export function AppSidebar({
     <aside className={catalog ? `sidebar app-sidebar app-sidebar--catalog${collapsed ? ' is-collapsed' : ''}` : 'app-sidebar'} dir="rtl">
       {catalog ? <SidebarToggle collapsed={collapsed} onToggle={toggle} /> : null}
       <div className="sidebar__logo app-sidebar__logo">
-        {collapsed ? <img src={brandAssets.logoMark} alt="TrackPlus" className="sidebar__logo-mark" /> : (brand ?? <TrackLogo size="sm" />)}
+        <span className="sidebar__brand-full">{brand ?? <TrackLogo size="sm" />}</span>
+        <img src={brandAssets.logoMark} alt="" aria-hidden className="sidebar__brand-mark" />
       </div>
       {catalog ? null : <div className="app-sidebar__divider" />}
       <div ref={searchRef} className={`sidebar__search app-sidebar__search${catalog ? ' app-sidebar__search--catalog' : ''}`}>
         {collapsed ? (
           <SidebarTip collapsed label={t('search')}>
-            <button type="button" className="sidebar-rail-search" aria-label={t('search')} onClick={expandToSearch}>
-              <Search size={18} strokeWidth={2.5} aria-hidden />
-            </button>
+            <button type="button" className="sidebar-rail-search" aria-label={t('search')} onClick={expandToSearch} />
           </SidebarTip>
-        ) : catalog ? (
+        ) : null}
+        {catalog ? (
           <>
             <Search size={18} strokeWidth={2.5} className="sidebar__search-icon app-sidebar__search-icon" aria-hidden />
             <PortalSearch
               className="app-sidebar__search-box"
-              renderInput={(props) => <input type="search" placeholder={t('search')} aria-label={t('search')} {...props} />}
+              renderInput={(props) => <input type="search" placeholder={t('search')} aria-label={t('search')} tabIndex={collapsed ? -1 : undefined} {...props} />}
             />
           </>
         ) : (

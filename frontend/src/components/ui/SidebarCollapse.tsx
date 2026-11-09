@@ -1,26 +1,22 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { Tooltip } from 'antd'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { PanelRightClose, PanelRightOpen } from 'lucide-react'
 import '../../design/sidebar-collapse.css'
 
 const STORAGE_KEY = 'trackplus.sidebar.collapsed'
 
-/** Used when no transition runs, as with reduced motion or at the fixed mobile width. */
-const FALLBACK_MS = 400
+/** Slightly longer than the sidebar's width animation. */
+const SETTLE_MS = 300
+const PULSE_MS = 50
 
-/** Dashboard grids only measure on window resize, so tell them once the sidebar has settled. */
-function remeasureAfterTransition() {
-  const sidebar = document.querySelector('.sidebar')
-  const announce = () => {
-    window.clearTimeout(fallback)
-    sidebar?.removeEventListener('transitionend', onEnd)
+/** Dashboard grids only measure on window resize, so keep them following the sidebar as it moves. */
+function remeasureWhileMoving() {
+  const started = performance.now()
+  const pulse = () => {
     window.dispatchEvent(new Event('resize'))
+    if (performance.now() - started < SETTLE_MS) window.setTimeout(pulse, PULSE_MS)
   }
-  const onEnd = (event: Event) => {
-    if (event.target === sidebar && (event as TransitionEvent).propertyName === 'width') announce()
-  }
-  const fallback = window.setTimeout(announce, FALLBACK_MS)
-  sidebar?.addEventListener('transitionend', onEnd)
+  window.setTimeout(pulse, PULSE_MS)
 }
 
 function readCollapsed() {
@@ -51,7 +47,7 @@ export function useSidebarCollapsed() {
     } catch {
       // Without storage the choice simply lasts for this visit.
     }
-    remeasureAfterTransition()
+    remeasureWhileMoving()
   }
 
   return { collapsed, toggle }
@@ -62,7 +58,7 @@ export function SidebarToggle({ collapsed, onToggle }: { collapsed: boolean; onT
   return (
     <Tooltip title={label} placement="left" mouseEnterDelay={0.3}>
       <button type="button" className="sidebar-toggle" aria-label={label} aria-expanded={!collapsed} onClick={onToggle}>
-        {collapsed ? <ChevronLeft size={16} strokeWidth={2.5} /> : <ChevronRight size={16} strokeWidth={2.5} />}
+        {collapsed ? <PanelRightOpen key="open" size={18} strokeWidth={2} /> : <PanelRightClose key="close" size={18} strokeWidth={2} />}
       </button>
     </Tooltip>
   )

@@ -170,29 +170,23 @@ export function Sidebar({ role, activePage, onNavigate, onSignOut }: SidebarProp
       <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}`} dir="rtl">
         <SidebarToggle collapsed={collapsed} onToggle={toggle} />
         <div className="sidebar__logo">
-          {collapsed ? (
-            <img src={brandAssets.logoMark} alt="TrackPlus" className="sidebar__logo-mark" />
-          ) : (
+          <span className="sidebar__brand-full">
             <img src={brandAssets.logoFull} alt="TrackPlus" className="sidebar__logo-full" />
-          )}
+          </span>
+          <img src={brandAssets.logoMark} alt="" aria-hidden className="sidebar__brand-mark" />
         </div>
 
         <div className="sidebar__search" ref={searchRef}>
           {collapsed ? (
             <SidebarTip collapsed label="البحث">
-              <button type="button" className="sidebar-rail-search" aria-label="البحث" onClick={expandToSearch}>
-                <Search size={18} strokeWidth={2.5} aria-hidden />
-              </button>
+              <button type="button" className="sidebar-rail-search" aria-label="البحث" onClick={expandToSearch} />
             </SidebarTip>
-          ) : (
-            <>
-              <Search size={18} strokeWidth={2.5} className="sidebar__search-icon" />
-              <PortalSearch
-                className="sidebar__search-box"
-                renderInput={(props) => <input type="search" placeholder="البحث" aria-label="بحث" {...props} />}
-              />
-            </>
-          )}
+          ) : null}
+          <Search size={18} strokeWidth={2.5} className="sidebar__search-icon" />
+          <PortalSearch
+            className="sidebar__search-box"
+            renderInput={(props) => <input type="search" placeholder="البحث" aria-label="بحث" tabIndex={collapsed ? -1 : undefined} {...props} />}
+          />
         </div>
 
         <nav className="sidebar__nav">
