@@ -186,6 +186,7 @@ export type JodaynProject = JodaynOwner & {
   endDate: string
   budget: number | string
   _count?: { deliverables?: number }
+  deliverables?: Array<{ status?: string; reviewStatus?: string }>
 }
 
 /** Every organization's and client's strategic goals (read-only). */

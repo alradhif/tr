@@ -37,14 +37,13 @@ import type { PptBridgePayload } from '../../features/portal/PptGeneratorFrame'
 import { Badge, CatalogButton, SubpageHeader } from '../ui'
 import { ProgressBar } from '../../org-catalog/ProgressBar'
 import {
-  OrgProjectOutputsView,
   OrgProjectRecordList,
   OrgProjectStagesView,
 } from '../../org-catalog/OrgProjectCatalogViews'
 import { CreatePresentationModal } from './CreatePresentationModal'
 import { ProjectAddModal, type ProjectAddKind } from './ProjectAddModals'
 import { DeliverablesApprovalTab, type ReviewStatus } from './DeliverablesApprovalTab'
-import { ChangeRequestsTable, RisksTable } from './RiskChangeTables'
+import { ChangeRequestsTable, OutputsTab, RisksTable } from './RiskChangeTables'
 import { CatalogConfirmDialog } from '../../org-catalog/CatalogConfirmDialog'
 import { parsePhaseActivities } from '../../org-catalog/phaseActivities'
 import {
@@ -334,9 +333,6 @@ export function ProjectDetailView({
     : (project as OrgProject | null)?.approvalStatus
   const pendingApproval = isPendingApproval(approvalStatus)
   const canAddNested = canMutate && !(portalRole && isDataEntry(portalRole) && pendingApproval)
-  const crStatusLabel = (status: string) =>
-    ({ PENDING: 'بانتظار القرار', UNDER_REVIEW: 'قيد المراجعة', APPROVED: 'معتمد', REJECTED: 'مرفوض' })[status] ?? status
-  const riskStatusLabel = (status: string) => (status.toUpperCase() === 'CLOSED' ? 'مغلق' : 'قائم')
 
   const teamMembers = asRows(
     (project as { teamMembers?: unknown[] } | null)?.teamMembers,
@@ -370,6 +366,9 @@ export function ProjectDetailView({
     { key: 'changeRequests', label: t('changeRequests') },
     { key: 'whatIf', label: t('whatIf') },
   ]
+
+  const phaseOfActivity = (activity: string) =>
+    String(phases.find((phase) => (phase.activities as string[]).some((item) => item.split(' | ')[0] === activity))?.title ?? '—')
 
   const tabContent: Record<string, ReactNode> = {
     phases: (
@@ -406,7 +405,7 @@ export function ProjectDetailView({
           submittedAgo: String(row.submittedAgo),
           dueDate: String(row.endDate),
           phase: String(
-            phases.find((phase) => (phase.activities as string[]).some((activity) => activity.split(' | ')[0] === String(row.description)))?.title ?? '—',
+            phaseOfActivity(String(row.description)),
           ),
         }))}
         canDecide={Boolean(portalRole && isUpperManagement(portalRole))}
@@ -416,13 +415,13 @@ export function ProjectDetailView({
         onChanged={load}
       />
     ) : (
-      <OrgProjectOutputsView
+      <OutputsTab
         rows={deliverables.map((row) => ({
           key: String(row.key),
           name: String(row.name),
-          phase: String(row.phase),
-          endDate: String(row.endDate),
-          createdAt: row.createdAt ? String(row.createdAt) : undefined,
+          phase: String(row.phase) !== '—' ? String(row.phase) : phaseOfActivity(String(row.description)),
+          dueDate: String(row.endDate),
+          createdAt: String(row.createdAt || '—'),
           status: String(row.status),
           progress: Number(row.progress),
           actions:
@@ -466,10 +465,10 @@ export function ProjectDetailView({
         }))}
       />
     ),
-    risks: resolvedPortal === 'org' ? (
+    risks: (
       <RisksTable
         base={`${basePath}/${id}/risks`}
-        canOpen={!jodaynKind}
+        canOpen={resolvedPortal === 'org' && !jodaynKind}
         rows={risks.map((row) => ({
           key: String(row.key),
           name: String(row.name),
@@ -478,19 +477,8 @@ export function ProjectDetailView({
           status: String(row.status),
           responsible: String(row.responsible),
           updated: String(row.updated),
-        }))}
-      />
-    ) : (
-      <OrgProjectRecordList
-        emptyKey="noRisksYet"
-        rows={risks.map((row) => ({
-          key: String(row.key),
-          title: String(row.name),
-          subtitle: String(row.responsible),
-          meta: `${t('probability', { defaultValue: 'الاحتمالية' })}: ${row.probability} · ${t('impact', { defaultValue: 'الأثر' })}: ${row.impact}`,
-          status: riskStatusLabel(String(row.status)),
           actions:
-            canAddNested || canDeleteProject ? (
+            resolvedPortal !== 'org' && (canAddNested || canDeleteProject) ? (
               <span className="row-actions">
                 {canAddNested && String(row.status).toUpperCase() !== 'CLOSED' ? (
                   <button
@@ -530,10 +518,10 @@ export function ProjectDetailView({
         }))}
       />
     ),
-    changeRequests: resolvedPortal === 'org' ? (
+    changeRequests: (
       <ChangeRequestsTable
         base={`${basePath}/${id}/change-requests`}
-        canOpen={!jodaynKind}
+        canOpen={resolvedPortal === 'org' && !jodaynKind}
         rows={changeRequestRows.map((row) => ({
           key: String(row.key),
           title: String(row.title),
@@ -541,19 +529,8 @@ export function ProjectDetailView({
           priority: String(row.priority),
           status: String(row.status),
           date: String(row.submittedDate),
-        }))}
-      />
-    ) : (
-      <OrgProjectRecordList
-        emptyKey="noChangeRequestsYet"
-        rows={changeRequestRows.map((row) => ({
-          key: String(row.key),
-          title: String(row.title),
-          subtitle: String(row.submittedBy),
-          meta: String(row.submittedDate),
-          status: crStatusLabel(String(row.status)),
           actions:
-            canApprove && ['PENDING', 'UNDER_REVIEW'].includes(String(row.status)) ? (
+            resolvedPortal !== 'org' && canApprove && ['PENDING', 'UNDER_REVIEW'].includes(String(row.status)) ? (
               <span className="row-actions">
                 <button
                   type="button"

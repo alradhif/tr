@@ -192,7 +192,7 @@ exports.getGoals = async (req, res) => {
       where,
       include: {
         stages: true,
-        projectLinks: true,
+        projectLinks: { include: { project: { select: { name: true } } } },
         kpiSnapshots: true
       },
       orderBy: { createdAt: 'desc' }

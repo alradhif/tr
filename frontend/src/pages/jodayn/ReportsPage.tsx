@@ -5,12 +5,13 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { getReports } from '../../api/jodayn'
 import { getJodaynToken } from '../../auth/jodaynAuth'
+import { RecordCard } from '../../components/ui/RecordCards'
 import {
   FinanceCreateButton,
   FinancePage,
   FinanceRow,
   FinanceStats,
-  FinanceTable,
+  FinanceListView,
   formatAmount,
 } from '../../features/jodayn-finance/FinanceParts'
 import icon1 from '../../features/jodayn-finance/assets/icon1.svg'
@@ -84,7 +85,22 @@ export function JodaynReportsPage() {
           { label: 'صافي الربح الإجمالي', value: formatAmount(totalProfit), icon: icon3 },
         ]}
       />
-      <FinanceTable
+      <FinanceListView
+        page="jodayn-reports"
+        cards={rows.map((row) => (
+          <RecordCard
+            key={row.key}
+            title={row.name}
+            subtitle={row.period}
+            rows={[
+              { label: 'قيمة العقود', value: formatAmount(row.totalContractsValue) },
+              { label: 'صافي الربح', value: formatAmount(row.netProfit) },
+              { label: 'صافي التدفق النقدي', value: formatAmount(row.netCashFlow) },
+            ]}
+            linkLabel="عرض التقرير"
+            onOpen={() => navigate(`/jodayn/reports/${row.key}`)}
+          />
+        ))}
         headers={['اسم التقرير', 'الفترة / الربع', 'قيمة العقود', 'صافي الربح', 'صافي التدفق النقدي']}
         loading={loading}
         empty={rows.length === 0}
@@ -98,7 +114,7 @@ export function JodaynReportsPage() {
             <td>{formatAmount(row.netCashFlow)}</td>
           </FinanceRow>
         ))}
-      </FinanceTable>
+      </FinanceListView>
     </FinancePage>
   )
 }

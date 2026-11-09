@@ -1,3 +1,4 @@
+import { useState, type ReactNode } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { RecordCard, RecordCardGrid, ToneBadge, useViewMode, ViewToggle } from '../ui/RecordCards'
@@ -43,12 +44,13 @@ export function RisksTable({
   base,
   canOpen,
 }: {
-  rows: Array<{ key: string; name: string; subtitle: string; impact: string; status: string; responsible: string; updated: string }>
+  rows: Array<{ key: string; name: string; subtitle: string; impact: string; status: string; responsible: string; updated: string; actions?: ReactNode }>
   base: string
   canOpen: boolean
 }) {
   const navigate = useNavigate()
   const [view, setView] = useViewMode('org-project-risks')
+  const hasActions = rows.some((row) => row.actions)
   return (
     <div className="dr-tab">
     <div className="rc-view-bar">
@@ -73,6 +75,7 @@ export function RisksTable({
                 { label: 'آخر نشاط', value: row.updated },
                 { label: 'المسؤول', value: row.responsible },
               ]}
+              actions={row.actions}
               linkLabel={canOpen ? 'عرض الخطر' : undefined}
               onOpen={canOpen ? () => navigate(`${base}/${row.key}`) : undefined}
             />
@@ -89,7 +92,7 @@ export function RisksTable({
             <th>الحالة</th>
             <th>المسؤول</th>
             <th>آخر نشاط</th>
-            <th aria-label="فتح" />
+            <th aria-label={canOpen ? 'فتح' : undefined}>{canOpen ? null : hasActions ? 'الإجراء' : null}</th>
           </tr>
         </thead>
         <tbody>
@@ -116,7 +119,7 @@ export function RisksTable({
                 <Person name={row.responsible} />
               </td>
               <td>{row.updated}</td>
-              <td>{canOpen ? <ChevronLeft size={20} /> : null}</td>
+              <td>{canOpen ? <ChevronLeft size={20} /> : row.actions}</td>
             </tr>
           ))}
         </tbody>
@@ -132,12 +135,13 @@ export function ChangeRequestsTable({
   base,
   canOpen,
 }: {
-  rows: Array<{ key: string; title: string; submittedBy: string; priority: string; status: string; date: string }>
+  rows: Array<{ key: string; title: string; submittedBy: string; priority: string; status: string; date: string; actions?: ReactNode }>
   base: string
   canOpen: boolean
 }) {
   const navigate = useNavigate()
   const [view, setView] = useViewMode('org-project-change-requests')
+  const hasActions = rows.some((row) => row.actions)
   return (
     <div className="dr-tab">
     <div className="rc-view-bar">
@@ -161,6 +165,7 @@ export function ChangeRequestsTable({
                 { label: 'التاريخ', value: row.date },
                 { label: 'مقدم الطلب', value: row.submittedBy },
               ]}
+              actions={row.actions}
               linkLabel={canOpen ? 'عرض الطلب' : undefined}
               onOpen={canOpen ? () => navigate(`${base}/${row.key}`) : undefined}
             />
@@ -177,7 +182,7 @@ export function ChangeRequestsTable({
             <th>الأولوية</th>
             <th>الحالة</th>
             <th>التاريخ</th>
-            <th aria-label="فتح" />
+            <th aria-label={canOpen ? 'فتح' : undefined}>{canOpen ? null : hasActions ? 'الإجراء' : null}</th>
           </tr>
         </thead>
         <tbody>
@@ -201,13 +206,123 @@ export function ChangeRequestsTable({
                 <ToneBadge meta={REQUEST_STATUS[row.status.toUpperCase()] ?? { label: row.status, tone: 'none' }} />
               </td>
               <td>{row.date}</td>
-              <td>{canOpen ? <ChevronLeft size={20} /> : null}</td>
+              <td>{canOpen ? <ChevronLeft size={20} /> : row.actions}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
     )}
+    </div>
+  )
+}
+
+const OUTPUT_STATE = {
+  done: { label: 'مكتمل', tone: 'approved' },
+  active: { label: 'قيد التنفيذ', tone: 'pending' },
+  planned: { label: 'مخطط', tone: 'none' },
+} as const
+
+type OutputRow = {
+  key: string
+  name: string
+  phase: string
+  dueDate: string
+  createdAt: string
+  status: string
+  progress: number
+  actions?: ReactNode
+}
+
+const outputState = (row: OutputRow) =>
+  row.status.toUpperCase() === 'COMPLETED' ? 'done' : row.progress > 0 ? 'active' : 'planned'
+
+/** Deliverables for portals without an approval step: same layout as the organization's tab. */
+export function OutputsTab({ rows }: { rows: OutputRow[] }) {
+  const [view, setView] = useViewMode('project-outputs')
+  const [filter, setFilter] = useState<'all' | keyof typeof OUTPUT_STATE>('all')
+  const visible = filter === 'all' ? rows : rows.filter((row) => outputState(row) === filter)
+  const hasActions = rows.some((row) => row.actions)
+  const chips = [
+    ['all', 'الكل', rows.length],
+    ...(Object.keys(OUTPUT_STATE) as Array<keyof typeof OUTPUT_STATE>).map(
+      (key) => [key, OUTPUT_STATE[key].label, rows.filter((row) => outputState(row) === key).length] as const,
+    ),
+  ] as Array<readonly ['all' | keyof typeof OUTPUT_STATE, string, number]>
+  const stateMeta = (row: OutputRow) => {
+    const state = outputState(row)
+    return state === 'active' ? { label: `${OUTPUT_STATE.active.label} ${row.progress}%`, tone: 'pending' } : OUTPUT_STATE[state]
+  }
+
+  return (
+    <div className="dr-tab">
+      <div className="dr-chips" role="tablist">
+        {chips.map(([key, label, count]) => (
+          <button key={key} type="button" role="tab" aria-selected={filter === key} className={filter === key ? 'is-active' : ''} onClick={() => setFilter(key)}>
+            {label}
+            <span>{count}</span>
+          </button>
+        ))}
+      </div>
+      <div className="rc-view-bar">
+        <ViewToggle value={view} onChange={setView} />
+      </div>
+      {view === 'cards' ? (
+        <>
+          {visible.length === 0 ? <p className="dr-empty">لا توجد مخرجات بهذه الحالة</p> : null}
+          <RecordCardGrid>
+            {visible.map((row) => (
+              <RecordCard
+                key={row.key}
+                title={row.name}
+                badges={<ToneBadge meta={stateMeta(row)} />}
+                rows={[
+                  { label: 'المرحلة', value: row.phase },
+                  { label: 'تاريخ الاستحقاق', value: row.dueDate },
+                  { label: 'تاريخ الإضافة', value: row.createdAt },
+                ]}
+                actions={row.actions}
+              />
+            ))}
+          </RecordCardGrid>
+        </>
+      ) : (
+        <div className="dr-table-wrap">
+          <table className="dr-table">
+            <thead>
+              <tr>
+                <th>اسم المخرج</th>
+                <th>المرحلة</th>
+                <th>تاريخ الاستحقاق</th>
+                <th>تاريخ الإضافة</th>
+                <th>الحالة</th>
+                {hasActions ? <th>الإجراء</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.length === 0 ? (
+                <tr>
+                  <td colSpan={hasActions ? 6 : 5} className="dr-empty">
+                    لا توجد مخرجات بهذه الحالة
+                  </td>
+                </tr>
+              ) : null}
+              {visible.map((row) => (
+                <tr key={row.key}>
+                  <td className="dr-name">{row.name}</td>
+                  <td>{row.phase}</td>
+                  <td>{row.dueDate}</td>
+                  <td>{row.createdAt}</td>
+                  <td>
+                    <ToneBadge meta={stateMeta(row)} />
+                  </td>
+                  {hasActions ? <td>{row.actions}</td> : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

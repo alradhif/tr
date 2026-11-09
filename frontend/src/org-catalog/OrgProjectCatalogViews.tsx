@@ -21,17 +21,6 @@ type PhaseRow = {
   total?: number
 }
 
-type DeliverableRow = {
-  key: string
-  name: string
-  phase: string
-  endDate: string
-  status: string
-  createdAt?: string
-  progress?: number
-  actions?: ReactNode
-}
-
 type RecordRow = {
   key: string
   title: string
@@ -218,43 +207,6 @@ export function OrgProjectStagesView({
           </article>
         )
       })}
-    </section>
-  )
-}
-
-export function OrgProjectOutputsView({ rows }: { rows: DeliverableRow[] }) {
-  const { t } = useTranslation()
-  return (
-    <section className="project-outputs" dir="rtl">
-      <div className="project-outputs__table-card">
-        <div className="project-outputs__thead" role="row">
-          <div>{t('deliverableName')}</div>
-          <div>{t('phase')}</div>
-          <div>{t('startDate')}</div>
-          <div>{t('createdAt')}</div>
-          <div>{t('status')}</div>
-        </div>
-        {rows.map((row, index) => {
-          const completed = String(row.status).toUpperCase() === 'COMPLETED'
-          return (
-            <div className={`project-outputs__row ${index % 2 ? 'is-alt' : ''}`} key={row.key} role="row">
-              <div className="project-outputs__name">{row.name}</div>
-              <div className="project-outputs__stage">
-                <strong>{row.phase === '—' ? t('phase') : row.phase}</strong>
-              </div>
-              <div>{row.endDate}</div>
-              <div>{row.createdAt ?? '—'}</div>
-              <div>
-                <Badge variant={completed ? 'success' : 'neutral'} icon={<span className="tenants-status-dot" />}>
-                  {completed ? t('completed') : row.progress ? `${row.progress}%` : t('planned')}
-                </Badge>
-                {row.actions}
-              </div>
-            </div>
-          )
-        })}
-        {rows.length === 0 ? <div className="project-outputs__empty">{t('noOutputsYet')}</div> : null}
-      </div>
     </section>
   )
 }

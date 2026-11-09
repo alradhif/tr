@@ -476,6 +476,21 @@ const PROJECT_CONTACTS = {
 const INSTALLMENT_TITLES = ['الدفعة الأولى', 'الدفعة الثانية', 'الدفعة الثالثة', 'الدفعة الرابعة']
 
 // Approved share follows the project's progress; the next two wait for review and one needs changes.
+/** Client deliverables add up to the project's progress, as they do once a user updates one. */
+async function seedClientDeliverableProgress(projectId, progress) {
+  const deliverables = await prisma.clientDeliverable.findMany({ where: { projectId }, orderBy: { createdAt: 'asc' } })
+  if (deliverables.length === 0) return
+  const done = Math.floor((progress / 100) * deliverables.length)
+  const rest = deliverables.length - done
+  const restPct = rest > 0 ? Math.round((progress * deliverables.length - 100 * done) / rest) : 0
+  for (const [index, deliverable] of deliverables.entries()) {
+    await prisma.clientDeliverable.update({
+      where: { id: deliverable.id },
+      data: index < done ? { status: 'COMPLETED', progressPct: 100 } : { progressPct: restPct },
+    })
+  }
+}
+
 async function seedDeliverableReviews(def, project, orgEntry) {
   const deliverables = await prisma.orgDeliverable.findMany({ where: { projectId: project.id }, orderBy: { createdAt: 'asc' } })
   const approvedCount = Math.round(((Number(def.progress) || 0) / 100) * deliverables.length)
@@ -796,6 +811,7 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
       })
     }
     await saveClientProjectDetails(project.id, projectBody(def))
+    await seedClientDeliverableProgress(project.id, def.progress)
     await seedProjectTeams(prisma.clientProjectTeamMember, prisma.clientProject, project)
     clientProjectsByName.set(def.name, project)
 
@@ -872,6 +888,12 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
           clientId: clientAccount.id,
         },
       })
+    }
+    for (const { name: projectName } of goalProjects) {
+      const project = clientProjectsByName.get(projectName)
+      if (!project) continue
+      const existing = await prisma.clientGoalProjectLink.findFirst({ where: { goalId: clientGoal.id, projectId: project.id } })
+      if (!existing) await prisma.clientGoalProjectLink.create({ data: { goalId: clientGoal.id, projectId: project.id, relevanceScore: 80, projectStatus: project.status } })
     }
   }
 

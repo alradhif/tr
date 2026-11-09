@@ -50,11 +50,17 @@ exports.getProjects = async (req, res) => {
     const [orgProjects, clientProjects] = await Promise.all([
       prisma.orgProject.findMany({
         orderBy: { createdAt: 'desc' },
-        select: { ...projectSelect, departmentId: true, orgId: true, org: { select: { name: true } } },
+        select: {
+          ...projectSelect,
+          departmentId: true,
+          orgId: true,
+          org: { select: { name: true } },
+          deliverables: { select: { reviewStatus: true } },
+        },
       }),
       prisma.clientProject.findMany({
         orderBy: { createdAt: 'desc' },
-        select: { ...projectSelect, client: { select: { name: true } } },
+        select: { ...projectSelect, client: { select: { name: true } }, deliverables: { select: { status: true } } },
       }),
     ])
 

@@ -5,13 +5,14 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { getSectors } from '../../api/superAdmin'
 import { getJodaynToken } from '../../auth/jodaynAuth'
+import { RecordCard } from '../../components/ui/RecordCards'
 import {
   FinanceDetails,
   FinanceCreateButton,
   FinancePage,
   FinanceRow,
   FinanceStats,
-  FinanceTable,
+  FinanceListView,
   formatAmount,
 } from '../../features/jodayn-finance/FinanceParts'
 import icon1 from '../../features/jodayn-finance/assets/icon1.svg'
@@ -87,7 +88,23 @@ export function JodaynSectorsPage() {
           { label: 'إجمالي الميزانيات', value: formatAmount(budgets), icon: icon4 },
         ]}
       />
-      <FinanceTable
+      <FinanceListView
+        page="jodayn-sectors"
+        cards={rows.map((row) => (
+          <RecordCard
+            key={row.key}
+            title={row.name}
+            rows={[
+              { label: 'المدير المسؤول', value: row.managerName },
+              { label: 'الميزانية', value: formatAmount(row.budget) },
+              { label: 'عدد الموظفين', value: row.employeeCount },
+              { label: 'عدد الإدارات', value: row.departmentCount },
+              { label: 'الربح', value: formatAmount(row.profit) },
+            ]}
+            linkLabel="عرض القطاع"
+            onOpen={() => setOpened(row)}
+          />
+        ))}
         headers={['اسم القطاع', 'المدير المسؤول', 'الميزانية', 'عدد الموظفين', 'عدد الإدارات', 'الربح']}
         loading={loading}
         empty={rows.length === 0}
@@ -102,7 +119,7 @@ export function JodaynSectorsPage() {
             <td>{formatAmount(row.profit)}</td>
           </FinanceRow>
         ))}
-      </FinanceTable>
+      </FinanceListView>
       {opened ? (
         <FinanceDetails
           title={opened.name}

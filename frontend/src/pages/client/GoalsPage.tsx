@@ -12,6 +12,7 @@ import { getClientToken } from '../../auth/clientAuth'
 import {
   Badge,
   CatalogButton,
+  FilterChips,
   ListCard,
   ListCardStack,
   StatCard,
@@ -24,10 +25,16 @@ import { ProgressBar } from '../../org-catalog/ProgressBar'
 
 type GoalUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
 
-function formatDate(value?: string | null) {
-  if (!value) return '—'
-  const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString()
+const TAG_DOTS = ['#17b26a', '#2e90fa', '#f79009', '#7a5af8']
+
+function yearOf(value?: string | null) {
+  return value ? String(new Date(value).getFullYear()) : '—'
+}
+
+function projectNamesOf(goal: ClientStrategicGoal) {
+  return (goal.projectLinks ?? [])
+    .map((link) => (link as { project?: { name?: string } }).project?.name)
+    .filter((name): name is string => Boolean(name))
 }
 
 function mapGoalUiStatus(goal: ClientStrategicGoal): GoalUiStatus {
@@ -50,6 +57,7 @@ export function ClientGoalsPage() {
   const navigate = useNavigate()
   const [goals, setGoals] = useState<ClientStrategicGoal[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeFilter, setActiveFilter] = useState('all')
 
   useEffect(() => {
     const token = getClientToken()
@@ -92,10 +100,15 @@ export function ClientGoalsPage() {
           ui,
           achievementRate: goal.achievementPct ?? 0,
           linkedProjects: goal.projectLinks?.length ?? 0,
-          endDate: formatDate(goal.endDate),
+          period: [yearOf(goal.startDate), yearOf(goal.endDate)].join(' - '),
+          projectNames: projectNamesOf(goal),
         }
       }),
     [goals],
+  )
+
+  const visible = rows.filter(
+    (row) => activeFilter === 'all' || row.ui === activeFilter || (activeFilter === 'stalled' && row.ui === 'delayed'),
   )
 
   return (
@@ -132,8 +145,22 @@ export function ClientGoalsPage() {
         />
       </StatGrid>
 
+      <FilterChips
+        value={activeFilter}
+        onChange={setActiveFilter}
+        items={[
+          { key: 'all', label: t('all'), count: rows.length },
+          { key: 'onTrack', label: t('onTrack'), count: rows.filter((row) => row.ui === 'onTrack').length },
+          { key: 'stalled', label: t('stalled'), count: rows.filter((row) => row.ui === 'stalled' || row.ui === 'delayed').length },
+          { key: 'completed', label: t('completed'), count: rows.filter((row) => row.ui === 'completed').length },
+        ]}
+      />
+
       <ListCardStack>
-        {rows.map((row) => (
+        {visible.map((row) => {
+          const extra = Math.max(0, row.linkedProjects - row.projectNames.slice(0, 2).length)
+          const { projectNames } = row
+          return (
           <ListCard
             key={row.key}
             title={row.name}
@@ -141,16 +168,31 @@ export function ClientGoalsPage() {
             metaItems={[
               <>
                 <AssetIcon src={commonAssets.clock} size={13} />
-                {row.endDate}
+                {row.period}
               </>,
               `${row.linkedProjects} ${t('projectsUnit')}`,
             ]}
-            progress={{ value: row.achievementRate, tone: statusVariant(row.ui), label: t('achievementRate') }}
+            progress={{ value: row.achievementRate, tone: row.achievementRate < 40 ? 'danger' : row.achievementRate < 70 ? 'warning' : 'success', label: t('achievementRate') }}
+            tags={
+                projectNames.length ? (
+                  <>
+                    {projectNames.slice(0, 2).map((name, index) => (
+                      <span key={`${row.key}-${name}`} className="list-card__tag">
+                        <span className="list-card__tag-dot" style={{ background: TAG_DOTS[index % TAG_DOTS.length] }} />
+                        {name}
+                      </span>
+                    ))}
+                    {extra > 0 ? <span className="list-card__tag list-card__tag--muted">+ {extra} {t('projectsUnit')}</span> : null}
+                  </>
+                ) : undefined
+              }
             onOpen={() => navigate(`/client/goals/${row.key}`)}
+            hideChevron
           />
-        ))}
+          )
+        })}
         {loading ? <div className="catalog-loading">{t('loadingList')}</div> : null}
-        {rows.length === 0 && !loading ? <EmptyState /> : null}
+        {visible.length === 0 && !loading ? <EmptyState /> : null}
       </ListCardStack>
     </OrgCatalogShell>
   )

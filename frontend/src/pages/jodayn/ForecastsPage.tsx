@@ -6,11 +6,12 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { getForecasts } from '../../api/jodayn'
 import { getJodaynToken } from '../../auth/jodaynAuth'
+import { RecordCard, ToneBadge } from '../../components/ui/RecordCards'
 import {
   FinanceCreateButton,
   FinancePage,
   FinanceRow,
-  FinanceTable,
+  FinanceListView,
   formatAmount,
 } from '../../features/jodayn-finance/FinanceParts'
 import { periodLabel, periodName } from './labels'
@@ -135,7 +136,24 @@ export function JodaynForecastsPage() {
         </div>
       </div>
 
-      <FinanceTable
+      <FinanceListView
+        page="jodayn-forecasts"
+        cards={rows.map((row) => (
+          <RecordCard
+            key={row.key}
+            title={row.name}
+            subtitle={row.period}
+            badges={<ToneBadge meta={row.achieved ? { label: 'محقق', tone: 'approved' } : { label: 'قيد التحقيق', tone: 'pending' }} />}
+            progress={{ label: 'نسبة التحقق', value: row.expected > 0 ? (row.actual / row.expected) * 100 : null }}
+            rows={[
+              { label: 'الجهة', value: row.entity },
+              { label: 'الإيراد المتوقع', value: formatAmount(row.expected) },
+              { label: 'الإيراد الفعلي المحقق', value: formatAmount(row.actual) },
+            ]}
+            linkLabel="عرض التوقع"
+            onOpen={() => navigate(`/jodayn/forecasts/${row.key}`)}
+          />
+        ))}
         headers={['اسم', 'الفترة الزمنية', 'الجهة', 'الإيراد المتوقع', 'الإيراد الفعلي المحقق', 'الحالة']}
         loading={loading}
         empty={rows.length === 0}
@@ -155,7 +173,7 @@ export function JodaynForecastsPage() {
             </td>
           </FinanceRow>
         ))}
-      </FinanceTable>
+      </FinanceListView>
     </FinancePage>
   )
 }

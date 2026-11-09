@@ -5,7 +5,9 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { getJodaynProjects, type JodaynProject } from '../../api/jodayn'
 import { getJodaynToken } from '../../auth/jodaynAuth'
-import { ProjectsListView } from '../../components/senior/ProjectsListView'
+import { executionFilterOptions, ProjectsListView } from '../../components/senior/ProjectsListView'
+import { useViewMode } from '../../components/ui/RecordCards'
+import { MultiSelectFilter, SingleSelectFilter } from '../../super-admin-ui/components/ui/filters'
 
 type ProjectUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
 type ProjectFilter = 'all' | 'onTrack' | 'delayed' | 'completed' | 'draft' | 'pending' | 'approved' | 'rejected'
@@ -18,6 +20,9 @@ type ProjectRow = {
   uiStatus: ProjectUiStatus
   outputsCount: number
   ownerType: JodaynProject['ownerType']
+  owner: string
+  doneOutputs: number
+  year: string
 }
 
 function mapStatus(raw: string, endDate?: string | null): ProjectUiStatus {
@@ -48,7 +53,9 @@ export function JodaynProjectsPage() {
   const [rows, setRows] = useState<ProjectRow[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [view, setView] = useViewMode('jodayn-projects')
+  const [ownerFilter, setOwnerFilter] = useState<string[]>([])
+  const [yearFilter, setYearFilter] = useState('all')
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -70,6 +77,12 @@ export function JodaynProjectsPage() {
             uiStatus: mapStatus(p.status, p.endDate),
             outputsCount: p._count?.deliverables ?? 0,
             ownerType: p.ownerType,
+            owner: p.ownerName ?? '—',
+            // Organizations count what they approved; clients have no approval step.
+            doneOutputs: (p.deliverables ?? []).filter((d) =>
+              p.ownerType === 'org' ? d.reviewStatus === 'APPROVED' : String(d.status).toUpperCase() === 'COMPLETED',
+            ).length,
+            year: (p.startDate ?? '').slice(0, 4),
           })),
         )
       } catch (err) {
@@ -99,8 +112,14 @@ export function JodaynProjectsPage() {
   )
 
   const filteredRows = useMemo(
-    () => rows.filter((row) => matchesFilter(row, activeFilter)),
-    [rows, activeFilter],
+    () =>
+      rows.filter(
+        (row) =>
+          matchesFilter(row, activeFilter) &&
+          (ownerFilter.length === 0 || ownerFilter.includes(row.owner)) &&
+          (yearFilter === 'all' || row.year === yearFilter),
+      ),
+    [rows, activeFilter, ownerFilter, yearFilter],
   )
 
   return (
@@ -111,6 +130,9 @@ export function JodaynProjectsPage() {
         progress: row.progress,
         status: row.uiStatus,
         approvalStatus: row.approvalStatus,
+        approvedOutputs: `${row.doneOutputs} من ${row.outputsCount}`,
+        noOutputs: row.outputsCount === 0,
+        subtitle: row.owner,
       }))}
       loading={loading}
       totalOutputs={rows.reduce((sum, row) => sum + row.outputsCount, 0)}
@@ -118,19 +140,57 @@ export function JodaynProjectsPage() {
         const row = rows.find((item) => item.key === key)
         if (row) navigate(`/jodayn/projects/${row.ownerType}/${row.key}`)
       }}
-      filtersOpen={filtersOpen}
-      onToggleFilters={() => setFiltersOpen((open) => !open)}
+      exec={{
+        view,
+        onViewChange: setView,
+        outputsLabel: 'المخرجات المنجزة',
+        progressLabel: 'نسبة التقدم',
+        kpis: [
+          { label: 'عدد المشاريع', value: rows.length, delta: `${filterCounts.completed} مكتمل`, up: true },
+          {
+            label: 'نسبة التقدم',
+            value: `${rows.length ? Math.round(rows.reduce((sum, row) => sum + row.progress, 0) / rows.length) : 0}%`,
+            delta: `${filterCounts.delayed} متأخر`,
+            up: filterCounts.delayed === 0,
+          },
+          {
+            label: 'إجمالي المخرجات',
+            value: rows.reduce((sum, row) => sum + row.outputsCount, 0),
+            delta: `${rows.reduce((sum, row) => sum + row.doneOutputs, 0)} منجز`,
+            up: true,
+          },
+        ],
+        filterBar: (
+          <div className="org-projects-filters">
+            <MultiSelectFilter
+              label="الجهة"
+              selected={ownerFilter}
+              options={[...new Set(rows.map((row) => row.owner))].map((value) => ({ value, label: value }))}
+              onApply={setOwnerFilter}
+            />
+            <SingleSelectFilter
+              label="حالة التنفيذ"
+              value={activeFilter}
+              options={executionFilterOptions(t, filterCounts)}
+              onChange={(key) => setActiveFilter(key as ProjectFilter)}
+            />
+            <SingleSelectFilter
+              label="الفترة"
+              value={yearFilter}
+              options={[
+                { value: 'all', label: 'الكل' },
+                ...[...new Set(rows.map((row) => row.year).filter(Boolean))].sort().map((value) => ({ value, label: value })),
+              ]}
+              onChange={setYearFilter}
+            />
+          </div>
+        ),
+      }}
+      filtersOpen={false}
+      onToggleFilters={() => undefined}
       activeFilter={activeFilter}
       onFilterChange={(key) => setActiveFilter(key as ProjectFilter)}
-      filters={[
-        { key: 'all', label: t('all'), count: filterCounts.all },
-        { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
-        { key: 'delayed', label: t('delayedTab'), count: filterCounts.delayed },
-        { key: 'completed', label: t('completed'), count: filterCounts.completed },
-        { key: 'pending', label: t('approvalStatusPending'), count: filterCounts.pending },
-        { key: 'draft', label: t('approvalStatusDraft'), count: filterCounts.draft },
-        { key: 'rejected', label: t('approvalStatusRejected'), count: filterCounts.rejected },
-      ]}
+      filters={[{ key: 'all', label: t('all'), count: filterCounts.all }]}
     />
   )
 }

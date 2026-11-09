@@ -200,7 +200,7 @@ export function JodaynGoalsPage() {
                   {[formatDate(goal.startDate), formatDate(goal.endDate)].join(' – ')}
                 </>,
               ]}
-              progress={{ value: progress, tone: variant, label: t('achievementRate') }}
+              progress={{ value: progress, tone: progress < 40 ? 'danger' : progress < 70 ? 'warning' : 'success', label: t('achievementRate') }}
               tags={
                 <>
                   {projectNames.slice(0, 2).map((name, index) => (

@@ -92,6 +92,7 @@ export function RecordCard({
   badges,
   progress,
   rows,
+  actions,
   linkLabel,
   onOpen,
 }: {
@@ -101,6 +102,7 @@ export function RecordCard({
   /** A null value means nothing can be measured yet, so no percentage is shown. */
   progress?: { label: string; value: number | null; note?: string }
   rows?: Array<{ label: string; value: ReactNode }>
+  actions?: ReactNode
   linkLabel?: string
   onOpen?: () => void
 }) {
@@ -136,6 +138,7 @@ export function RecordCard({
           ))}
         </dl>
       ) : null}
+      {actions ? <div className="rc-card__actions">{actions}</div> : null}
       {linkLabel && onOpen ? (
         <button type="button" className="rc-card__link" onClick={onOpen}>
           {linkLabel}

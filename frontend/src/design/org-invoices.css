@@ -382,9 +382,13 @@
   font-size: 11px;
 }
 
+.org-invoices__filters .org-invoices__tabs-row {
+  flex: 1 0 100%;
+}
+
 .org-invoices__tabs-row {
   display: flex;
-  flex: 1 0 100%;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: 12px;

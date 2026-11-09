@@ -6,6 +6,7 @@ import { ApiError } from '../../api/client'
 import { deleteJodaynRecord, getInvoices, updateInvoice, type Invoice } from '../../api/jodayn'
 import { getJodaynRole, getJodaynToken } from '../../auth/jodaynAuth'
 import { PaymentsTracker, type TrackedPayment } from '../../components/senior/PaymentsTracker'
+import { RecordCard, RecordCardGrid, ToneBadge, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
 import {
   FinanceCreateButton,
   formatAmount,
@@ -49,6 +50,7 @@ export function JodaynInvoicesPage() {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'collection' | 'list'>('collection')
   const [working, setWorking] = useState<string | null>(null)
+  const [listView, setListView] = useViewMode('jodayn-invoices-list')
 
   const load = useCallback(async () => {
     const token = getJodaynToken()
@@ -173,6 +175,36 @@ export function JodaynInvoicesPage() {
           ))}
         </div>
 
+        <div className="rc-view-bar">
+          <ViewToggle value={listView} onChange={setListView} />
+        </div>
+
+        {listView === 'cards' && !loading && invoices.length > 0 ? (
+          <RecordCardGrid>
+            {invoices.map((inv) => (
+              <RecordCard
+                key={inv.id}
+                title={inv.contractReference || inv.invoiceNumber}
+                subtitle={inv.projectName || '—'}
+                badges={
+                  <ToneBadge
+                    meta={{
+                      label: statusText(inv),
+                      tone: inv.status === 'PAID' ? 'approved' : inv.status === 'OVERDUE' ? 'changes' : inv.status === 'PENDING' ? 'pending' : 'none',
+                    }}
+                  />
+                }
+                rows={[
+                  { label: 'الجهة المرتبطة', value: inv.clientName },
+                  { label: 'المبلغ الأساسي', value: formatAmount(inv.amount) },
+                  { label: 'تاريخ الإصدار', value: formatDate(inv.issueDate) },
+                ]}
+                linkLabel="عرض الفاتورة"
+                onOpen={() => navigate(`/jodayn/invoices/${inv.id}`)}
+              />
+            ))}
+          </RecordCardGrid>
+        ) : (
         <div className="jinv-table-wrap">
           {loading ? (
             <p className="jinv-empty">جاري تحميل البيانات...</p>
@@ -223,6 +255,7 @@ export function JodaynInvoicesPage() {
             </table>
           )}
         </div>
+        )}
           </>
         )}
       </div>

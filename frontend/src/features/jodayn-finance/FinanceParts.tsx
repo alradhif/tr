@@ -3,6 +3,7 @@ import { Modal } from 'antd'
 import { ChevronLeft, Plus } from 'lucide-react'
 import icon1 from './assets/icon1.svg'
 import icon2 from './assets/icon2.svg'
+import { RecordCardGrid, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
 import './finance.css'
 
 /** Page frame from the Jodayn finance design: top bar with the page title, then the body. */
@@ -107,6 +108,43 @@ export function FinanceTable({
 }
 
 /** Clickable table row ending with the design's chevron; opens the record's details. */
+/** A Jodayn list that switches between its table and cards, remembered per page. */
+export function FinanceListView({
+  page,
+  headers,
+  loading,
+  empty,
+  cards,
+  children,
+}: {
+  page: string
+  headers: string[]
+  loading: boolean
+  empty: boolean
+  cards: ReactNode
+  children: ReactNode
+}) {
+  const [view, setView] = useViewMode(page)
+  return (
+    <>
+      <div className="rc-view-bar">
+        <ViewToggle value={view} onChange={setView} />
+      </div>
+      {view === 'table' ? (
+        <FinanceTable headers={headers} loading={loading} empty={empty}>
+          {children}
+        </FinanceTable>
+      ) : loading ? (
+        <p className="finance-empty">جاري تحميل البيانات...</p>
+      ) : empty ? (
+        <p className="finance-empty">لا توجد بيانات بعد.</p>
+      ) : (
+        <RecordCardGrid>{cards}</RecordCardGrid>
+      )}
+    </>
+  )
+}
+
 export function FinanceRow({ onOpen, children }: { onOpen: () => void; children: ReactNode }) {
   return (
     <tr

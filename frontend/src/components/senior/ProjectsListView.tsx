@@ -29,6 +29,24 @@ export type ProjectListExec = {
   onViewChange: (view: ViewMode) => void
   kpis: Array<{ label: string; value: string | number; delta: string; up: boolean }>
   filterBar: ReactNode
+  /** Portals without deliverable approval measure and name these differently. */
+  outputsLabel?: string
+  progressLabel?: string
+}
+
+type ExecCounts = Record<'all' | 'onTrack' | 'delayed' | 'completed' | 'pending' | 'draft' | 'rejected', number>
+
+/** Options of the "حالة التنفيذ" filter, the same on every portal. */
+export function executionFilterOptions(t: (key: string) => string, counts: ExecCounts) {
+  return [
+    { value: 'all', label: `${t('all')} (${counts.all})` },
+    { value: 'onTrack', label: `${t('onTrack')} (${counts.onTrack})` },
+    { value: 'delayed', label: `${t('delayedTab')} (${counts.delayed})` },
+    { value: 'completed', label: `${t('completed')} (${counts.completed})` },
+    { value: 'pending', label: `${t('approvalStatusPending')} (${counts.pending})` },
+    { value: 'draft', label: `${t('approvalStatusDraft')} (${counts.draft})` },
+    { value: 'rejected', label: `${t('approvalStatusRejected')} (${counts.rejected})` },
+  ]
 }
 
 export type ProjectListFilter = { key: string; label: string; count: number }
@@ -193,9 +211,9 @@ export function ProjectsListView({
                           />
                         }
                         progress={{
-                          label: 'التقدم التنفيذي',
+                          label: exec.progressLabel ?? 'التقدم التنفيذي',
                           value: row.noOutputs ? null : row.progress,
-                          note: row.noOutputs ? 'لم تُحدد المخرجات بعد' : `المخرجات المعتمدة ${row.approvedOutputs}`,
+                          note: row.noOutputs ? 'لم تُحدد المخرجات بعد' : `${exec.outputsLabel ?? 'المخرجات المعتمدة'} ${row.approvedOutputs}`,
                         }}
                         linkLabel="عرض المشروع"
                         onOpen={() => onOpen(row.key)}
@@ -209,7 +227,7 @@ export function ProjectsListView({
               <div className={`sp-table-head${showApproved ? ' sp-grid--approved' : ''}`}>
                 <span className="sp-col-name">اسم المشروع</span>
                 <span className="sp-col-progress">نسبة التقدم</span>
-                {showApproved ? <span className="sp-col-approved">المخرجات المعتمدة</span> : null}
+                {showApproved ? <span className="sp-col-approved">{exec?.outputsLabel ?? 'المخرجات المعتمدة'}</span> : null}
                 <span className="sp-col-status">{showApproved ? 'حالة التنفيذ' : 'الحالة'}</span>
                 <span className="sp-col-action" />
               </div>

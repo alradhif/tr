@@ -7,7 +7,9 @@ import { getClientProjects } from '../../api/clientPortal'
 import type { ClientRole } from '../../auth/clientAuth'
 import { getClientToken } from '../../auth/clientAuth'
 import { canCreateDraft } from '../../auth/permissions'
-import { ProjectsListView } from '../../components/senior/ProjectsListView'
+import { executionFilterOptions, ProjectsListView } from '../../components/senior/ProjectsListView'
+import { useViewMode } from '../../components/ui/RecordCards'
+import { SingleSelectFilter } from '../../super-admin-ui/components/ui/filters'
 
 type ProjectUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
 type ProjectFilter = 'all' | 'onTrack' | 'delayed' | 'completed' | 'draft' | 'pending' | 'approved' | 'rejected'
@@ -22,6 +24,8 @@ type ProjectRow = {
   rawStatus: string
   endDate: string
   outputsCount: number
+  doneOutputs: number
+  year: string
 }
 
 function formatDate(value?: string | null) {
@@ -58,7 +62,8 @@ export function ClientProjectsPage() {
   const [rows, setRows] = useState<ProjectRow[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [view, setView] = useViewMode('client-projects')
+  const [yearFilter, setYearFilter] = useState('all')
 
   useEffect(() => {
     const token = getClientToken()
@@ -82,6 +87,8 @@ export function ClientProjectsPage() {
             rawStatus: p.status,
             endDate: formatDate(p.endDate),
             outputsCount: p._count?.deliverables ?? p.deliverables?.length ?? 0,
+            doneOutputs: (p.deliverables ?? []).filter((d) => String((d as { status?: string }).status).toUpperCase() === 'COMPLETED').length,
+            year: (p.startDate ?? '').slice(0, 4),
           })),
         )
       } catch (err) {
@@ -111,8 +118,8 @@ export function ClientProjectsPage() {
   )
 
   const filteredRows = useMemo(
-    () => rows.filter((row) => matchesFilter(row, activeFilter)),
-    [rows, activeFilter],
+    () => rows.filter((row) => matchesFilter(row, activeFilter) && (yearFilter === 'all' || row.year === yearFilter)),
+    [rows, activeFilter, yearFilter],
   )
 
 
@@ -124,25 +131,59 @@ export function ClientProjectsPage() {
         progress: row.progress,
         status: row.status,
         approvalStatus: row.approvalStatus,
+        approvedOutputs: `${row.doneOutputs} من ${row.outputsCount}`,
+        noOutputs: row.outputsCount === 0,
       }))}
       loading={loading}
       totalOutputs={rows.reduce((sum, row) => sum + row.outputsCount, 0)}
       createLabel={canCreateDraft(role) ? (role === 'upper' ? t('addProject') : t('addProjectDraft')) : undefined}
       onCreate={() => navigate('/client/projects/new')}
       onOpen={(key) => navigate(`/client/projects/${key}`)}
-      filtersOpen={filtersOpen}
-      onToggleFilters={() => setFiltersOpen((open) => !open)}
+      exec={{
+        view,
+        onViewChange: setView,
+        outputsLabel: 'المخرجات المنجزة',
+        progressLabel: 'نسبة التقدم',
+        kpis: [
+          { label: 'عدد المشاريع', value: rows.length, delta: `${filterCounts.completed} مكتمل`, up: true },
+          {
+            label: 'نسبة التقدم',
+            value: `${rows.length ? Math.round(rows.reduce((sum, row) => sum + row.progress, 0) / rows.length) : 0}%`,
+            delta: `${filterCounts.delayed} متأخر`,
+            up: filterCounts.delayed === 0,
+          },
+          {
+            label: 'إجمالي المخرجات',
+            value: rows.reduce((sum, row) => sum + row.outputsCount, 0),
+            delta: `${rows.reduce((sum, row) => sum + row.doneOutputs, 0)} منجز`,
+            up: true,
+          },
+        ],
+        filterBar: (
+          <div className="org-projects-filters">
+            <SingleSelectFilter
+              label="حالة التنفيذ"
+              value={activeFilter}
+              options={executionFilterOptions(t, filterCounts)}
+              onChange={(key) => setActiveFilter(key as ProjectFilter)}
+            />
+            <SingleSelectFilter
+              label="الفترة"
+              value={yearFilter}
+              options={[
+                { value: 'all', label: 'الكل' },
+                ...[...new Set(rows.map((row) => row.year).filter(Boolean))].sort().map((value) => ({ value, label: value })),
+              ]}
+              onChange={setYearFilter}
+            />
+          </div>
+        ),
+      }}
+      filtersOpen={false}
+      onToggleFilters={() => undefined}
       activeFilter={activeFilter}
       onFilterChange={(key) => setActiveFilter(key as ProjectFilter)}
-      filters={[
-        { key: 'all', label: t('all'), count: filterCounts.all },
-        { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
-        { key: 'delayed', label: t('delayedTab'), count: filterCounts.delayed },
-        { key: 'completed', label: t('completed'), count: filterCounts.completed },
-        { key: 'pending', label: t('approvalStatusPending'), count: filterCounts.pending },
-        { key: 'draft', label: t('approvalStatusDraft'), count: filterCounts.draft },
-        { key: 'rejected', label: t('approvalStatusRejected'), count: filterCounts.rejected },
-      ]}
+      filters={[{ key: 'all', label: t('all'), count: filterCounts.all }]}
     />
   )
 }

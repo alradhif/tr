@@ -7,7 +7,7 @@ import { getProjects, type OrgProject } from '../../api/orgProjects'
 import type { OrgRole } from '../../auth/orgAuth'
 import { getOrgToken } from '../../auth/orgAuth'
 import { canCreateDraft } from '../../auth/permissions'
-import { ProjectsListView } from '../../components/senior/ProjectsListView'
+import { executionFilterOptions, ProjectsListView } from '../../components/senior/ProjectsListView'
 import { useViewMode } from '../../components/ui/RecordCards'
 import { MultiSelectFilter, SingleSelectFilter } from '../../super-admin-ui/components/ui/filters'
 
@@ -181,15 +181,7 @@ export function OrgProjectsPage() {
             <SingleSelectFilter
               label="حالة التنفيذ"
               value={activeFilter}
-              options={[
-                { value: 'all', label: `${t('all')} (${filterCounts.all})` },
-                { value: 'onTrack', label: `${t('onTrack')} (${filterCounts.onTrack})` },
-                { value: 'delayed', label: `${t('delayedTab')} (${filterCounts.delayed})` },
-                { value: 'completed', label: `${t('completed')} (${filterCounts.completed})` },
-                { value: 'pending', label: `${t('approvalStatusPending')} (${filterCounts.pending})` },
-                { value: 'draft', label: `${t('approvalStatusDraft')} (${filterCounts.draft})` },
-                { value: 'rejected', label: `${t('approvalStatusRejected')} (${filterCounts.rejected})` },
-              ]}
+              options={executionFilterOptions(t, filterCounts)}
               onChange={(key) => setActiveFilter(key as ProjectFilter)}
             />
             <SingleSelectFilter

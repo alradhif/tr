@@ -182,6 +182,13 @@
   text-decoration: underline;
 }
 
+/* Row actions keep their place on a card, under its details. */
+.rc-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .rc-cards-inset {
   padding: 0 24px 24px;
 }
