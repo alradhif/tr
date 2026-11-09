@@ -308,6 +308,20 @@
   font-size: 13px;
 }
 
+.ui-card.goal-approval {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  text-align: right;
+}
+
+.goals-kpi-card__note {
+  margin: 8px 0 0;
+  color: #8e8f97;
+  font-size: 12px;
+  text-align: right;
+}
+
 .goal-approval--done {
   background: #e8f8f0;
 }
@@ -502,4 +516,18 @@
   font-weight: 400;
   resize: none;
   box-sizing: border-box;
+}
+
+.dr-cell-sub {
+  display: block;
+  margin-top: 2px;
+  color: #8e8f97;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.ui-card.goals-kpi-card:has(.goals-kpi-card__note) {
+  flex: none;
+  height: auto;
+  max-height: none;
 }

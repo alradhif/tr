@@ -4,7 +4,6 @@ import {
   ClipboardCheck,
   ClipboardList,
   Download,
-  HelpCircle,
   ListFilter,
   Mail,
   Phone,
@@ -32,6 +31,7 @@ import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { SubpageHeader } from '../../components/ui'
 import { TrendKpiRow } from '../../components/senior/TrendKpiCard'
 import { downloadCsv } from '../../api/me'
+import { progressColor, RecordCard, RecordCardGrid, StatusBadge, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
 import { averageProgress, nextStatusFilter, projectStatusClass, STATUS_META, type StatusClass } from './orgEntityUi'
 import '../../design/senior-companies.css'
 
@@ -111,6 +111,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusClass | 'all'>('all')
+  const [view, setView] = useViewMode('org-company-projects')
 
   const canEdit = canCreateDraft(role)
   const canDelete = isUpperManagement(role)
@@ -303,7 +304,7 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
               <TrendKpiRow
                 stats={[
                   { label: 'عدد المشاريع', value: String(projects.length), delta: `${team.length} موظف`, up: true },
-                  { label: 'متوسط التقدم', value: `${progress}%`, delta: company.isActive ? 'نشط' : 'غير نشط', up: progress >= 50 },
+                  { label: 'التقدم التنفيذي', value: `${progress}%`, delta: company.isActive ? 'نشط' : 'غير نشط', up: progress >= 50 },
                   { label: 'عدد المخرجات', value: String(outputs), delta: `${company.teamCount ?? team.length}`, up: outputs > 0 },
                 ]}
               />
@@ -344,33 +345,62 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
                 ))}
               </div>
 
-              <div className="cd-tab-toolbar">
-                <button
-                  type="button"
-                  className="sc-btn-outline cd-tool-btn"
-                  disabled={tab !== 'المشاريع'}
-                  title="تصفية المشاريع حسب الحالة"
-                  onClick={() => setStatusFilter(nextStatusFilter(statusFilter))}
-                >
-                  <ListFilter size={15} />
-                  {statusFilter === 'all' ? 'تصفية' : `تصفية: ${STATUS_META[statusFilter]}`}
-                </button>
-                <button
-                  type="button"
-                  className="sc-btn-outline cd-tool-btn"
-                  disabled={tab === 'التقارير' || (tab === 'المشاريع' ? visibleProjects.length === 0 : team.length === 0)}
-                  onClick={exportTab}
-                >
-                  <Download size={15} />
-                  تصدير
-                </button>
+              <div className="cd-tab-toolbar rc-tab-head">
+                <h3 className="rc-section-title">{tab}</h3>
+                <div className="rc-tab-head__tools">
+                  <button
+                    type="button"
+                    className="sc-btn-outline cd-tool-btn"
+                    disabled={tab === 'التقارير' || (tab === 'المشاريع' ? visibleProjects.length === 0 : team.length === 0)}
+                    onClick={exportTab}
+                  >
+                    <Download size={15} />
+                    تصدير
+                  </button>
+                  <button
+                    type="button"
+                    className="sc-btn-outline cd-tool-btn"
+                    disabled={tab !== 'المشاريع'}
+                    title="تصفية المشاريع حسب الحالة"
+                    onClick={() => setStatusFilter(nextStatusFilter(statusFilter))}
+                  >
+                    <ListFilter size={15} />
+                    {statusFilter === 'all' ? 'تصفية' : `تصفية: ${STATUS_META[statusFilter]}`}
+                  </button>
+                </div>
               </div>
 
               {tab === 'المشاريع' ? (
+                <div className="rc-tab-view">
+                  <ViewToggle value={view} onChange={setView} />
+                </div>
+              ) : null}
+
+              {tab === 'المشاريع' && view === 'cards' ? (
+                <div className="rc-cards-inset">
+                  {visibleProjects.length === 0 ? (
+                    <p className="cd-empty-tab">{projects.length === 0 ? 'لا توجد مشاريع مرتبطة بهذه الشركة' : 'لا توجد مشاريع بهذه الحالة'}</p>
+                  ) : null}
+                  <RecordCardGrid>
+                    {visibleProjects.map((project) => (
+                      <RecordCard
+                        key={project.id}
+                        title={project.name}
+                        badges={<StatusBadge status={projectStatusClass(project.status)} />}
+                        progress={{ label: 'التقدم التنفيذي', value: project.progressPct || 0 }}
+                        linkLabel="عرض المشروع"
+                        onOpen={() => navigate(`/org/projects/${project.id}`)}
+                      />
+                    ))}
+                  </RecordCardGrid>
+                </div>
+              ) : null}
+
+              {tab === 'المشاريع' && view === 'table' ? (
                 <div>
                   <div className="cd-proj-head cd-proj-head--with-trash">
                     <span className="cd-proj-col-name">اسم المشروع</span>
-                    <span className="sc-col-center">نسبة التقدم</span>
+                    <span className="sc-col-center">التقدم التنفيذي</span>
                     <span className="sc-col-center">الحالة</span>
                     <span />
                     <span />
@@ -390,16 +420,13 @@ export function OrgCompanyDetailPage({ initialEdit = false }: { initialEdit?: bo
                             <div className="sc-progress-track">
                               <div
                                 className={`sc-progress-fill sc-progress-fill--${status}`}
-                                style={{ width: `${project.progressPct || 0}%` }}
+                                style={{ width: `${project.progressPct || 0}%`, background: progressColor(project.progressPct || 0) }}
                               />
                             </div>
                             <span className="sc-progress-text">{project.progressPct || 0}%</span>
                           </div>
                           <div className="sc-col-center">
-                            <span className={`cd-proj-status cd-proj-status--${status}`}>
-                              <HelpCircle size={13} />
-                              {STATUS_META[status]}
-                            </span>
+                            <StatusBadge status={status} />
                           </div>
                           <button
                             type="button"

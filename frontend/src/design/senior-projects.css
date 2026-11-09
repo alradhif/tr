@@ -230,3 +230,7 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.sp-exec-bar {
+  margin-top: 16px;
+}

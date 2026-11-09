@@ -18,19 +18,16 @@
 .org-invoices__tabs {
   display: inline-flex;
   align-self: flex-start;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 10px;
-  background: #fff;
+  gap: 8px;
 }
 
 .org-invoices__tabs button {
   height: 34px;
   padding: 0 16px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #8e8f97;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: #fff;
+  color: #3f3f43;
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -38,8 +35,9 @@
 }
 
 .org-invoices__tabs button.is-active {
-  background: #0c0c0d;
-  color: #fff;
+  border-color: #4aa23d;
+  background: #fff;
+  color: #2f7d32;
 }
 
 .org-invoices__name {
@@ -382,4 +380,27 @@
 .org-invoices__receipt small {
   color: #8e8f97;
   font-size: 11px;
+}
+
+.org-invoices__tabs-row {
+  display: flex;
+  flex: 1 0 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.org-invoices__card-details {
+  display: block;
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.org-invoices__card-details h2 {
+  margin: 0 0 12px;
+  color: #0c0c0d;
+  font-size: 16px;
+  font-weight: 700;
 }

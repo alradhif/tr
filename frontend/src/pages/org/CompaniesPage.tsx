@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, ChevronLeft, HelpCircle, ListFilter, Plus } from 'lucide-react'
+import { ChevronLeft, Plus } from 'lucide-react'
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { CompanyMark } from '../../components/ui/CompanyLogoPicker'
 import { ApiError } from '../../api/client'
@@ -9,11 +9,12 @@ import type { OrgRole } from '../../auth/orgAuth'
 import { getOrgToken } from '../../auth/orgAuth'
 import { canCreateDraft } from '../../auth/permissions'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
-import { TrendKpiRow } from '../../components/senior/TrendKpiCard'
-import { averageProgress, contractCount, projectStatusClass, STATUS_META } from './orgEntityUi'
+import { progressColor, RecordCard, RecordCardGrid, StatusBadge, StatusFilterMenu, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
+import { aggregateStatus, averageProgress, contractCount, STATUS_DOT, STATUS_META, type StatusClass } from './orgEntityUi'
 import '../../design/senior-companies.css'
 
 type ListNotice = 'success' | 'error' | 'deleted' | undefined
+type CompanyFilter = 'all' | StatusClass | 'inactive'
 
 function companyProjects(projects: OrgProject[], companyId: string) {
   return projects.filter((project) => project.executingCompanyId === companyId)
@@ -27,7 +28,8 @@ export function OrgCompaniesPage() {
   const [projects, setProjects] = useState<OrgProject[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [onlyDelayed, setOnlyDelayed] = useState(false)
+  const [filter, setFilter] = useState<CompanyFilter>('all')
+  const [view, setView] = useViewMode('org-companies')
   const [notice, setNotice] = useState<ListNotice>(() => (location.state as { notice?: ListNotice } | null)?.notice)
 
   useEffect(() => {
@@ -66,14 +68,15 @@ export function OrgCompaniesPage() {
       const linked = companyProjects(projects, company.id)
       const progress = averageProgress(linked)
       const contracts = linked.reduce((sum, project) => sum + contractCount(project), 0)
-      const status = !company.isActive ? 'delay' : projectStatusClass(linked[0]?.status)
+      const status: StatusClass = !company.isActive ? 'delay' : aggregateStatus(linked)
       return { company, linked, progress, contracts, status }
     })
   }, [companies, projects])
 
-  const visible = onlyDelayed ? rows.filter((row) => row.status === 'delay' || !row.company.isActive) : rows
-  const avgProgress = averageProgress(projects)
-  const totalContracts = projects.reduce((sum, project) => sum + contractCount(project), 0)
+  const matches = (row: (typeof rows)[number], key: CompanyFilter) =>
+    key === 'all' || (key === 'inactive' ? !row.company.isActive : row.company.isActive && row.status === key)
+  const visible = rows.filter((row) => matches(row, filter))
+  const openCompany = (id: string) => navigate(`/org/companies/${id}`)
 
   return (
     <div className="dashboard-page sc-page" dir="rtl">
@@ -100,34 +103,61 @@ export function OrgCompaniesPage() {
       <div className="sc-content">
         <div className="sc-list-header">
           <div className="sc-page-heading">
-            <h2>قائمة الشركات</h2>
+            <h2>الشركات</h2>
           </div>
-          <div className="sc-toolbar">
+          <div className="sc-toolbar rc-stack">
             {canCreateDraft(role) ? (
               <button type="button" className="sc-btn-primary" onClick={() => navigate('/org/companies/new')}>
                 <Plus size={18} />
                 <span>إضافة شركة جديدة</span>
               </button>
             ) : null}
-            <button
-              type="button"
-              className={`sc-btn-outline${onlyDelayed ? ' sc-btn-outline--active' : ''}`}
-              onClick={() => setOnlyDelayed((value) => !value)}
-            >
-              <ListFilter size={17} />
-              <span>تصفية</span>
-            </button>
+            <StatusFilterMenu
+              title="حالة الشركة"
+              allKey="all"
+              value={filter}
+              shown={visible.length}
+              total={rows.length}
+              noun="شركات"
+              onChange={setFilter}
+              options={[
+                { key: 'all', label: 'الكل', count: rows.length },
+                ...(['track', 'delay', 'blocked', 'done'] as const).map((key) => ({
+                  key,
+                  label: STATUS_META[key],
+                  count: rows.filter((row) => matches(row, key)).length,
+                  dot: STATUS_DOT[key],
+                })),
+                { key: 'inactive', label: 'غير نشطة', count: rows.filter((row) => matches(row, 'inactive')).length, dot: '#8e8f97' },
+              ]}
+            />
           </div>
         </div>
 
-        <TrendKpiRow
-          stats={[
-            { label: 'عدد الشركات', value: String(companies.length), delta: `${rows.filter((r) => r.company.isActive).length} نشط`, up: true },
-            { label: 'متوسط التقدم', value: `${avgProgress}%`, delta: `${projects.length} مشروع`, up: avgProgress >= 50 },
-            { label: 'إجمالي العقود', value: String(totalContracts), delta: `${projects.length}`, up: totalContracts > 0 },
-          ]}
-        />
+        <div className="rc-view-bar">
+          <ViewToggle value={view} onChange={setView} />
+        </div>
 
+        {view === 'cards' ? (
+          <>
+            {loading ? <p className="sc-empty">جاري التحميل...</p> : null}
+            {!loading && visible.length === 0 ? <p className="sc-empty">لا توجد شركات حالياً</p> : null}
+            <RecordCardGrid>
+              {visible.map((row) => (
+                <RecordCard
+                  key={row.company.id}
+                  title={row.company.name}
+                  subtitle={row.company.description || row.company.email || '—'}
+                  badges={<StatusBadge status={row.status} />}
+                  progress={{ label: 'نسبة الإنجاز', value: row.progress }}
+                  rows={[{ label: 'عدد العقود', value: row.contracts }]}
+                  linkLabel="عرض الشركة"
+                  onOpen={() => openCompany(row.company.id)}
+                />
+              ))}
+            </RecordCardGrid>
+          </>
+        ) : (
         <div className="sc-table-wrap">
           <div className="sc-table-head">
             <span className="sc-col-name">الشركة</span>
@@ -158,28 +188,18 @@ export function OrgCompaniesPage() {
                 </div>
                 <div className="sc-progress-cell">
                   <div className="sc-progress-track">
-                    <div className="sc-progress-fill" style={{ width: `${row.progress}%` }} />
+                    <div className="sc-progress-fill" style={{ width: `${row.progress}%`, background: progressColor(row.progress) }} />
                   </div>
                   <span className="sc-progress-text">{row.progress}%</span>
                 </div>
                 <div className="sc-col-center">
-                  {row.company.isActive ? (
-                    <span className="sc-status-pill sc-status-pill--track">
-                      <HelpCircle className="sc-status-pill__icon" />
-                      {STATUS_META.track}
-                    </span>
-                  ) : (
-                    <span className="sc-status-pill sc-status-pill--warning">
-                      <AlertTriangle className="sc-status-pill__icon" />
-                      {STATUS_META.delay}
-                    </span>
-                  )}
+                  <StatusBadge status={row.status} />
                 </div>
                 <button
                   type="button"
                   className="sc-btn-action"
                   aria-label={`تفاصيل ${row.company.name}`}
-                  onClick={() => navigate(`/org/companies/${row.company.id}`)}
+                  onClick={() => openCompany(row.company.id)}
                 >
                   <ChevronLeft size={20} />
                 </button>
@@ -187,6 +207,7 @@ export function OrgCompaniesPage() {
             ))}
           </ul>
         </div>
+        )}
       </div>
     </div>
   )

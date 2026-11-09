@@ -1,0 +1,365 @@
+/* Table/cards switch and the record cards shared by the organization lists. */
+.rc-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 18px;
+  background: #ececee;
+}
+
+.rc-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: #8e8f97;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.rc-toggle button.is-active {
+  background: #fff;
+  color: #0c0c0d;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(15, 23, 41, 0.08);
+}
+
+.rc-view-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0 0 16px;
+}
+
+.rc-view-bar--split {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.rc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.rc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 20px;
+  border-radius: 20px;
+  background: #fff;
+  text-align: right;
+}
+
+.rc-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f1f2;
+}
+
+.rc-card__title {
+  min-width: 0;
+}
+
+.rc-card__title h3 {
+  margin: 0;
+  color: #0c0c0d;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.rc-card__title p {
+  overflow: hidden;
+  margin: 2px 0 0;
+  color: #8e8f97;
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-card__badges {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.rc-card__progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #8e8f97;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.rc-card__progress-head strong {
+  color: #0c0c0d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rc-card__track {
+  overflow: hidden;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 6px;
+  background: #ececee;
+}
+
+.rc-card__track i {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+}
+
+.rc-card__note {
+  margin: 8px 0 0;
+  color: #8e8f97;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.rc-card__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.rc-card__rows > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rc-card__rows dt {
+  flex: none;
+  color: #8e8f97;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.rc-card__rows dd {
+  margin: 0;
+  color: #0c0c0d;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: left;
+}
+
+.rc-card__link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2f80ed;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rc-card__link:hover {
+  text-decoration: underline;
+}
+
+.rc-cards-inset {
+  padding: 0 24px 24px;
+}
+
+.rc-cards-inset .rc-card {
+  border: 1px solid #ececee;
+}
+
+/* Status menu behind the "تصفية" button */
+.rc-stack.sc-toolbar,
+.rc-stack.departments-toolbar--screenshot-one {
+  align-items: flex-end;
+}
+
+.rc-filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rc-filter__summary {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  color: #f04438;
+  font-size: 12px;
+}
+
+.rc-filter__summary button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.rc-filter__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  min-width: 104px;
+  padding: 0 16px;
+  border: 1px solid #0c0c0d;
+  border-radius: 8px;
+  background: #fff;
+  color: #0c0c0d;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rc-filter__button.is-applied {
+  border-color: #f04438;
+}
+
+.rc-filter__menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 280px;
+  padding: 10px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(15, 23, 41, 0.14);
+}
+
+.rc-filter__title {
+  padding: 4px 8px 6px;
+  color: #8e8f97;
+  font-size: 12px;
+}
+
+.rc-filter__menu button {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #0c0c0d;
+  font: inherit;
+  font-size: 14px;
+  text-align: right;
+  cursor: pointer;
+}
+
+.rc-filter__menu button:hover,
+.rc-filter__menu button.is-active {
+  background: #f4f4f5;
+}
+
+.rc-filter__menu button.is-active {
+  font-weight: 700;
+}
+
+.rc-filter__menu i {
+  width: 7px;
+  height: 7px;
+  margin: auto;
+  border-radius: 50%;
+}
+
+.rc-filter__check {
+  padding: 2px;
+  border-radius: 50%;
+  background: #22b573;
+  color: #fff;
+}
+
+.rc-filter__menu small {
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: #f4f4f5;
+  color: #6b6c72;
+  font-size: 12px;
+  text-align: center;
+}
+
+.departments-page__heading--screenshot-one h2,
+.rc-section-title {
+  margin: 0;
+  color: #0c0c0d;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.rc-section-title {
+  font-size: 18px;
+}
+
+.cd-tab-toolbar.rc-tab-head,
+.department-detail-toolbar.rc-tab-head {
+  justify-content: space-between;
+}
+
+.rc-tab-head__tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rc-tab-view {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 24px 16px;
+}
+
+@media (max-width: 1100px) {
+  .rc-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .rc-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rc-cards-inset,
+  .rc-tab-view {
+    padding-inline: 16px;
+  }
+
+  .rc-filter__menu {
+    width: min(280px, calc(100vw - 32px));
+  }
+}

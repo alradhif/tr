@@ -5,7 +5,7 @@ const RECEIPT_TYPES = ['image/png', 'image/jpeg', 'application/pdf']
 const receiptUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }).single('receipt')
 
 const PAYMENT_INCLUDE = {
-  project: { select: { id: true, name: true } },
+  project: { select: { id: true, name: true, contracts: { select: { name: true }, take: 1, orderBy: { createdAt: 'desc' } } } },
   company: { select: { id: true, name: true } },
 }
 

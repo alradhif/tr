@@ -1,6 +1,10 @@
-import { CheckCircle2, Clock, ChevronLeft, TriangleAlert, XCircle } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { RecordCard, RecordCardGrid, ToneBadge, useViewMode, ViewToggle } from '../ui/RecordCards'
+
 import '../../design/deliverable-review.css'
+
+export { ToneBadge }
 
 export const LEVEL_META: Record<string, { label: string; tone: string }> = {
   CRITICAL: { label: 'حرج', tone: 'changes' },
@@ -25,24 +29,6 @@ export const REQUEST_STATUS: Record<string, { label: string; tone: string }> = {
   REJECTED: { label: 'مرفوض', tone: 'changes' },
 }
 
-const TONE_ICON: Record<string, typeof Clock> = {
-  approved: CheckCircle2,
-  pending: Clock,
-  changes: TriangleAlert,
-  none: XCircle,
-}
-
-export function ToneBadge({ meta }: { meta?: { label: string; tone: string } }) {
-  const tone = meta?.tone ?? 'none'
-  const Icon = TONE_ICON[tone]
-  return (
-    <span className={`dr-badge dr-badge--${tone}`}>
-      <Icon size={13} />
-      {meta?.label ?? '—'}
-    </span>
-  )
-}
-
 function Person({ name }: { name: string }) {
   return (
     <span className="dr-person">
@@ -62,7 +48,38 @@ export function RisksTable({
   canOpen: boolean
 }) {
   const navigate = useNavigate()
+  const [view, setView] = useViewMode('org-project-risks')
   return (
+    <div className="dr-tab">
+    <div className="rc-view-bar">
+      <ViewToggle value={view} onChange={setView} />
+    </div>
+    {view === 'cards' ? (
+      <>
+        {rows.length === 0 ? <p className="dr-empty">لا توجد مخاطر بعد</p> : null}
+        <RecordCardGrid>
+          {rows.map((row) => (
+            <RecordCard
+              key={row.key}
+              title={row.name}
+              subtitle={row.subtitle}
+              badges={
+                <>
+                  <ToneBadge meta={RISK_STATUS[row.status.toUpperCase()] ?? { label: row.status, tone: 'none' }} />
+                  <ToneBadge meta={LEVEL_META[row.impact.toUpperCase()]} />
+                </>
+              }
+              rows={[
+                { label: 'آخر نشاط', value: row.updated },
+                { label: 'المسؤول', value: row.responsible },
+              ]}
+              linkLabel={canOpen ? 'عرض الخطر' : undefined}
+              onOpen={canOpen ? () => navigate(`${base}/${row.key}`) : undefined}
+            />
+          ))}
+        </RecordCardGrid>
+      </>
+    ) : (
     <div className="dr-table-wrap">
       <table className="dr-table dr-table--center">
         <thead>
@@ -105,6 +122,8 @@ export function RisksTable({
         </tbody>
       </table>
     </div>
+    )}
+    </div>
   )
 }
 
@@ -118,7 +137,37 @@ export function ChangeRequestsTable({
   canOpen: boolean
 }) {
   const navigate = useNavigate()
+  const [view, setView] = useViewMode('org-project-change-requests')
   return (
+    <div className="dr-tab">
+    <div className="rc-view-bar">
+      <ViewToggle value={view} onChange={setView} />
+    </div>
+    {view === 'cards' ? (
+      <>
+        {rows.length === 0 ? <p className="dr-empty">لا توجد طلبات تغيير بعد</p> : null}
+        <RecordCardGrid>
+          {rows.map((row) => (
+            <RecordCard
+              key={row.key}
+              title={row.title}
+              badges={
+                <>
+                  <ToneBadge meta={REQUEST_STATUS[row.status.toUpperCase()] ?? { label: row.status, tone: 'none' }} />
+                  <ToneBadge meta={LEVEL_META[row.priority.toUpperCase()]} />
+                </>
+              }
+              rows={[
+                { label: 'التاريخ', value: row.date },
+                { label: 'مقدم الطلب', value: row.submittedBy },
+              ]}
+              linkLabel={canOpen ? 'عرض الطلب' : undefined}
+              onOpen={canOpen ? () => navigate(`${base}/${row.key}`) : undefined}
+            />
+          ))}
+        </RecordCardGrid>
+      </>
+    ) : (
     <div className="dr-table-wrap">
       <table className="dr-table dr-table--center">
         <thead>
@@ -157,6 +206,8 @@ export function ChangeRequestsTable({
           ))}
         </tbody>
       </table>
+    </div>
+    )}
     </div>
   )
 }

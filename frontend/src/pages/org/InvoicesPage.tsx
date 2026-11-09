@@ -17,6 +17,7 @@ import { getOrgToken } from '../../auth/orgAuth'
 import { canCreateDraft, isUpperManagement } from '../../auth/permissions'
 import { TrackFormModal } from '../../components/ui/TrackFormModal'
 import { FinanceCreateButton, formatAmount } from '../../features/jodayn-finance/FinanceParts'
+import { RecordCard, RecordCardGrid, ToneBadge, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
 import { MultiSelectFilter, PageState, SingleSelectFilter } from '../../super-admin-ui/components/ui/filters'
 import { SaDialog } from '../../super-admin-ui/components/ui/SaDialog'
 import '../../features/jodayn-finance/jodayn-invoices.css'
@@ -45,6 +46,7 @@ export function OrgInvoicesPage() {
   const [failed, setFailed] = useState(false)
   const [groupBy, setGroupBy] = useState<GroupBy>('company')
   const [openGroup, setOpenGroup] = useState<string | null>(null)
+  const [view, setView] = useViewMode('org-invoices')
   const [adding, setAdding] = useState(false)
   const [recording, setRecording] = useState<OrgPayment | null>(null)
   const [year, setYear] = useState('all')
@@ -124,6 +126,59 @@ export function OrgInvoicesPage() {
   const unique = (values: string[]) => [...new Set(values)].map((value) => ({ value, label: value }))
   const years = [...new Set(payments.map((payment) => payment.dueDate.slice(0, 4)))].sort()
 
+  const invoicesOf = (list: OrgPayment[]) => {
+    const invoices = new Map<string, OrgPayment[]>()
+    for (const payment of list) {
+      const key = payment.invoiceNumber ?? payment.project.name
+      invoices.set(key, [...(invoices.get(key) ?? []), payment])
+    }
+    return invoices
+  }
+
+  const renderInvoices = (invoices: Map<string, OrgPayment[]>) =>
+    [...invoices.entries()].map(([number, list], invoiceIndex) => (
+      <section key={`${number}-${invoiceIndex}`}>
+        <h3>
+          الفاتورة {number}
+          {list[0].project.contracts?.[0] ? ` · عقد ${list[0].project.contracts[0].name}` : ''} · مشروع {list[0].project.name}
+        </h3>
+        <ul>
+          {list.map((payment) => {
+            const state = stateOf(payment)
+            return (
+              <li key={payment.id}>
+                <strong>{payment.title}</strong>
+                <span className="org-invoices__amount">{formatAmount(payment.amount)} ر.س</span>
+                <span className="org-invoices__date">الاستحقاق {iso(payment.dueDate)}</span>
+                <span className={`org-invoices__state is-${state}`}>
+                  {state === 'paid' ? <CheckCircle2 size={12} /> : state === 'overdue' ? <TriangleAlert size={12} /> : <Clock size={12} />}
+                  {state === 'paid' ? words.paidState : state === 'overdue' ? 'متأخرة' : 'مستحقة'}
+                </span>
+                {payment.paidAt ? (
+                  <span className="org-invoices__date">
+                    تاريخ التسجيل {iso(payment.paidAt)} · {payment.recordedByName ?? '—'}
+                    {payment.receiptUrl ? (
+                      <a href={payment.receiptUrl} download={payment.receiptName ?? 'receipt'} onClick={(event) => event.stopPropagation()}>
+                        {' '}· الإيصال
+                      </a>
+                    ) : null}
+                  </span>
+                ) : isUpperManagement(role) ? (
+                  <button type="button" className="org-invoices__record" onClick={() => setRecording(payment)}>
+                    {words.action}
+                  </button>
+                ) : (
+                  <span />
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+    ))
+
+  const openedCard = view === 'cards' ? groups.find((group) => group.name === openGroup) : undefined
+
   return (
     <div className="finance-page jinv org-invoices" dir="rtl">
       <header className="jinv-header">
@@ -139,7 +194,8 @@ export function OrgInvoicesPage() {
         </div>
 
         <div className="org-invoices__filters">
-          <div className="org-invoices__tabs" role="tablist" aria-label="طريقة العرض">
+          <div className="org-invoices__tabs-row">
+          <div className="org-invoices__tabs" role="tablist" aria-label="طريقة التجميع">
             {(
               [
                 ['company', words.byCompany],
@@ -160,6 +216,8 @@ export function OrgInvoicesPage() {
                 {label}
               </button>
             ))}
+          </div>
+          <ViewToggle value={view} onChange={setView} />
           </div>
           <div className="org-invoices__selects">
             <SingleSelectFilter
@@ -230,6 +288,47 @@ export function OrgInvoicesPage() {
           />
         ) : !loading && groups.length === 0 ? (
           <PageState title="لا توجد فواتير" body="لا توجد دفعات تطابق الفلاتر الحالية." />
+        ) : view === 'cards' ? (
+          <>
+            {loading ? <p className="jinv-empty">جاري تحميل البيانات...</p> : null}
+            <RecordCardGrid>
+              {groups.map((group) => {
+                const left = group.payments.filter((payment) => !payment.paidAt)
+                const lateCount = group.payments.filter((payment) => stateOf(payment) === 'overdue').length
+                const invoiceCount = invoicesOf(group.payments).size
+                return (
+                  <RecordCard
+                    key={group.name}
+                    title={group.name}
+                    badges={
+                      <ToneBadge
+                        meta={{
+                          label: `${remainingLabel(left.length)}${lateCount ? ` · ${lateCount} متأخرة` : ''}`,
+                          tone: left.length === 0 ? 'approved' : lateCount ? 'changes' : 'pending',
+                        }}
+                      />
+                    }
+                    rows={[
+                      { label: 'المتبقي', value: `${formatAmount(sum(left))} ر.س` },
+                      { label: words.settled, value: `${formatAmount(sum(group.payments) - sum(left))} ر.س` },
+                      { label: 'الإجمالي', value: `${formatAmount(sum(group.payments))} ر.س` },
+                      groupBy === 'project'
+                        ? { label: words.company, value: companyName(group.payments[0]) }
+                        : { label: 'الفواتير', value: invoiceCount },
+                    ]}
+                    linkLabel={openGroup === group.name ? 'إخفاء الدفعات' : 'عرض الدفعات'}
+                    onOpen={() => setOpenGroup(openGroup === group.name ? null : group.name)}
+                  />
+                )
+              })}
+            </RecordCardGrid>
+            {openedCard ? (
+              <div className="org-invoices__details org-invoices__card-details">
+                <h2>دفعات {openedCard.name}</h2>
+                {renderInvoices(invoicesOf(openedCard.payments))}
+              </div>
+            ) : null}
+          </>
         ) : (
           <div className="jinv-table-wrap">
             {loading ? <p className="jinv-empty">جاري تحميل البيانات...</p> : null}
@@ -251,11 +350,7 @@ export function OrgInvoicesPage() {
                     const isOpen = openGroup === group.name
                     const left = group.payments.filter((payment) => !payment.paidAt)
                     const hasLate = group.payments.some((payment) => stateOf(payment) === 'overdue')
-                    const invoices = new Map<string, OrgPayment[]>()
-                    for (const payment of group.payments) {
-                      const key = payment.invoiceNumber ?? payment.project.name
-                      invoices.set(key, [...(invoices.get(key) ?? []), payment])
-                    }
+                    const invoices = invoicesOf(group.payments)
                     return (
                       <Fragment key={group.name}>
                         <tr
@@ -282,45 +377,7 @@ export function OrgInvoicesPage() {
                         {isOpen ? (
                           <tr className="org-invoices__details">
                             <td colSpan={7}>
-                              {[...invoices.entries()].map(([number, list], invoiceIndex) => (
-                                <section key={`${number}-${invoiceIndex}`}>
-                                  <h3>
-                                    الفاتورة {number} · مشروع {list[0].project.name}
-                                  </h3>
-                                  <ul>
-                                    {list.map((payment) => {
-                                      const state = stateOf(payment)
-                                      return (
-                                        <li key={payment.id}>
-                                          <strong>{payment.title}</strong>
-                                          <span className="org-invoices__amount">{formatAmount(payment.amount)} ر.س</span>
-                                          <span className="org-invoices__date">الاستحقاق {iso(payment.dueDate)}</span>
-                                          <span className={`org-invoices__state is-${state}`}>
-                                            {state === 'paid' ? <CheckCircle2 size={12} /> : state === 'overdue' ? <TriangleAlert size={12} /> : <Clock size={12} />}
-                                            {state === 'paid' ? words.paidState : state === 'overdue' ? 'متأخرة' : 'مستحقة'}
-                                          </span>
-                                          {payment.paidAt ? (
-                                            <span className="org-invoices__date">
-                                              تاريخ التسجيل {iso(payment.paidAt)} · {payment.recordedByName ?? '—'}
-                                              {payment.receiptUrl ? (
-                                                <a href={payment.receiptUrl} download={payment.receiptName ?? 'receipt'} onClick={(event) => event.stopPropagation()}>
-                                                  {' '}· الإيصال
-                                                </a>
-                                              ) : null}
-                                            </span>
-                                          ) : isUpperManagement(role) ? (
-                                            <button type="button" className="org-invoices__record" onClick={() => setRecording(payment)}>
-                                              {words.action}
-                                            </button>
-                                          ) : (
-                                            <span />
-                                          )}
-                                        </li>
-                                      )
-                                    })}
-                                  </ul>
-                                </section>
-                              ))}
+                              {renderInvoices(invoices)}
                             </td>
                           </tr>
                         ) : null}

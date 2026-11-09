@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   ClipboardList,
   Download,
-  HelpCircle,
   ListFilter,
   Mail,
   Phone,
@@ -23,6 +22,7 @@ import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { SubpageHeader } from '../../components/ui'
 import { TrendKpiRow } from '../../components/senior/TrendKpiCard'
 import { downloadCsv } from '../../api/me'
+import { progressColor, RecordCard, RecordCardGrid, StatusBadge, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
 import { averageProgress, projectStatusClass, STATUS_META, nextStatusFilter, type StatusClass } from './orgEntityUi'
 import '../../design/departments-detail.css'
 import '../../design/departments.css'
@@ -46,6 +46,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
   const [banner, setBanner] = useState<'success' | 'error' | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusClass | 'all'>('all')
+  const [view, setView] = useViewMode(`${portal.base}-department-projects`)
 
   const canEdit = canCreateDraft(role)
   const canDelete = isUpperManagement(role)
@@ -180,7 +181,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
             <TrendKpiRow
               stats={[
                 { label: 'عدد المشاريع', value: `${projects.length}`, delta: `${employees.length} موظف`, up: true },
-                { label: 'متوسط التقدم', value: `${progress}%`, delta: department.isActive ? 'نشط' : 'غير نشط', up: progress >= 50 },
+                { label: 'التقدم التنفيذي', value: `${progress}%`, delta: department.isActive ? 'نشط' : 'غير نشط', up: progress >= 50 },
                 { label: 'عدد المخرجات', value: `${outputs}`, delta: `${department.employeeCount ?? employees.length}`, up: outputs > 0 },
               ]}
             />
@@ -219,7 +220,9 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
 
               {tab === 'المشاريع' ? (
                 <>
-                  <div className="department-detail-toolbar">
+                  <div className="department-detail-toolbar rc-tab-head">
+                    <h3 className="rc-section-title">المشاريع</h3>
+                    <div className="rc-tab-head__tools">
                     <button
                       type="button"
                       className="department-detail-outline"
@@ -250,14 +253,40 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
                       onClick={() => setStatusFilter(nextStatusFilter(statusFilter))}
                     >
                       <ListFilter />
-                      {statusFilter === 'all' ? 'تصفية: الكل' : `تصفية: ${STATUS_META[statusFilter]}`}
+                      {statusFilter === 'all' ? 'تصفية' : `تصفية: ${STATUS_META[statusFilter]}`}
                     </button>
+                    </div>
                   </div>
+                  <div className="rc-tab-view">
+                    <ViewToggle value={view} onChange={setView} />
+                  </div>
+                  {view === 'cards' ? (
+                    <div className="rc-cards-inset">
+                      {visibleProjects.length === 0 ? (
+                        <p className="department-detail-empty">{projects.length === 0 ? 'لا توجد مشاريع مرتبطة بهذه الإدارة' : 'لا توجد مشاريع بهذه الحالة'}</p>
+                      ) : null}
+                      <RecordCardGrid>
+                        {visibleProjects.map((project) => {
+                          const href = portal.projectHref(project.id)
+                          return (
+                            <RecordCard
+                              key={project.id}
+                              title={project.name}
+                              badges={<StatusBadge status={projectStatusClass(project.status)} />}
+                              progress={{ label: 'التقدم التنفيذي', value: project.progressPct || 0 }}
+                              linkLabel={href ? 'عرض المشروع' : undefined}
+                              onOpen={href ? () => navigate(href) : undefined}
+                            />
+                          )
+                        })}
+                      </RecordCardGrid>
+                    </div>
+                  ) : (
                   <table className="department-detail-project-table">
                     <thead>
                       <tr>
                         <th>اسم المشروع</th>
-                        <th>نسبة التقدم</th>
+                        <th>التقدم التنفيذي</th>
                         <th>الحالة</th>
                         <th aria-label="فتح" />
                       </tr>
@@ -272,7 +301,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
                       ) : null}
                       {visibleProjects.map((project) => {
                         const status = projectStatusClass(project.status)
-                        const meta = { label: STATUS_META[status], barClass: `is-${status === 'delay' ? 'late' : status === 'blocked' ? 'risk' : status === 'done' ? 'done' : 'track'}`, className: status === 'delay' ? 'is-late' : status === 'blocked' ? 'is-risk' : status === 'done' ? 'is-done' : 'is-track' }
+                        const meta = { barClass: `is-${status === 'delay' ? 'late' : status === 'blocked' ? 'risk' : status === 'done' ? 'done' : 'track'}` }
                         return (
                           <tr key={project.id} onClick={() => {
                             const href = portal.projectHref(project.id)
@@ -283,15 +312,12 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
                               <div className="department-detail-progress">
                                 <span>{project.progressPct || 0}%</span>
                                 <span dir="ltr" className="department-detail-progress__track">
-                                  <span className={`department-detail-progress__bar ${meta.barClass}`} style={{ width: `${project.progressPct || 0}%` }} />
+                                  <span className={`department-detail-progress__bar ${meta.barClass}`} style={{ width: `${project.progressPct || 0}%`, background: progressColor(project.progressPct || 0) }} />
                                 </span>
                               </div>
                             </td>
                             <td>
-                              <span className={`department-detail-status ${meta.className}`}>
-                                {meta.label}
-                                <HelpCircle className="department-detail-status__icon" />
-                              </span>
+                              <StatusBadge status={status} />
                             </td>
                             <td>
                               <ChevronLeft className="department-detail-row-chevron" />
@@ -301,6 +327,7 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
                       })}
                     </tbody>
                   </table>
+                  )}
                 </>
               ) : null}
 

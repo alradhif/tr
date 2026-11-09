@@ -103,6 +103,16 @@ function riskLevel(value?: string) {
   return 'low'
 }
 
+function submittedAgo(value?: string) {
+  if (!value) return ''
+  const days = Math.floor((Date.now() - new Date(value).getTime()) / 86400000)
+  if (Number.isNaN(days) || days < 0) return ''
+  if (days === 0) return 'اليوم'
+  if (days === 1) return 'أمس'
+  if (days === 2) return 'منذ يومين'
+  return days <= 10 ? `منذ ${days} أيام` : `منذ ${days} يومًا`
+}
+
 function asRows(items: unknown[] | undefined, map: (item: AnyRecord, index: number) => AnyRecord) {
   return (items ?? []).map((item, index) => map((item ?? {}) as AnyRecord, index))
 }
@@ -250,6 +260,7 @@ export function ProjectDetailView({
         reviewStatus: String(item.reviewStatus ?? 'NOT_SUBMITTED') as ReviewStatus,
         submittedAt: item.submittedAt ? formatDate(item.submittedAt) : '—',
         submittedBy: String(item.submittedByName ?? '—'),
+        submittedAgo: submittedAgo(item.submittedAt as string | undefined),
       })),
     [project],
   )
@@ -392,6 +403,11 @@ export function ProjectDetailView({
           reviewStatus: row.reviewStatus as ReviewStatus,
           submittedAt: String(row.submittedAt),
           submittedBy: String(row.submittedBy),
+          submittedAgo: String(row.submittedAgo),
+          dueDate: String(row.endDate),
+          phase: String(
+            phases.find((phase) => (phase.activities as string[]).some((activity) => activity.split(' | ')[0] === String(row.description)))?.title ?? '—',
+          ),
         }))}
         canDecide={Boolean(portalRole && isUpperManagement(portalRole))}
         canSubmit={Boolean(portalRole && isDataEntry(portalRole))}

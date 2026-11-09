@@ -353,6 +353,7 @@ export function OrgGoalDetailPage() {
                   </span>
                 ) : null}
               </div>
+              <p className="goals-kpi-card__note">يُحتسب من المخرجات المعتمدة فقط — المرفوعة دون اعتماد لا تدخل في النسبة.</p>
             </div>
 
             {goal.approvedAt ? (

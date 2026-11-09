@@ -13,7 +13,7 @@ export type OrgPayment = {
   recordedByName?: string | null
   receiptUrl?: string | null
   receiptName?: string | null
-  project: { id: string; name: string }
+  project: { id: string; name: string; contracts?: Array<{ name: string }> }
   company?: { id: string; name: string } | null
 }
 

@@ -726,6 +726,18 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
     await saveOrgProjectDetails(project.id, projectBody(def))
     orgProjectsByName.set(def.name, project)
     await seedProjectTeams(prisma.orgProjectTeamMember, prisma.orgProject, project)
+    if (!(await prisma.orgContract.findFirst({ where: { projectId: project.id, name: def.contractNumber } }))) {
+      await prisma.orgContract.create({
+        data: {
+          name: def.contractNumber,
+          fileUrl: 'demo://file',
+          startDate: new Date(def.contractStartDate),
+          endDate: new Date(def.contractEndDate),
+          projectId: project.id,
+          uploadedBy: orgEntry.id,
+        },
+      })
+    }
     await seedDeliverableReviews(def, project, orgEntry)
     await seedProjectPayments(def, project, orgAccount.id, 1000 + orgProjectsByName.size * 10)
 

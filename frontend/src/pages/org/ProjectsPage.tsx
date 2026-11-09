@@ -8,6 +8,7 @@ import type { OrgRole } from '../../auth/orgAuth'
 import { getOrgToken } from '../../auth/orgAuth'
 import { canCreateDraft } from '../../auth/permissions'
 import { ProjectsListView } from '../../components/senior/ProjectsListView'
+import { useViewMode } from '../../components/ui/RecordCards'
 import { MultiSelectFilter, SingleSelectFilter } from '../../super-admin-ui/components/ui/filters'
 
 type ProjectUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
@@ -20,7 +21,9 @@ type ProjectRow = {
   approvalStatus: string
   uiStatus: ProjectUiStatus
   outputsCount: number
+  approvedCount: number
   approvedOutputs: string
+  executor: string
   goals: string[]
   company: string
   year: string
@@ -54,7 +57,7 @@ export function OrgProjectsPage() {
   const [rows, setRows] = useState<ProjectRow[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<ProjectFilter>('all')
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [view, setView] = useViewMode('org-projects')
   const [goalFilter, setGoalFilter] = useState<string[]>([])
   const [companyFilter, setCompanyFilter] = useState<string[]>([])
   const [yearFilter, setYearFilter] = useState('all')
@@ -83,7 +86,9 @@ export function OrgProjectsPage() {
               .filter(Boolean),
             company: p.executingCompany?.name ?? 'بدون شركة',
             year: (p.startDate ?? '').slice(0, 4),
+            approvedCount: (p.deliverables ?? []).filter((d) => (d as { reviewStatus?: string }).reviewStatus === 'APPROVED').length,
             approvedOutputs: `${(p.deliverables ?? []).filter((d) => (d as { reviewStatus?: string }).reviewStatus === 'APPROVED').length} من ${p.deliverables?.length ?? 0}`,
+            executor: p.executingCompany?.name ?? 'داخلي',
           })),
         )
       } catch (err) {
@@ -133,50 +138,77 @@ export function OrgProjectsPage() {
         status: row.uiStatus,
         approvalStatus: row.approvalStatus,
         approvedOutputs: row.approvedOutputs,
+        subtitle: row.executor,
+        noOutputs: row.outputsCount === 0,
       }))}
       loading={loading}
       totalOutputs={rows.reduce((sum, row) => sum + row.outputsCount, 0)}
       createLabel={canCreateDraft(role) ? (role === 'upper' ? t('addProject') : t('addProjectDraft')) : undefined}
       onCreate={() => navigate('/org/projects/new')}
       onOpen={(key) => navigate(`/org/projects/${key}`)}
-      toolbarExtra={
-        <div className="org-projects-filters">
-          <MultiSelectFilter
-            label="الهدف"
-            selected={goalFilter}
-            options={[...new Set(rows.flatMap((row) => row.goals))].map((value) => ({ value, label: value }))}
-            onApply={setGoalFilter}
-          />
-          <MultiSelectFilter
-            label="المنفذ"
-            selected={companyFilter}
-            options={[...new Set(rows.map((row) => row.company))].map((value) => ({ value, label: value }))}
-            onApply={setCompanyFilter}
-          />
-          <SingleSelectFilter
-            label="الفترة"
-            value={yearFilter}
-            options={[
-              { value: 'all', label: 'الكل' },
-              ...[...new Set(rows.map((row) => row.year).filter(Boolean))].sort().map((value) => ({ value, label: value })),
-            ]}
-            onChange={setYearFilter}
-          />
-        </div>
-      }
-      filtersOpen={filtersOpen}
-      onToggleFilters={() => setFiltersOpen((open) => !open)}
+      exec={{
+        view,
+        onViewChange: setView,
+        kpis: [
+          { label: 'عدد المشاريع', value: rows.length, delta: `${filterCounts.completed} مكتمل`, up: true },
+          {
+            label: 'التقدم التنفيذي',
+            value: `${rows.length ? Math.round(rows.reduce((sum, row) => sum + row.progress, 0) / rows.length) : 0}%`,
+            delta: `${filterCounts.delayed} متأخر`,
+            up: filterCounts.delayed === 0,
+          },
+          {
+            label: 'إجمالي المخرجات',
+            value: rows.reduce((sum, row) => sum + row.outputsCount, 0),
+            delta: `${rows.reduce((sum, row) => sum + row.approvedCount, 0)} معتمد`,
+            up: true,
+          },
+        ],
+        filterBar: (
+          <div className="org-projects-filters">
+            <MultiSelectFilter
+              label="الهدف"
+              selected={goalFilter}
+              options={[...new Set(rows.flatMap((row) => row.goals))].map((value) => ({ value, label: value }))}
+              onApply={setGoalFilter}
+            />
+            <MultiSelectFilter
+              label="المنفذ"
+              selected={companyFilter}
+              options={[...new Set(rows.map((row) => row.company))].map((value) => ({ value, label: value }))}
+              onApply={setCompanyFilter}
+            />
+            <SingleSelectFilter
+              label="حالة التنفيذ"
+              value={activeFilter}
+              options={[
+                { value: 'all', label: `${t('all')} (${filterCounts.all})` },
+                { value: 'onTrack', label: `${t('onTrack')} (${filterCounts.onTrack})` },
+                { value: 'delayed', label: `${t('delayedTab')} (${filterCounts.delayed})` },
+                { value: 'completed', label: `${t('completed')} (${filterCounts.completed})` },
+                { value: 'pending', label: `${t('approvalStatusPending')} (${filterCounts.pending})` },
+                { value: 'draft', label: `${t('approvalStatusDraft')} (${filterCounts.draft})` },
+                { value: 'rejected', label: `${t('approvalStatusRejected')} (${filterCounts.rejected})` },
+              ]}
+              onChange={(key) => setActiveFilter(key as ProjectFilter)}
+            />
+            <SingleSelectFilter
+              label="الفترة"
+              value={yearFilter}
+              options={[
+                { value: 'all', label: 'الكل' },
+                ...[...new Set(rows.map((row) => row.year).filter(Boolean))].sort().map((value) => ({ value, label: value })),
+              ]}
+              onChange={setYearFilter}
+            />
+          </div>
+        ),
+      }}
+      filtersOpen={false}
+      onToggleFilters={() => undefined}
       activeFilter={activeFilter}
       onFilterChange={(key) => setActiveFilter(key as ProjectFilter)}
-      filters={[
-        { key: 'all', label: t('all'), count: filterCounts.all },
-        { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
-        { key: 'delayed', label: t('delayedTab'), count: filterCounts.delayed },
-        { key: 'completed', label: t('completed'), count: filterCounts.completed },
-        { key: 'pending', label: t('approvalStatusPending'), count: filterCounts.pending },
-        { key: 'draft', label: t('approvalStatusDraft'), count: filterCounts.draft },
-        { key: 'rejected', label: t('approvalStatusRejected'), count: filterCounts.rejected },
-      ]}
+      filters={[{ key: 'all', label: t('all'), count: filterCounts.all }]}
     />
   )
 }

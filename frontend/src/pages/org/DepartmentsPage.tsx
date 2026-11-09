@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, Filter, Plus } from 'lucide-react'
+import { ChevronLeft, Plus } from 'lucide-react'
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import type { Department } from '../../api/org'
@@ -8,20 +8,12 @@ import type { OrgRole } from '../../auth/orgAuth'
 import { useDepartmentPortal } from './departmentPortal'
 import { canCreateDraft } from '../../auth/permissions'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
-import { averageProgress, formatJoinDate, projectStatusClass, STATUS_META } from './orgEntityUi'
+import { progressColor, RecordCard, RecordCardGrid, StatusBadge, StatusFilterMenu, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
+import { aggregateStatus, averageProgress, formatJoinDate, STATUS_DOT, STATUS_META, type StatusClass } from './orgEntityUi'
 import '../../design/departments.css'
 import '../../design/senior-projects.css'
 
-type DepartmentFilter = 'all' | 'track' | 'delay' | 'blocked' | 'done' | 'inactive'
-
-const DEPARTMENT_FILTERS: { key: DepartmentFilter; label: string }[] = [
-  { key: 'all', label: 'الكل' },
-  { key: 'track', label: STATUS_META.track },
-  { key: 'delay', label: STATUS_META.delay },
-  { key: 'blocked', label: STATUS_META.blocked },
-  { key: 'done', label: STATUS_META.done },
-  { key: 'inactive', label: 'غير نشطة' },
-]
+type DepartmentFilter = 'all' | StatusClass | 'inactive'
 
 type ListNotice = 'success' | 'deleted' | undefined
 
@@ -39,7 +31,7 @@ export function OrgDepartmentsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<DepartmentFilter>('all')
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [view, setView] = useViewMode(`${portal.base}-departments`)
   const [notice, setNotice] = useState<ListNotice>(() => (location.state as { notice?: ListNotice } | null)?.notice)
 
   useEffect(() => {
@@ -80,7 +72,7 @@ export function OrgDepartmentsPage() {
         department,
         linked,
         progress: averageProgress(linked),
-        status: !department.isActive ? 'delay' as const : projectStatusClass(linked[0]?.status),
+        status: (!department.isActive ? 'delay' : aggregateStatus(linked)) as StatusClass,
       }
     })
   }, [departments, projects])
@@ -111,49 +103,65 @@ export function OrgDepartmentsPage() {
       ) : null}
       <div className="departments-content departments-content--screenshot-one">
         <div className="departments-list-header departments-list-header--screenshot-one">
-          <div className="departments-toolbar departments-toolbar--screenshot-one">
+          <div className="departments-page__heading departments-page__heading--screenshot-one">
+            <h2>الإدارات</h2>
+          </div>
+          <div className="departments-toolbar departments-toolbar--screenshot-one rc-stack">
             {canCreateDraft(role) ? (
               <button className="departments-primary" type="button" onClick={() => navigate(`${portal.base}/new`)}>
                 <Plus size={19} />
                 <span>إضافة إدارة جديدة</span>
               </button>
             ) : null}
-            <button
-              className={`departments-outline${filtersOpen || filter !== 'all' ? ' departments-outline--active' : ''}`}
-              type="button"
-              aria-expanded={filtersOpen}
-              onClick={() => setFiltersOpen((open) => !open)}
-            >
-              <Filter size={18} />
-              <span>تصفية</span>
-            </button>
+            <StatusFilterMenu
+              title="حالة الإدارة"
+              allKey="all"
+              value={filter}
+              shown={visible.length}
+              total={rows.length}
+              noun="إدارات"
+              onChange={setFilter}
+              options={[
+                { key: 'all', label: 'الكل', count: rows.length },
+                ...(['track', 'delay', 'blocked', 'done'] as const).map((key) => ({
+                  key,
+                  label: STATUS_META[key],
+                  count: rows.filter((row) => matches(row, key)).length,
+                  dot: STATUS_DOT[key],
+                })),
+                { key: 'inactive', label: 'غير نشطة', count: rows.filter((row) => matches(row, 'inactive')).length, dot: '#8e8f97' },
+              ]}
+            />
           </div>
         </div>
-        {filtersOpen ? (
-          <div className="sp-filters departments-filters" role="tablist" aria-label="تصفية الإدارات">
-            {DEPARTMENT_FILTERS.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                role="tab"
-                aria-selected={item.key === filter}
-                className={item.key === filter ? 'is-active' : ''}
-                onClick={() => setFilter(item.key)}
-              >
-                {item.label}
-                <span className="sp-filters__count">{rows.filter((row) => matches(row, item.key)).length}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-        {filter !== 'all' ? (
-          <p className="departments-filter-result">
-            عرض {visible.length} من {rows.length} إدارات
-            <button type="button" onClick={() => setFilter('all')}>
-              مسح التصفية
-            </button>
-          </p>
-        ) : null}
+        <div className="rc-view-bar">
+          <ViewToggle value={view} onChange={setView} />
+        </div>
+        {view === 'cards' ? (
+          <>
+            {loading ? <p className="departments-empty">جاري التحميل...</p> : null}
+            {!loading && visible.length === 0 ? <p className="departments-empty">لا توجد إدارات حالياً</p> : null}
+            <RecordCardGrid>
+              {visible.map((row) => (
+                <RecordCard
+                  key={row.department.id}
+                  title={row.department.name}
+                  subtitle={row.department.description || '—'}
+                  badges={<StatusBadge status={row.status} />}
+                  progress={{ label: 'نسبة الإنجاز', value: row.progress }}
+                  rows={[
+                    { label: 'آخر نشاط', value: <span dir="ltr">{formatJoinDate(row.department.updatedAt ?? row.department.createdAt)}</span> },
+                    { label: 'عدد المشاريع', value: row.linked.length },
+                    { label: 'القسم', value: row.department.type || '—' },
+                    { label: 'مدير الإدارة', value: row.department.managerName || '—' },
+                  ]}
+                  linkLabel="عرض الإدارة"
+                  onOpen={() => navigate(`${portal.base}/${row.department.id}`)}
+                />
+              ))}
+            </RecordCardGrid>
+          </>
+        ) : (
         <div className="departments-table-wrap departments-table-wrap--screenshot-one">
           <table className="departments-table departments-table--screenshot-one">
             <thead>
@@ -190,18 +198,15 @@ export function OrgDepartmentsPage() {
                       <div className="progress-cell progress-cell--screenshot-one">
                         <strong>{row.progress}%</strong>
                         <span>
-                          <i className={`bar-${row.status}`} style={{ width: `${row.progress}%` }} />
+                          <i style={{ width: `${row.progress}%`, background: progressColor(row.progress) }} />
                         </span>
                       </div>
                     </td>
                     <td>
-                      <span className={`status-pill project-status--${row.status}`}>
-                        <b className="status-pill__question">?</b>
-                        {STATUS_META[row.status]}
-                      </span>
+                      <StatusBadge status={row.status} />
                     </td>
                     <td className="date-cell" dir="ltr">
-                      {formatJoinDate(row.department.createdAt)}
+                      {formatJoinDate(row.department.updatedAt ?? row.department.createdAt)}
                     </td>
                     <td>
                       <ChevronLeft size={23} className="row-chevron" />
@@ -218,6 +223,7 @@ export function OrgDepartmentsPage() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   )

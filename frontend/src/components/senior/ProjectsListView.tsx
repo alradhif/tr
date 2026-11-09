@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { ChevronLeft, ListFilter, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { TrendKpiRow } from './TrendKpiCard'
+import { progressColor, RecordCard, RecordCardGrid, ToneBadge, ViewToggle, type ViewMode } from '../ui/RecordCards'
 import { approvalLabelKey } from '../../org-catalog/approvalStatus'
 import '../../design/senior-companies.css'
 import '../../design/senior-projects.css'
@@ -16,6 +17,18 @@ export type ProjectListRow = {
   approvalStatus: string
   /** Approved deliverables, as "7 من 10". Adds the column when present. */
   approvedOutputs?: string
+  /** Who executes the project; shown on the card. */
+  subtitle?: string
+  /** No deliverables have been defined, so progress cannot be measured yet. */
+  noOutputs?: boolean
+}
+
+/** Organization layout: KPIs and filters from the design, plus the table/cards switch. */
+export type ProjectListExec = {
+  view: ViewMode
+  onViewChange: (view: ViewMode) => void
+  kpis: Array<{ label: string; value: string | number; delta: string; up: boolean }>
+  filterBar: ReactNode
 }
 
 export type ProjectListFilter = { key: string; label: string; count: number }
@@ -25,6 +38,13 @@ const STATUS_META: Record<ProjectListStatus, { label: string; tone: string }> = 
   stalled: { label: 'متعثر', tone: 'stalled' },
   completed: { label: 'مكتمل', tone: 'completed' },
   onTrack: { label: 'على المسار', tone: 'ontrack' },
+}
+
+const EXEC_TONE: Record<ProjectListStatus, string> = {
+  delayed: 'pending',
+  stalled: 'changes',
+  completed: 'approved',
+  onTrack: 'approved',
 }
 
 function InfoIcon() {
@@ -54,6 +74,7 @@ export function ProjectsListView({
   onToggleFilters,
   toolbarExtra,
   banner,
+  exec,
   children,
 }: {
   rows: ProjectListRow[]
@@ -69,6 +90,7 @@ export function ProjectsListView({
   onToggleFilters: () => void
   toolbarExtra?: ReactNode
   banner?: ReactNode
+  exec?: ProjectListExec
   /** Replaces the KPI row and table (used for the presentation generator view). */
   children?: ReactNode
 }) {
@@ -94,18 +116,20 @@ export function ProjectsListView({
               <span>{createLabel}</span>
             </button>
           ) : null}
-          {toolbarExtra}
-          <button
-            type="button"
-            className={`sc-btn-outline${filtersOpen || activeFilter !== 'all' ? ' sc-btn-outline--active' : ''}`}
-            onClick={onToggleFilters}
-          >
-            <ListFilter size={17} />
-            <span>تصفية</span>
-          </button>
+          {exec ? null : toolbarExtra}
+          {exec ? null : (
+            <button
+              type="button"
+              className={`sc-btn-outline${filtersOpen || activeFilter !== 'all' ? ' sc-btn-outline--active' : ''}`}
+              onClick={onToggleFilters}
+            >
+              <ListFilter size={17} />
+              <span>تصفية</span>
+            </button>
+          )}
         </div>
 
-        {filtersOpen ? (
+        {filtersOpen && !exec ? (
           <div className="sp-filters" role="tablist" aria-label="تصفية المشاريع">
             {filters.map((filter) => (
               <button
@@ -126,13 +150,61 @@ export function ProjectsListView({
         {children ?? (
           <>
             <TrendKpiRow
-              stats={[
-                { label: 'عدد المشاريع', value: all, delta: `${completed} مكتمل`, up: true },
-                { label: 'متوسط التقدم', value: `${avgProgress}%`, delta: `${delayed} متأخر`, up: delayed === 0 },
-                { label: 'عدد المخرجات', value: totalOutputs, delta: `${all} مشروع`, up: totalOutputs > 0 },
-              ]}
+              stats={
+                exec?.kpis ?? [
+                  { label: 'عدد المشاريع', value: all, delta: `${completed} مكتمل`, up: true },
+                  { label: 'متوسط التقدم', value: `${avgProgress}%`, delta: `${delayed} متأخر`, up: delayed === 0 },
+                  { label: 'عدد المخرجات', value: totalOutputs, delta: `${all} مشروع`, up: totalOutputs > 0 },
+                ]
+              }
             />
 
+            {exec ? (
+              <div className="rc-view-bar rc-view-bar--split sp-exec-bar">
+                {exec.filterBar}
+                <ViewToggle value={exec.view} onChange={exec.onViewChange} />
+              </div>
+            ) : null}
+
+            {exec?.view === 'cards' ? (
+              <>
+                {loading ? <p className="sc-empty">جاري التحميل...</p> : null}
+                {!loading && rows.length === 0 ? (
+                  <p className="sc-empty">{activeFilter === 'all' ? 'لا توجد مشاريع. أضف مشروعاً جديداً للبدء.' : t('noMatchingFilter')}</p>
+                ) : null}
+                <RecordCardGrid>
+                  {rows.map((row) => {
+                    const meta = STATUS_META[row.status]
+                    const notStarted = !row.noOutputs && row.progress === 0 && row.status === 'onTrack'
+                    return (
+                      <RecordCard
+                        key={row.key}
+                        title={row.name}
+                        subtitle={row.subtitle}
+                        badges={
+                          <ToneBadge
+                            meta={
+                              row.noOutputs
+                                ? { label: 'لم تُحدد المخرجات', tone: 'none' }
+                                : notStarted
+                                  ? { label: 'لم يبدأ', tone: 'none' }
+                                  : { label: meta.label, tone: EXEC_TONE[row.status] }
+                            }
+                          />
+                        }
+                        progress={{
+                          label: 'التقدم التنفيذي',
+                          value: row.noOutputs ? null : row.progress,
+                          note: row.noOutputs ? 'لم تُحدد المخرجات بعد' : `المخرجات المعتمدة ${row.approvedOutputs}`,
+                        }}
+                        linkLabel="عرض المشروع"
+                        onOpen={() => onOpen(row.key)}
+                      />
+                    )
+                  })}
+                </RecordCardGrid>
+              </>
+            ) : (
             <div className="sc-table-wrap">
               <div className={`sp-table-head${showApproved ? ' sp-grid--approved' : ''}`}>
                 <span className="sp-col-name">اسم المشروع</span>
@@ -170,7 +242,10 @@ export function ProjectsListView({
                         <div className="sp-progress">
                           <span className="sp-progress__text">{progress}%</span>
                           <div className="sp-progress__track">
-                            <div className={`sp-progress__fill sp-tone--${meta.tone}`} style={{ width: `${progress}%` }} />
+                            <div
+                              className={`sp-progress__fill sp-tone--${meta.tone}`}
+                              style={{ width: `${progress}%`, ...(exec ? { background: progressColor(progress) } : null) }}
+                            />
                           </div>
                         </div>
                       </div>
@@ -197,6 +272,7 @@ export function ProjectsListView({
                 })}
               </ul>
             </div>
+            )}
           </>
         )}
       </div>

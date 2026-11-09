@@ -174,7 +174,11 @@ exports.getProjects = async (req, res) => {
 
     const projects = await prisma.orgProject.findMany({
       where,
-      include: { ...PROJECT_INCLUDE, goalLinks: { select: { goal: { select: { id: true, title: true } } } } },
+      include: {
+        ...PROJECT_INCLUDE,
+        contracts: { select: { id: true, name: true } },
+        goalLinks: { select: { goal: { select: { id: true, title: true } } } },
+      },
       orderBy: { createdAt: 'desc' },
     })
     res.json({ count: projects.length, projects })

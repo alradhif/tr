@@ -17,6 +17,21 @@ export function projectStatusClass(status?: string | null): StatusClass {
   return 'track'
 }
 
+/** One status for a group of projects: the worst thing happening in it, "done" only when all are. */
+export function aggregateStatus(projects: Array<{ status?: string | null }>): StatusClass {
+  const statuses = projects.map((project) => projectStatusClass(project.status))
+  if (statuses.includes('blocked')) return 'blocked'
+  if (statuses.includes('delay')) return 'delay'
+  return statuses.length > 0 && statuses.every((status) => status === 'done') ? 'done' : 'track'
+}
+
+export const STATUS_DOT: Record<StatusClass, string> = {
+  track: '#22b573',
+  delay: '#f79009',
+  blocked: '#f04438',
+  done: '#22b573',
+}
+
 export function averageProgress(projects: OrgProject[]) {
   if (!projects.length) return 0
   const total = projects.reduce((sum, project) => sum + (Number(project.progressPct) || 0), 0)
