@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { riskContactError } = require('../lib/riskContact')
 const { normalizeDeliverableInput, recomputeProjectProgress } = require('../lib/projectWorkflow')
 const { notifyChangeRequestCreated } = require('../lib/changeRequests')
 const { createForUsers } = require('../lib/notify')
@@ -333,7 +334,9 @@ exports.createRisk = async (req, res) => {
     const { projectId } = req.params
     await assertOrgProject(projectId, req.user.orgId)
 
-    const { name, description, probability, impact, status, responsibleName } = req.body
+    const { name, description, probability, impact, status, responsibleName, responsiblePhone, responsibleEmail } = req.body
+    const contactError = riskContactError(req.body)
+    if (contactError) return res.status(400).json({ message: contactError })
     if (!name || !probability || !impact) {
       return res.status(400).json({
         message: 'Required fields: name, probability, impact'
@@ -348,6 +351,8 @@ exports.createRisk = async (req, res) => {
         impact,
         status: status || 'ACTIVE',
         responsibleName,
+        responsiblePhone: responsiblePhone || null,
+        responsibleEmail: responsibleEmail || null,
         projectId
       }
     })
@@ -373,6 +378,9 @@ exports.updateRisk = async (req, res) => {
     if (existing.project.orgId !== req.user.orgId) {
       return res.status(403).json({ message: 'Access denied' })
     }
+
+    const contactError = riskContactError(req.body)
+    if (contactError) return res.status(400).json({ message: contactError })
 
     const data = { ...req.body }
     delete data.projectId

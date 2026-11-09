@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, useLayoutEffect } from 'react';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, FolderOpen, X } from 'lucide-react';
 import './filters.css';
 
@@ -16,6 +16,16 @@ function FilterShell({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [alignEnd, setAlignEnd] = useState(false);
+
+  // In RTL a filter near the sidebar would open under it, so open toward the page instead.
+  useLayoutEffect(() => {
+    if (!open || !ref.current || !menuRef.current) return;
+    const trigger = ref.current.getBoundingClientRect();
+    const sidebarLeft = document.querySelector('.sidebar')?.getBoundingClientRect().left ?? window.innerWidth;
+    setAlignEnd(trigger.left + menuRef.current.offsetWidth > sidebarLeft - 8);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -47,7 +57,7 @@ function FilterShell({
         {count ? <span className="sa-filter__count">{count}</span> : null}
         <ChevronDown size={16} className={open ? 'sa-filter__chevron--open' : undefined} />
       </button>
-      {open ? <div className="sa-filter__menu">{children(() => setOpen(false))}</div> : null}
+      {open ? <div ref={menuRef} className={`sa-filter__menu${alignEnd ? ' sa-filter__menu--end' : ''}`}>{children(() => setOpen(false))}</div> : null}
     </div>
   );
 }

@@ -15,6 +15,22 @@
   min-width: 0;
 }
 
+/* Grid rows are single pixels with no margin, so each item keeps the gap inside its own height. */
+.dashboard-grid__item > .widget-wrapper {
+  height: calc(100% - 24px);
+}
+
+.dashboard-grid__item > .react-resizable-handle-s,
+.dashboard-grid__item > .react-resizable-handle-se,
+.dashboard-grid__item > .react-resizable-handle-sw {
+  bottom: 24px;
+}
+
+.dashboard-body:has(.dashboard-grid),
+.sa-app-shell .dashboard-body:has(.dashboard-grid) {
+  padding-top: 32px;
+}
+
 .dashboard-grid__layout.react-grid-layout {
   position: relative;
 }
@@ -454,8 +470,9 @@
   display: flex;
   flex: 1;
   gap: 8px;
-  min-height: 190px;
-  margin-top: 12px;
+  flex: 1;
+  min-height: 150px;
+  margin-top: 8px;
 }
 
 .sa-status-chart__ticks {
@@ -587,4 +604,36 @@
 
 .org-goal-row__bar b {
   font-size: 12px;
+}
+
+.widget-footnote {
+  margin: 8px 0 0;
+  color: #8e8f97;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.widget-open-risks,
+.widget-tenant-status-donut {
+  padding-block: 12px;
+}
+
+.widget-open-risks .legend-list,
+.widget-tenant-status-donut .legend-list {
+  gap: 2px;
+}
+
+/* The design's plan card holds all five plans in its 232px height. */
+.widget-tenant-plan-donut__legend {
+  gap: 4px;
+}
+
+.widget-tenant-plan-donut__legend .legend-item {
+  padding: 5px 12px;
+}
+
+.widget-tenant-plan-donut__chart {
+  width: 130px;
+  height: 130px;
 }

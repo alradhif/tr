@@ -48,7 +48,7 @@ export function ProjectsListWidget() {
       </div>
       <WidgetBodyGate isEmpty={projects.length === 0}>
         <div className="list-rows">
-          {projects.map((item) => {
+          {projects.slice(0, 3).map((item) => {
             const StatusIcon = statusIcon[item.status]
             return (
               <div className="list-row" key={item.id}>

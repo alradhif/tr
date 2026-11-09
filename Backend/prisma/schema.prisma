@@ -692,6 +692,8 @@ model OrgRisk {
   impact          RiskLevel
   status          String     @default("ACTIVE")
   responsibleName String?
+  responsiblePhone String?
+  responsibleEmail String?
   projectId       String
   project         OrgProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt       DateTime   @default(now())
@@ -1121,6 +1123,8 @@ model ClientRisk {
   impact          RiskLevel
   status          String        @default("ACTIVE")
   responsibleName String?
+  responsiblePhone String?
+  responsibleEmail String?
   projectId       String
   project         ClientProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt       DateTime      @default(now())

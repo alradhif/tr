@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { riskContactError } = require('../lib/riskContact')
 const { normalizeDeliverableInput, recomputeProjectProgress } = require('../lib/projectWorkflow')
 const { notifyChangeRequestCreated } = require('../lib/changeRequests')
 
@@ -402,10 +403,13 @@ exports.createRisk = async (req, res) => {
   try {
     const clientId = req.user.clientId
     const { projectId } = req.params
-    const { name, description, probability, impact, status, responsibleName } = req.body
+    const { name, description, probability, impact, status, responsibleName, responsiblePhone, responsibleEmail } = req.body
 
     const owned = await getOwnedProject(projectId, clientId)
     if (owned.error) return res.status(owned.error.status).json({ message: owned.error.message })
+
+    const contactError = riskContactError(req.body)
+    if (contactError) return res.status(400).json({ message: contactError })
 
     if (!name || !probability || !impact) {
       return res.status(400).json({ message: 'Required fields: name, probability, impact' })
@@ -419,6 +423,8 @@ exports.createRisk = async (req, res) => {
         impact,
         status: status || 'ACTIVE',
         responsibleName,
+        responsiblePhone: responsiblePhone || null,
+        responsibleEmail: responsibleEmail || null,
         projectId
       }
     })
@@ -483,6 +489,9 @@ exports.updateRisk = async (req, res) => {
     if (!existing || existing.projectId !== projectId) {
       return res.status(404).json({ message: 'Risk not found' })
     }
+
+    const contactError = riskContactError(req.body)
+    if (contactError) return res.status(400).json({ message: contactError })
 
     const data = { ...req.body }
     delete data.projectId

@@ -367,7 +367,7 @@
   flex: 1;
   gap: 0;
   min-height: 0;
-  padding: 24px 32px 32px;
+  padding: 24px 24px 32px;
 }
 
 .dashboard-body__grid-area {

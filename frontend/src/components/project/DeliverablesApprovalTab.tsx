@@ -130,10 +130,20 @@ export function DeliverablesApprovalTab({
               </tr>
             ) : null}
             {visible.map((row) => (
-              <tr key={row.key}>
+              <tr
+                key={row.key}
+                className={canOpen ? 'dr-row-link' : undefined}
+                onClick={canOpen ? () => navigate(`${reviewBase}/${row.key}`) : undefined}
+              >
                 <td className="dr-name">
                   {canOpen ? (
-                    <button type="button" onClick={() => navigate(`${reviewBase}/${row.key}`)}>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        navigate(`${reviewBase}/${row.key}`)
+                      }}
+                    >
                       {row.name}
                     </button>
                   ) : (
@@ -149,7 +159,7 @@ export function DeliverablesApprovalTab({
                 <td>
                   <ReviewBadge status={row.reviewStatus} />
                 </td>
-                <td>
+                <td onClick={(event) => event.stopPropagation()}>
                   <div className="dr-actions">
                     {canDecide && row.reviewStatus === 'PENDING' ? (
                       <>

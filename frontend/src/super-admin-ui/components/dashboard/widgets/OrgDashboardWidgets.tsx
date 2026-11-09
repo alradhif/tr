@@ -94,6 +94,7 @@ export function PendingApprovalsListWidget() {
             </div>
           ))}
         </div>
+        <p className="widget-footnote">الاعتماد يتم على المخرج داخل صفحة مشروعه. اختر مخرجًا لفتحه.</p>
       </WidgetBodyGate>
     </Card>
   )

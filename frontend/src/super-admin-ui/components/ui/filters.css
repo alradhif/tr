@@ -65,6 +65,11 @@
   box-shadow: 0 12px 32px rgb(16 24 40 / 16%);
 }
 
+.sa-filter__menu--end {
+  right: 0;
+  left: auto;
+}
+
 .sa-filter__heading {
   margin: 0 0 8px;
   color: #8e8f97;

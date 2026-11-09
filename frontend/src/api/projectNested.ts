@@ -122,6 +122,8 @@ export type OrgRiskDetail = {
   impact: string
   status: string
   responsibleName?: string | null
+  responsiblePhone?: string | null
+  responsibleEmail?: string | null
   actions: Array<{ id: string; action: string; responsibleName?: string | null }>
 }
 

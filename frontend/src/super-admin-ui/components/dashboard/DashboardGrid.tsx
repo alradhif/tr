@@ -19,12 +19,24 @@ import './dashboard.css';
 
 const ResponsiveGrid = WidthProvider(GridLayout);
 
-const ROW_HEIGHT = 60;
-const ROW_MARGIN_Y = 20;
+/** One grid row is one pixel; an item's height is its card plus the gap below it (see dashboard.css). */
+const ROW_GAP = 24;
+/** Layouts saved before the pixel grid used 80px rows (60px plus a 20px gap). */
+const LEGACY_ROW_PX = 80;
+const LEGACY_MAX_ROWS = 60;
 
 function pixelsToRows(pixelHeight: number, minH: number) {
-  const rows = Math.ceil((pixelHeight + ROW_MARGIN_Y) / (ROW_HEIGHT + ROW_MARGIN_Y));
-  return Math.max(rows, minH);
+  return Math.max(Math.ceil(pixelHeight) + ROW_GAP, minH);
+}
+
+function fromSavedLayout(items: LayoutItem[]): LayoutItem[] {
+  if (items.some((item) => item.h >= LEGACY_MAX_ROWS)) return items;
+  return items.map((item) => ({
+    ...item,
+    y: item.y * LEGACY_ROW_PX,
+    h: item.h * LEGACY_ROW_PX,
+    ...(item.minH !== undefined ? { minH: WIDGET_REGISTRY[item.i as WidgetId]?.minH ?? item.minH * LEGACY_ROW_PX } : null),
+  }));
 }
 
 interface DashboardGridProps {
@@ -105,8 +117,8 @@ export function DashboardGrid({
         className="dashboard-grid__layout"
         layout={activeLayout}
         cols={12}
-        rowHeight={60}
-        margin={[20, 20]}
+        rowHeight={1}
+        margin={[20, 0]}
         containerPadding={[0, 0]}
         isDraggable={isEditMode}
         isResizable={isEditMode}
@@ -170,7 +182,7 @@ export function useDashboardState(
         );
         if (valid.length === 0) return;
         setActiveWidgetIds(valid);
-        setLayout((saved.layout as LayoutItem[]).filter((item) => valid.includes(item.i as WidgetId)));
+        setLayout(fromSavedLayout((saved.layout as LayoutItem[]).filter((item) => valid.includes(item.i as WidgetId))));
       })
       .catch(() => undefined);
     return () => {

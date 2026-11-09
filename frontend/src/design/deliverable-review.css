@@ -531,3 +531,31 @@
   height: auto;
   max-height: none;
 }
+
+/* Risk facts: impact, likelihood and status, then the responsible person's contact details. */
+.dr-facts--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+
+.dr-facts--three .dr-fact {
+  padding: 14px 0;
+}
+
+.dr-facts--three .dr-fact:nth-child(n + 4) {
+  border-top: 1px solid #ececee;
+}
+
+.dr-facts--three a {
+  color: inherit;
+}
+
+.dr-row-link {
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  .dr-facts--three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

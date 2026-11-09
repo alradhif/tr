@@ -25,15 +25,15 @@ export function TenantStatusDonutWidget() {
               </div>
             ))}
           </div>
-          <div style={{ width: 76, height: 76, flexShrink: 0 }}>
+          <div style={{ width: 64, height: 64, flexShrink: 0 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={tenantStatusBreakdown}
                   cx="50%"
                   cy="50%"
-                  innerRadius={20}
-                  outerRadius={34}
+                  innerRadius={17}
+                  outerRadius={30}
                   paddingAngle={2}
                   dataKey="value"
                   stroke="none"

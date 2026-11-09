@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { message } from 'antd'
-import { Calendar, Clock, Coins, FileWarning, Mail, ShieldAlert, Target, User } from 'lucide-react'
+import { Calendar, Clock, Coins, FileWarning, Mail, Phone, ShieldAlert, Target, User } from 'lucide-react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import {
@@ -151,7 +151,7 @@ export function OrgRiskPage() {
               </span>
               <h2>{risk.name}</h2>
             </div>
-            <dl className="dr-facts">
+            <dl className="dr-facts dr-facts--three">
               <Fact icon={<Target size={18} />} label="التأثير">
                 <ToneBadge meta={LEVEL_META[risk.impact]} />
               </Fact>
@@ -163,6 +163,12 @@ export function OrgRiskPage() {
               </Fact>
               <Fact icon={<User size={18} />} label="الشخص المسؤول">
                 {risk.responsibleName || '—'}
+              </Fact>
+              <Fact icon={<Phone size={18} />} label="الهاتف">
+                <span dir="ltr">{risk.responsiblePhone || '—'}</span>
+              </Fact>
+              <Fact icon={<Mail size={18} />} label="البريد الإلكتروني">
+                {risk.responsibleEmail ? <a href={`mailto:${risk.responsibleEmail}`}>{risk.responsibleEmail}</a> : '—'}
               </Fact>
             </dl>
           </section>

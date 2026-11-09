@@ -354,7 +354,11 @@ const MOCK_RISKS = [
   { name: 'تعارض إصدارات المكتبات التقنية', description: 'تقني • المرحلة 2', probability: 'HIGH', impact: 'HIGH', status: 'MITIGATING', responsibleName: 'رهف احمد' },
   { name: 'تغيير متطلبات واجهة المستخدم', description: 'نطاق العمل • المرحلة 1', probability: 'MEDIUM', impact: 'MEDIUM', status: 'ACTIVE', responsibleName: 'محمد عبدالله' },
   { name: 'انتهاء عقد أحد أعضاء الفريق', description: 'موارد بشرية • المرحلة 1', probability: 'LOW', impact: 'LOW', status: 'CLOSED', responsibleName: 'سارة خالد' },
-]
+].map((risk, index) => ({
+  ...risk,
+  responsiblePhone: `+966 50 123 45${10 + index}`,
+  responsibleEmail: `risk.owner${index + 1}@trackplus.example`,
+}))
 
 const MOCK_CHANGE_REQUESTS = [
   { title: 'إضافة تقارير تحليلية للوحة التحكم', priority: 'HIGH', status: 'UNDER_REVIEW', submittedBy: 'سارة خالد' },

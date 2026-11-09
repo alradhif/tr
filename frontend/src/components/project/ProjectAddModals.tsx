@@ -275,7 +275,10 @@ export function AddRiskModal({ projectId, portal, onClose, onSaved }: SharedProp
   const [name, setName] = useState('')
   const [probability, setProbability] = useState('MEDIUM')
   const [impact, setImpact] = useState('MEDIUM')
+  const [status, setStatus] = useState('ACTIVE')
   const [responsibleName, setResponsibleName] = useState('')
+  const [responsiblePhone, setResponsiblePhone] = useState('')
+  const [responsibleEmail, setResponsibleEmail] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -293,8 +296,10 @@ export function AddRiskModal({ projectId, portal, onClose, onSaved }: SharedProp
         description: description.trim() || undefined,
         probability,
         impact,
-        status: 'ACTIVE',
+        status,
         responsibleName: responsibleName.trim() || undefined,
+        responsiblePhone: responsiblePhone.trim() || undefined,
+        responsibleEmail: responsibleEmail.trim() || undefined,
       }
       await postNested(
         portal,
@@ -313,7 +318,7 @@ export function AddRiskModal({ projectId, portal, onClose, onSaved }: SharedProp
 
   return (
     <TrackFormModal
-      title="إضافة خطر"
+      title="إضافة مخاطر"
       icon={<FileText size={22} />}
       submitLabel="إضافة"
       submitting={submitting}
@@ -323,8 +328,25 @@ export function AddRiskModal({ projectId, portal, onClose, onSaved }: SharedProp
     >
       <div className="project-output-modal__grid">
         <label>
-          <span>اسم الخطر</span>
+          <span>اسم المخاطر</span>
           <input value={name} onChange={(event) => setName(event.target.value)} autoFocus />
+        </label>
+        <label>
+          <span>الحالة</span>
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>
+            <option value="ACTIVE">نشط</option>
+            <option value="IN_PROGRESS">قيد المعالجة</option>
+            <option value="CLOSED">مغلق</option>
+          </select>
+        </label>
+        <label>
+          <span>مدى التأثير</span>
+          <select value={impact} onChange={(event) => setImpact(event.target.value)}>
+            <option value="LOW">منخفض</option>
+            <option value="MEDIUM">متوسط</option>
+            <option value="HIGH">مرتفع</option>
+            <option value="CRITICAL">حرج</option>
+          </select>
         </label>
         <label>
           <span>الاحتمالية</span>
@@ -336,17 +358,16 @@ export function AddRiskModal({ projectId, portal, onClose, onSaved }: SharedProp
           </select>
         </label>
         <label>
-          <span>الأثر</span>
-          <select value={impact} onChange={(event) => setImpact(event.target.value)}>
-            <option value="LOW">منخفض</option>
-            <option value="MEDIUM">متوسط</option>
-            <option value="HIGH">مرتفع</option>
-            <option value="CRITICAL">حرج</option>
-          </select>
+          <span>مسؤول المخاطر</span>
+          <input value={responsibleName} onChange={(event) => setResponsibleName(event.target.value)} />
         </label>
         <label>
-          <span>المسؤول</span>
-          <input value={responsibleName} onChange={(event) => setResponsibleName(event.target.value)} />
+          <span>رقم الهاتف</span>
+          <input type="tel" dir="ltr" placeholder="+966 5X XXX XXXX" value={responsiblePhone} onChange={(event) => setResponsiblePhone(event.target.value)} />
+        </label>
+        <label>
+          <span>البريد الإلكتروني</span>
+          <input type="email" dir="ltr" value={responsibleEmail} onChange={(event) => setResponsibleEmail(event.target.value)} />
         </label>
       </div>
       <div className="project-output-modal__files">
