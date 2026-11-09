@@ -381,30 +381,3 @@
   color: #8e8f97;
   font-size: 11px;
 }
-
-.org-invoices__filters .org-invoices__tabs-row {
-  flex: 1 0 100%;
-}
-
-.org-invoices__tabs-row {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.org-invoices__card-details {
-  display: block;
-  margin-top: 16px;
-  padding: 20px;
-  border-radius: 20px;
-  background: #fff;
-}
-
-.org-invoices__card-details h2 {
-  margin: 0 0 12px;
-  color: #0c0c0d;
-  font-size: 16px;
-  font-weight: 700;
-}

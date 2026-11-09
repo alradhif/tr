@@ -17,7 +17,6 @@ import { getOrgToken } from '../../auth/orgAuth'
 import { canCreateDraft, isUpperManagement } from '../../auth/permissions'
 import { TrackFormModal } from '../../components/ui/TrackFormModal'
 import { FinanceCreateButton, formatAmount } from '../../features/jodayn-finance/FinanceParts'
-import { RecordCard, RecordCardGrid, ToneBadge, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
 import { MultiSelectFilter, PageState, SingleSelectFilter } from '../../super-admin-ui/components/ui/filters'
 import { SaDialog } from '../../super-admin-ui/components/ui/SaDialog'
 import '../../features/jodayn-finance/jodayn-invoices.css'
@@ -46,7 +45,6 @@ export function OrgInvoicesPage() {
   const [failed, setFailed] = useState(false)
   const [groupBy, setGroupBy] = useState<GroupBy>('company')
   const [openGroup, setOpenGroup] = useState<string | null>(null)
-  const [view, setView] = useViewMode('org-invoices')
   const [adding, setAdding] = useState(false)
   const [recording, setRecording] = useState<OrgPayment | null>(null)
   const [year, setYear] = useState('all')
@@ -177,8 +175,6 @@ export function OrgInvoicesPage() {
       </section>
     ))
 
-  const openedCard = view === 'cards' ? groups.find((group) => group.name === openGroup) : undefined
-
   return (
     <div className="finance-page jinv org-invoices" dir="rtl">
       <header className="jinv-header">
@@ -194,7 +190,6 @@ export function OrgInvoicesPage() {
         </div>
 
         <div className="org-invoices__filters">
-          <div className="org-invoices__tabs-row">
           <div className="org-invoices__tabs" role="tablist" aria-label="طريقة التجميع">
             {(
               [
@@ -216,8 +211,6 @@ export function OrgInvoicesPage() {
                 {label}
               </button>
             ))}
-          </div>
-          <ViewToggle value={view} onChange={setView} />
           </div>
           <div className="org-invoices__selects">
             <SingleSelectFilter
@@ -288,47 +281,6 @@ export function OrgInvoicesPage() {
           />
         ) : !loading && groups.length === 0 ? (
           <PageState title="لا توجد فواتير" body="لا توجد دفعات تطابق الفلاتر الحالية." />
-        ) : view === 'cards' ? (
-          <>
-            {loading ? <p className="jinv-empty">جاري تحميل البيانات...</p> : null}
-            <RecordCardGrid>
-              {groups.map((group) => {
-                const left = group.payments.filter((payment) => !payment.paidAt)
-                const lateCount = group.payments.filter((payment) => stateOf(payment) === 'overdue').length
-                const invoiceCount = invoicesOf(group.payments).size
-                return (
-                  <RecordCard
-                    key={group.name}
-                    title={group.name}
-                    badges={
-                      <ToneBadge
-                        meta={{
-                          label: `${remainingLabel(left.length)}${lateCount ? ` · ${lateCount} متأخرة` : ''}`,
-                          tone: left.length === 0 ? 'approved' : lateCount ? 'changes' : 'pending',
-                        }}
-                      />
-                    }
-                    rows={[
-                      { label: 'المتبقي', value: `${formatAmount(sum(left))} ر.س` },
-                      { label: words.settled, value: `${formatAmount(sum(group.payments) - sum(left))} ر.س` },
-                      { label: 'الإجمالي', value: `${formatAmount(sum(group.payments))} ر.س` },
-                      groupBy === 'project'
-                        ? { label: words.company, value: companyName(group.payments[0]) }
-                        : { label: 'الفواتير', value: invoiceCount },
-                    ]}
-                    linkLabel={openGroup === group.name ? 'إخفاء الدفعات' : 'عرض الدفعات'}
-                    onOpen={() => setOpenGroup(openGroup === group.name ? null : group.name)}
-                  />
-                )
-              })}
-            </RecordCardGrid>
-            {openedCard ? (
-              <div className="org-invoices__details org-invoices__card-details">
-                <h2>دفعات {openedCard.name}</h2>
-                {renderInvoices(invoicesOf(openedCard.payments))}
-              </div>
-            ) : null}
-          </>
         ) : (
           <div className="jinv-table-wrap">
             {loading ? <p className="jinv-empty">جاري تحميل البيانات...</p> : null}

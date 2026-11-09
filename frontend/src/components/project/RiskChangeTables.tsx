@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { RecordCard, RecordCardGrid, ToneBadge, useViewMode, ViewToggle } from '../ui/RecordCards'
+import { ToneBadge } from '../ui/RecordCards'
 
 import '../../design/deliverable-review.css'
 
@@ -49,40 +49,8 @@ export function RisksTable({
   canOpen: boolean
 }) {
   const navigate = useNavigate()
-  const [view, setView] = useViewMode('org-project-risks')
   const hasActions = rows.some((row) => row.actions)
   return (
-    <div className="dr-tab">
-    <div className="rc-view-bar">
-      <ViewToggle value={view} onChange={setView} />
-    </div>
-    {view === 'cards' ? (
-      <>
-        {rows.length === 0 ? <p className="dr-empty">لا توجد مخاطر بعد</p> : null}
-        <RecordCardGrid>
-          {rows.map((row) => (
-            <RecordCard
-              key={row.key}
-              title={row.name}
-              subtitle={row.subtitle}
-              badges={
-                <>
-                  <ToneBadge meta={RISK_STATUS[row.status.toUpperCase()] ?? { label: row.status, tone: 'none' }} />
-                  <ToneBadge meta={LEVEL_META[row.impact.toUpperCase()]} />
-                </>
-              }
-              rows={[
-                { label: 'آخر نشاط', value: row.updated },
-                { label: 'المسؤول', value: row.responsible },
-              ]}
-              actions={row.actions}
-              linkLabel={canOpen ? 'عرض الخطر' : undefined}
-              onOpen={canOpen ? () => navigate(`${base}/${row.key}`) : undefined}
-            />
-          ))}
-        </RecordCardGrid>
-      </>
-    ) : (
     <div className="dr-table-wrap">
       <table className="dr-table dr-table--center">
         <thead>
@@ -125,8 +93,6 @@ export function RisksTable({
         </tbody>
       </table>
     </div>
-    )}
-    </div>
   )
 }
 
@@ -140,39 +106,8 @@ export function ChangeRequestsTable({
   canOpen: boolean
 }) {
   const navigate = useNavigate()
-  const [view, setView] = useViewMode('org-project-change-requests')
   const hasActions = rows.some((row) => row.actions)
   return (
-    <div className="dr-tab">
-    <div className="rc-view-bar">
-      <ViewToggle value={view} onChange={setView} />
-    </div>
-    {view === 'cards' ? (
-      <>
-        {rows.length === 0 ? <p className="dr-empty">لا توجد طلبات تغيير بعد</p> : null}
-        <RecordCardGrid>
-          {rows.map((row) => (
-            <RecordCard
-              key={row.key}
-              title={row.title}
-              badges={
-                <>
-                  <ToneBadge meta={REQUEST_STATUS[row.status.toUpperCase()] ?? { label: row.status, tone: 'none' }} />
-                  <ToneBadge meta={LEVEL_META[row.priority.toUpperCase()]} />
-                </>
-              }
-              rows={[
-                { label: 'التاريخ', value: row.date },
-                { label: 'مقدم الطلب', value: row.submittedBy },
-              ]}
-              actions={row.actions}
-              linkLabel={canOpen ? 'عرض الطلب' : undefined}
-              onOpen={canOpen ? () => navigate(`${base}/${row.key}`) : undefined}
-            />
-          ))}
-        </RecordCardGrid>
-      </>
-    ) : (
     <div className="dr-table-wrap">
       <table className="dr-table dr-table--center">
         <thead>
@@ -212,8 +147,6 @@ export function ChangeRequestsTable({
         </tbody>
       </table>
     </div>
-    )}
-    </div>
   )
 }
 
@@ -239,7 +172,6 @@ const outputState = (row: OutputRow) =>
 
 /** Deliverables for portals without an approval step: same layout as the organization's tab. */
 export function OutputsTab({ rows }: { rows: OutputRow[] }) {
-  const [view, setView] = useViewMode('project-outputs')
   const [filter, setFilter] = useState<'all' | keyof typeof OUTPUT_STATE>('all')
   const visible = filter === 'all' ? rows : rows.filter((row) => outputState(row) === filter)
   const hasActions = rows.some((row) => row.actions)
@@ -264,29 +196,6 @@ export function OutputsTab({ rows }: { rows: OutputRow[] }) {
           </button>
         ))}
       </div>
-      <div className="rc-view-bar">
-        <ViewToggle value={view} onChange={setView} />
-      </div>
-      {view === 'cards' ? (
-        <>
-          {visible.length === 0 ? <p className="dr-empty">لا توجد مخرجات بهذه الحالة</p> : null}
-          <RecordCardGrid>
-            {visible.map((row) => (
-              <RecordCard
-                key={row.key}
-                title={row.name}
-                badges={<ToneBadge meta={stateMeta(row)} />}
-                rows={[
-                  { label: 'المرحلة', value: row.phase },
-                  { label: 'تاريخ الاستحقاق', value: row.dueDate },
-                  { label: 'تاريخ الإضافة', value: row.createdAt },
-                ]}
-                actions={row.actions}
-              />
-            ))}
-          </RecordCardGrid>
-        </>
-      ) : (
         <div className="dr-table-wrap">
           <table className="dr-table">
             <thead>
@@ -322,7 +231,6 @@ export function OutputsTab({ rows }: { rows: OutputRow[] }) {
             </tbody>
           </table>
         </div>
-      )}
     </div>
   )
 }

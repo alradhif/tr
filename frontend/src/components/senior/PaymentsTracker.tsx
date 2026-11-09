@@ -1,7 +1,6 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronLeft, Trash2 } from 'lucide-react'
 import { formatAmount, formatDate } from '../../features/jodayn-finance/FinanceParts'
-import { RecordCard, RecordCardGrid, ToneBadge, useViewMode, ViewToggle } from '../ui/RecordCards'
 import '../../features/jodayn-finance/jodayn-invoices.css'
 import '../../design/org-invoices.css'
 
@@ -77,7 +76,6 @@ export function PaymentsTracker({
 }) {
   const [groupBy, setGroupBy] = useState<GroupBy>('counterparty')
   const [openGroup, setOpenGroup] = useState<string | null>(null)
-  const [view, setView] = useViewMode(`payments-${direction}`)
   const words = WORDING[direction]
 
   const groups = useMemo(() => {
@@ -170,7 +168,6 @@ export function PaymentsTracker({
         ))}
       </div>
 
-      <div className="org-invoices__tabs-row">
       <div className="org-invoices__tabs" role="tablist" aria-label="طريقة تجميع الدفعات">
         {(
           [
@@ -193,48 +190,7 @@ export function PaymentsTracker({
           </button>
         ))}
       </div>
-      <ViewToggle value={view} onChange={setView} />
-      </div>
 
-      {view === 'cards' && !loading && groups.length > 0 ? (
-        <>
-          <RecordCardGrid>
-            {groups.map((group) => {
-              const left = group.payments.filter((payment) => !payment.settled)
-              const lateCount = group.payments.filter(isOverdue).length
-              const total = sum(group.payments)
-              return (
-                <RecordCard
-                  key={group.name}
-                  title={group.name}
-                  badges={
-                    <ToneBadge
-                      meta={{
-                        label: `${remainingLabel(left.length)}${lateCount ? ` · ${lateCount} متأخرة` : ''}`,
-                        tone: left.length === 0 ? 'approved' : lateCount ? 'changes' : 'pending',
-                      }}
-                    />
-                  }
-                  progress={{ label: 'نسبة الإنجاز', value: total ? ((total - sum(left)) / total) * 100 : 0 }}
-                  rows={[
-                    { label: words.remaining, value: `${formatAmount(sum(left))} ريال` },
-                    { label: words.settled, value: `${formatAmount(total - sum(left))} ريال` },
-                    { label: 'الدفعات', value: `${group.payments.length - left.length} من ${group.payments.length}` },
-                  ]}
-                  linkLabel={openGroup === group.name ? 'إخفاء الدفعات' : 'عرض الدفعات'}
-                  onOpen={() => setOpenGroup(openGroup === group.name ? null : group.name)}
-                />
-              )
-            })}
-          </RecordCardGrid>
-          {groups.find((group) => group.name === openGroup) ? (
-            <div className="org-invoices__details org-invoices__card-details">
-              <h2>دفعات {openGroup}</h2>
-              {renderPayments(groups.find((group) => group.name === openGroup)!.payments)}
-            </div>
-          ) : null}
-        </>
-      ) : (
       <div className="jinv-table-wrap">
         {loading ? (
           <p className="jinv-empty">جاري تحميل البيانات...</p>
@@ -301,7 +257,6 @@ export function PaymentsTracker({
           </table>
         )}
       </div>
-      )}
     </>
   )
 }

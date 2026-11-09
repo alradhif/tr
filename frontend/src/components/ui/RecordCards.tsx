@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Tooltip } from 'antd'
 import { Check, CheckCircle2, Clock, LayoutGrid, ListFilter, Rows3, TriangleAlert, XCircle } from 'lucide-react'
 import type { StatusClass } from '../../pages/org/orgEntityUi'
 import { STATUS_META } from '../../pages/org/orgEntityUi'
@@ -13,9 +14,9 @@ const storageKey = (page: string) => `trackplus.view.${page}`
 export function useViewMode(page: string) {
   const [view, setView] = useState<ViewMode>(() => {
     try {
-      return localStorage.getItem(storageKey(page)) === 'cards' ? 'cards' : 'table'
+      return localStorage.getItem(storageKey(page)) === 'table' ? 'table' : 'cards'
     } catch {
-      return 'table'
+      return 'cards'
     }
   })
   const change = (next: ViewMode) => {
@@ -37,10 +38,11 @@ export function ViewToggle({ value, onChange }: { value: ViewMode; onChange: (ne
   return (
     <div className="rc-toggle" role="group" aria-label="طريقة العرض">
       {options.map(({ key, label, Icon }) => (
-        <button key={key} type="button" aria-pressed={value === key} className={value === key ? 'is-active' : ''} onClick={() => onChange(key)}>
-          <Icon size={16} />
-          {label}
-        </button>
+        <Tooltip key={key} title={label}>
+          <button type="button" aria-label={label} aria-pressed={value === key} className={value === key ? 'is-active' : ''} onClick={() => onChange(key)}>
+            <Icon size={17} aria-hidden />
+          </button>
+        </Tooltip>
       ))}
     </div>
   )
@@ -92,7 +94,6 @@ export function RecordCard({
   badges,
   progress,
   rows,
-  actions,
   linkLabel,
   onOpen,
 }: {
@@ -102,7 +103,6 @@ export function RecordCard({
   /** A null value means nothing can be measured yet, so no percentage is shown. */
   progress?: { label: string; value: number | null; note?: string }
   rows?: Array<{ label: string; value: ReactNode }>
-  actions?: ReactNode
   linkLabel?: string
   onOpen?: () => void
 }) {
@@ -138,7 +138,6 @@ export function RecordCard({
           ))}
         </dl>
       ) : null}
-      {actions ? <div className="rc-card__actions">{actions}</div> : null}
       {linkLabel && onOpen ? (
         <button type="button" className="rc-card__link" onClick={onOpen}>
           {linkLabel}

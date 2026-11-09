@@ -12,7 +12,6 @@ import { getClientToken } from '../../auth/clientAuth'
 import {
   Badge,
   CatalogButton,
-  FilterChips,
   ListCard,
   ListCardStack,
   StatCard,
@@ -20,6 +19,7 @@ import {
   type BadgeVariant,
 } from '../../components/ui'
 import { EmptyState } from '../../components/EmptyState'
+import { useGoalFilters } from '../../components/ui/GoalFilters'
 import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
 import { ProgressBar } from '../../org-catalog/ProgressBar'
 
@@ -57,7 +57,6 @@ export function ClientGoalsPage() {
   const navigate = useNavigate()
   const [goals, setGoals] = useState<ClientStrategicGoal[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeFilter, setActiveFilter] = useState('all')
 
   useEffect(() => {
     const token = getClientToken()
@@ -107,9 +106,20 @@ export function ClientGoalsPage() {
     [goals],
   )
 
-  const visible = rows.filter(
-    (row) => activeFilter === 'all' || row.ui === activeFilter || (activeFilter === 'stalled' && row.ui === 'delayed'),
+  const filterItems = useMemo(
+    () =>
+      goals.map((goal) => ({
+        id: goal.id,
+        title: goal.title,
+        status: mapGoalUiStatus(goal),
+        startDate: goal.startDate,
+        endDate: goal.endDate,
+        owners: [],
+      })),
+    [goals],
   )
+  const { visibleIds, bar } = useGoalFilters(filterItems)
+  const visible = rows.filter((row) => visibleIds.has(row.key))
 
   return (
     <OrgCatalogShell title={t('strategicGoals')}>
@@ -145,16 +155,7 @@ export function ClientGoalsPage() {
         />
       </StatGrid>
 
-      <FilterChips
-        value={activeFilter}
-        onChange={setActiveFilter}
-        items={[
-          { key: 'all', label: t('all'), count: rows.length },
-          { key: 'onTrack', label: t('onTrack'), count: rows.filter((row) => row.ui === 'onTrack').length },
-          { key: 'stalled', label: t('stalled'), count: rows.filter((row) => row.ui === 'stalled' || row.ui === 'delayed').length },
-          { key: 'completed', label: t('completed'), count: rows.filter((row) => row.ui === 'completed').length },
-        ]}
-      />
+      {bar}
 
       <ListCardStack>
         {visible.map((row) => {

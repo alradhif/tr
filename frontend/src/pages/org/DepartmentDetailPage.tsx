@@ -22,7 +22,7 @@ import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
 import { SubpageHeader } from '../../components/ui'
 import { TrendKpiRow } from '../../components/senior/TrendKpiCard'
 import { downloadCsv } from '../../api/me'
-import { progressColor, RecordCard, RecordCardGrid, StatusBadge, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
+import { progressColor, StatusBadge } from '../../components/ui/RecordCards'
 import { averageProgress, projectStatusClass, STATUS_META, nextStatusFilter, type StatusClass } from './orgEntityUi'
 import '../../design/departments-detail.css'
 import '../../design/departments.css'
@@ -46,7 +46,6 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
   const [banner, setBanner] = useState<'success' | 'error' | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusClass | 'all'>('all')
-  const [view, setView] = useViewMode(`${portal.base}-department-projects`)
 
   const canEdit = canCreateDraft(role)
   const canDelete = isUpperManagement(role)
@@ -257,31 +256,6 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
                     </button>
                     </div>
                   </div>
-                  <div className="rc-tab-view">
-                    <ViewToggle value={view} onChange={setView} />
-                  </div>
-                  {view === 'cards' ? (
-                    <div className="rc-cards-inset">
-                      {visibleProjects.length === 0 ? (
-                        <p className="department-detail-empty">{projects.length === 0 ? 'لا توجد مشاريع مرتبطة بهذه الإدارة' : 'لا توجد مشاريع بهذه الحالة'}</p>
-                      ) : null}
-                      <RecordCardGrid>
-                        {visibleProjects.map((project) => {
-                          const href = portal.projectHref(project.id)
-                          return (
-                            <RecordCard
-                              key={project.id}
-                              title={project.name}
-                              badges={<StatusBadge status={projectStatusClass(project.status)} />}
-                              progress={{ label: 'التقدم التنفيذي', value: project.progressPct || 0 }}
-                              linkLabel={href ? 'عرض المشروع' : undefined}
-                              onOpen={href ? () => navigate(href) : undefined}
-                            />
-                          )
-                        })}
-                      </RecordCardGrid>
-                    </div>
-                  ) : (
                   <table className="department-detail-project-table">
                     <thead>
                       <tr>
@@ -327,7 +301,6 @@ export function OrgDepartmentDetailPage({ initialEdit = false }: { initialEdit?:
                       })}
                     </tbody>
                   </table>
-                  )}
                 </>
               ) : null}
 

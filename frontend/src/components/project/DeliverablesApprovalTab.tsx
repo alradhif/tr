@@ -6,7 +6,6 @@ import { ApiError } from '../../api/client'
 import { approveOrgDeliverable, requestOrgDeliverableChanges, submitOrgDeliverable } from '../../api/projectNested'
 import { getOrgToken } from '../../auth/orgAuth'
 import { SaDialog } from '../../super-admin-ui/components/ui/SaDialog'
-import { RecordCard, RecordCardGrid, useViewMode, ViewToggle } from '../ui/RecordCards'
 import '../../design/deliverable-review.css'
 
 export type ReviewStatus = 'NOT_SUBMITTED' | 'PENDING' | 'CHANGES_REQUESTED' | 'APPROVED'
@@ -65,7 +64,6 @@ export function DeliverablesApprovalTab({
   const [filter, setFilter] = useState<Filter>('all')
   const [decision, setDecision] = useState<Decision | null>(null)
   const [busy, setBusy] = useState(false)
-  const [view, setView] = useViewMode('org-project-deliverables')
 
   const chips: Array<{ id: Filter; label: string }> = [
     { id: 'all', label: 'الكل' },
@@ -111,31 +109,6 @@ export function DeliverablesApprovalTab({
         ))}
       </div>
 
-      <div className="rc-view-bar">
-        <ViewToggle value={view} onChange={setView} />
-      </div>
-
-      {view === 'cards' ? (
-        <>
-          {visible.length === 0 ? <p className="dr-empty">لا توجد مخرجات بهذه الحالة</p> : null}
-          <RecordCardGrid>
-            {visible.map((row) => (
-              <RecordCard
-                key={row.key}
-                title={row.name}
-                badges={<ReviewBadge status={row.reviewStatus} />}
-                rows={[
-                  { label: 'تاريخ التقديم', value: row.submittedAt },
-                  { label: 'تاريخ الاستحقاق', value: row.dueDate },
-                  { label: 'النشاط · المرحلة', value: [row.description, row.phase].filter((part) => part && part !== '—').join(' · ') || '—' },
-                ]}
-                linkLabel={canOpen ? 'عرض المخرج' : undefined}
-                onOpen={canOpen ? () => navigate(`${reviewBase}/${row.key}`) : undefined}
-              />
-            ))}
-          </RecordCardGrid>
-        </>
-      ) : (
       <div className="dr-table-wrap">
         <table className="dr-table">
           <thead>
@@ -215,7 +188,6 @@ export function DeliverablesApprovalTab({
           </tbody>
         </table>
       </div>
-      )}
       <p className="dr-note">
         الاعتماد يتم هنا على المخرج داخل مشروعه. المخرج المعتمد يُحتسب في تقدم المرحلة والمشروع والهدف، و«طلب تعديل» يعيده
         للمنفذ مع ملاحظاتك.

@@ -6,11 +6,10 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { getAccounts } from '../../api/superAdmin'
 import { getJodaynToken } from '../../auth/jodaynAuth'
-import { RecordCard, ToneBadge } from '../../components/ui/RecordCards'
 import {
   FinancePage,
   FinanceRow,
-  FinanceListView,
+  FinanceTable,
   shortRef,
 } from '../../features/jodayn-finance/FinanceParts'
 import { CityDonutCard, cityDistribution } from '../../features/jodayn-finance/CityDonut'
@@ -92,23 +91,7 @@ export function JodaynClientAccountsPage() {
         </div>
         <CityDonutCard title="توزيع حسب المدينة" items={cityDistribution(rows.map((row) => row.city))} />
       </div>
-      <FinanceListView
-        page="jodayn-client-accounts"
-        cards={rows.map((row) => (
-          <RecordCard
-            key={row.key}
-            title={row.name}
-            subtitle={row.managerName}
-            badges={<ToneBadge meta={row.active ? { label: 'نشطة', tone: 'approved' } : { label: 'غير نشطة', tone: 'none' }} />}
-            rows={[
-              { label: 'المدينة', value: row.city },
-              { label: 'القطاع', value: row.sector },
-              { label: 'المعرّف', value: row.reference },
-            ]}
-            linkLabel="عرض العميل"
-            onOpen={() => navigate(`/jodayn/client-accounts/${row.key}`)}
-          />
-        ))}
+      <FinanceTable
         headers={['اسم العميل', 'الشخص المسؤول', 'المدينة', 'الحالة', 'المعرّف']}
         loading={loading}
         empty={rows.length === 0}
@@ -127,7 +110,7 @@ export function JodaynClientAccountsPage() {
             <td>{row.reference}</td>
           </FinanceRow>
         ))}
-      </FinanceListView>
+      </FinanceTable>
     </FinancePage>
   )
 }

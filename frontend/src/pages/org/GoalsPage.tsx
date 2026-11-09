@@ -12,7 +12,6 @@ import { getOrgToken } from '../../auth/orgAuth'
 import {
   Badge,
   CatalogButton,
-  FilterChips,
   ListCard,
   ListCardStack,
   StatCard,
@@ -22,6 +21,7 @@ import {
 import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
 import { ProgressBar } from '../../org-catalog/ProgressBar'
 import { EmptyState } from '../../components/EmptyState'
+import { useGoalFilters } from '../../components/ui/GoalFilters'
 
 type GoalUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
 
@@ -76,7 +76,6 @@ export function OrgGoalsPage() {
   const navigate = useNavigate()
   const [goals, setGoals] = useState<StrategicGoal[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeFilter, setActiveFilter] = useState('all')
 
   useEffect(() => {
     const token = getOrgToken()
@@ -111,21 +110,26 @@ export function OrgGoalsPage() {
     return new Date(g.endDate).getTime() < Date.now() && String(g.status).toUpperCase() !== 'COMPLETED'
   }).length
 
-  const filterCounts = useMemo(() => {
-    const counts = { all: goals.length, onTrack: 0, delayed: 0, stalled: 0, completed: 0 }
-    goals.forEach((goal) => {
-      counts[mapGoalUiStatus(goal)] += 1
-    })
-    return counts
-  }, [goals])
-
-  const filteredGoals = useMemo(() => {
-    if (activeFilter === 'all') return goals
-    return goals.filter((goal) => {
-      const status = mapGoalUiStatus(goal)
-      return activeFilter === 'stalled' ? status === 'stalled' || status === 'delayed' : status === activeFilter
-    })
-  }, [goals, activeFilter])
+  const filterItems = useMemo(
+    () =>
+      goals.map((goal) => ({
+        id: goal.id,
+        title: goal.title,
+        status: mapGoalUiStatus(goal),
+        startDate: goal.startDate,
+        endDate: goal.endDate,
+        owners: [
+          ...new Set(
+            (goal.projectLinks ?? []).map(
+              (link) => (link.project as { executingCompany?: { name?: string } | null } | null | undefined)?.executingCompany?.name ?? 'داخلي',
+            ),
+          ),
+        ],
+      })),
+    [goals],
+  )
+  const { visibleIds, bar } = useGoalFilters(filterItems, 'المنفذ')
+  const filteredGoals = goals.filter((goal) => visibleIds.has(goal.id))
 
   return (
     <OrgCatalogShell title={t('strategicGoals')}>
@@ -166,16 +170,7 @@ export function OrgGoalsPage() {
         />
       </StatGrid>
 
-      <FilterChips
-        value={activeFilter}
-        onChange={setActiveFilter}
-        items={[
-          { key: 'all', label: t('all'), count: filterCounts.all },
-          { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
-          { key: 'stalled', label: t('stalled'), count: filterCounts.stalled + filterCounts.delayed },
-          { key: 'completed', label: t('completed'), count: filterCounts.completed },
-        ]}
-      />
+      {bar}
 
       <ListCardStack>
         {filteredGoals.map((goal) => {

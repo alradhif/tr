@@ -6,14 +6,13 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { getAccounts } from '../../api/superAdmin'
 import { getJodaynToken } from '../../auth/jodaynAuth'
-import { RecordCard, ToneBadge } from '../../components/ui/RecordCards'
 import {
   FinanceDetails,
   FinanceCreateButton,
   FinancePage,
   FinanceRow,
   FinanceStats,
-  FinanceListView,
+  FinanceTable,
   shortRef,
 } from '../../features/jodayn-finance/FinanceParts'
 import icon1 from '../../features/jodayn-finance/assets/icon1.svg'
@@ -89,23 +88,7 @@ export function JodaynOrgAccountsPage() {
           { label: 'الجهات غير النشطة', value: String(rows.length - active), icon: icon3 },
         ]}
       />
-      <FinanceListView
-        page="jodayn-org-accounts"
-        cards={rows.map((row) => (
-          <RecordCard
-            key={row.key}
-            title={row.name}
-            subtitle={row.type}
-            badges={<ToneBadge meta={row.active ? { label: 'نشطة', tone: 'approved' } : { label: 'غير نشطة', tone: 'none' }} />}
-            rows={[
-              { label: 'المدينة', value: row.city },
-              { label: 'القطاع', value: row.sector },
-              { label: 'المعرّف', value: row.reference },
-            ]}
-            linkLabel="عرض الجهة"
-            onOpen={() => setOpened(row)}
-          />
-        ))}
+      <FinanceTable
         headers={['اسم الجهة', 'نوع الجهة', 'المدينة', 'الحالة', 'المعرّف']}
         loading={loading}
         empty={rows.length === 0}
@@ -124,7 +107,7 @@ export function JodaynOrgAccountsPage() {
             <td>{row.reference}</td>
           </FinanceRow>
         ))}
-      </FinanceListView>
+      </FinanceTable>
       {opened ? (
         <FinanceDetails
           title={opened.name}

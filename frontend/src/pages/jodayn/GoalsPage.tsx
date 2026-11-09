@@ -10,7 +10,6 @@ import { getJodaynGoals, type JodaynGoal } from '../../api/jodayn'
 import { getJodaynToken } from '../../auth/jodaynAuth'
 import {
   Badge,
-  FilterChips,
   ListCard,
   ListCardStack,
   StatCard,
@@ -20,6 +19,7 @@ import {
 import { OrgCatalogShell } from '../../org-catalog/OrgCatalogShell'
 import { ProgressBar } from '../../org-catalog/ProgressBar'
 import { EmptyState } from '../../components/EmptyState'
+import { useGoalFilters } from '../../components/ui/GoalFilters'
 
 type GoalUiStatus = 'onTrack' | 'delayed' | 'stalled' | 'completed'
 
@@ -76,7 +76,6 @@ export function JodaynGoalsPage() {
   const { t } = useTranslation()
   const [goals, setGoals] = useState<JodaynGoal[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeFilter, setActiveFilter] = useState('all')
 
   useEffect(() => {
     const token = getJodaynToken()
@@ -112,18 +111,20 @@ export function JodaynGoalsPage() {
     return new Date(g.endDate).getTime() < Date.now() && String(g.status).toUpperCase() !== 'COMPLETED'
   }).length
 
-  const filterCounts = useMemo(() => {
-    const counts = { all: goals.length, onTrack: 0, delayed: 0, stalled: 0, completed: 0 }
-    goals.forEach((goal) => {
-      counts[mapGoalUiStatus(goal)] += 1
-    })
-    return counts
-  }, [goals])
-
-  const filteredGoals = useMemo(() => {
-    if (activeFilter === 'all') return goals
-    return goals.filter((goal) => mapGoalUiStatus(goal) === activeFilter)
-  }, [goals, activeFilter])
+  const filterItems = useMemo(
+    () =>
+      goals.map((goal) => ({
+        id: goal.id,
+        title: goal.title,
+        status: mapGoalUiStatus(goal),
+        startDate: goal.startDate,
+        endDate: goal.endDate,
+        owners: goal.ownerName ? [goal.ownerName] : [],
+      })),
+    [goals],
+  )
+  const { visibleIds, bar } = useGoalFilters(filterItems, 'الجهة')
+  const filteredGoals = goals.filter((goal) => visibleIds.has(goal.id))
 
   return (
     <OrgCatalogShell title={t('strategicGoals')}>
@@ -160,17 +161,7 @@ export function JodaynGoalsPage() {
         />
       </StatGrid>
 
-      <FilterChips
-        value={activeFilter}
-        onChange={setActiveFilter}
-        items={[
-          { key: 'all', label: t('all'), count: filterCounts.all },
-          { key: 'onTrack', label: t('onTrack'), count: filterCounts.onTrack },
-          { key: 'delayed', label: t('delayed'), count: filterCounts.delayed },
-          { key: 'stalled', label: t('stalled'), count: filterCounts.stalled },
-          { key: 'completed', label: t('completed'), count: filterCounts.completed },
-        ]}
-      />
+      {bar}
 
       <ListCardStack>
         {filteredGoals.map((goal) => {
