@@ -55,7 +55,7 @@
 .project-detail__body {
   width: 100%;
   box-sizing: border-box;
-  padding: 20px 21px 32px;
+  padding: 20px 24px 32px;
 }
 
 .project-detail__overview {
@@ -141,11 +141,11 @@
   display: flex;
   gap: 7px;
   direction: rtl;
-  padding-top: 2px;
+  padding-top: 5px;
 }
 
 .project-detail__actions button {
-  height: 43px;
+  height: 37px;
   min-width: 59px;
   padding: 0 16px;
   border: 0;

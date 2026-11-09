@@ -8,12 +8,12 @@ import type { OrgRole } from '../../auth/orgAuth'
 import { useDepartmentPortal } from './departmentPortal'
 import { canCreateDraft } from '../../auth/permissions'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
-import { progressColor, RecordCard, RecordCardGrid, StatusBadge, StatusFilterMenu, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
-import { aggregateStatus, averageProgress, formatJoinDate, STATUS_DOT, STATUS_META, type StatusClass } from './orgEntityUi'
+import { progressColor, RecordCard, RecordCardGrid, StatusBadge, StatusChips, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
+import { aggregateStatus, averageProgress, formatJoinDate, type StatusClass } from './orgEntityUi'
 import '../../design/departments.css'
 import '../../design/senior-projects.css'
 
-type DepartmentFilter = 'all' | StatusClass | 'inactive'
+type DepartmentFilter = 'all' | StatusClass
 
 type ListNotice = 'success' | 'deleted' | undefined
 
@@ -77,9 +77,7 @@ export function OrgDepartmentsPage() {
     })
   }, [departments, projects])
 
-  const matches = (row: (typeof rows)[number], key: DepartmentFilter) =>
-    key === 'all' || (key === 'inactive' ? !row.department.isActive : row.department.isActive && row.status === key)
-  const visible = rows.filter((row) => matches(row, filter))
+  const visible = rows.filter((row) => filter === 'all' || row.status === filter)
 
   return (
     <div className="dashboard-page departments-page departments-page--screenshot-one" dir="rtl">
@@ -102,11 +100,10 @@ export function OrgDepartmentsPage() {
         </FeedbackBanner>
       ) : null}
       <div className="departments-content departments-content--screenshot-one">
-        <div className="departments-list-header departments-list-header--screenshot-one">
-          <div className="departments-page__heading departments-page__heading--screenshot-one">
-            <h2>الإدارات</h2>
-          </div>
-          <div className="departments-toolbar departments-toolbar--screenshot-one">
+        <div className="rc-list-bar">
+          <StatusChips statuses={rows.map((row) => row.status)} value={filter} onChange={setFilter} />
+          <div className="rc-list-bar__actions">
+            <ViewToggle value={view} onChange={setView} />
             {canCreateDraft(role) ? (
               <button className="departments-primary" type="button" onClick={() => navigate(`${portal.base}/new`)}>
                 <Plus size={19} />
@@ -114,28 +111,6 @@ export function OrgDepartmentsPage() {
               </button>
             ) : null}
           </div>
-        </div>
-        <div className="rc-view-bar">
-          <StatusFilterMenu
-            title="حالة الإدارة"
-            allKey="all"
-            value={filter}
-            shown={visible.length}
-            total={rows.length}
-            noun="إدارات"
-            onChange={setFilter}
-            options={[
-              { key: 'all', label: 'الكل', count: rows.length },
-              ...(['track', 'delay', 'blocked', 'done'] as const).map((key) => ({
-                key,
-                label: STATUS_META[key],
-                count: rows.filter((row) => matches(row, key)).length,
-                dot: STATUS_DOT[key],
-              })),
-              { key: 'inactive', label: 'غير نشطة', count: rows.filter((row) => matches(row, 'inactive')).length, dot: '#8e8f97' },
-            ]}
-          />
-          <ViewToggle value={view} onChange={setView} />
         </div>
         {view === 'cards' ? (
           <>

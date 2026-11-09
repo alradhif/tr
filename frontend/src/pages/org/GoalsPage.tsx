@@ -133,10 +133,6 @@ export function OrgGoalsPage() {
 
   return (
     <OrgCatalogShell title={t('strategicGoals')}>
-      <CatalogButton icon={<Plus size={16} strokeWidth={2.5} />} onClick={() => navigate('/org/goals/new')}>
-        {t('addGoal')}
-      </CatalogButton>
-
       <StatGrid>
         <StatCard
           label={t('totalGoals')}
@@ -170,7 +166,12 @@ export function OrgGoalsPage() {
         />
       </StatGrid>
 
-      {bar}
+      <div className="goal-filter-row">
+        {bar}
+        <CatalogButton icon={<Plus size={16} strokeWidth={2.5} />} onClick={() => navigate('/org/goals/new')}>
+          {t('addGoal')}
+        </CatalogButton>
+      </div>
 
       <ListCardStack>
         {filteredGoals.map((goal) => {

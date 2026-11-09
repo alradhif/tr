@@ -306,7 +306,9 @@
 }
 
 .dashboard-page .stat-card {
-  padding: 24px 20px;
+  box-sizing: border-box;
+  max-height: 129px;
+  padding: 16px 20px;
   border: none;
   border-radius: 20px;
   box-shadow: none;
@@ -501,4 +503,13 @@
   padding: 28px 8px;
   text-align: center;
   color: #71717a;
+}
+
+/* Goals list spacing and add button from the design. */
+.tenants-body:has(> .list-card-stack) {
+  gap: 20px;
+}
+
+.tenants-body > .list-card-stack {
+  gap: 20px;
 }

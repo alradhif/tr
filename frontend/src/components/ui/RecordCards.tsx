@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Tooltip } from 'antd'
-import { Check, CheckCircle2, Clock, LayoutGrid, ListFilter, Rows3, TriangleAlert, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, LayoutGrid, Rows3, TriangleAlert, XCircle } from 'lucide-react'
 import type { StatusClass } from '../../pages/org/orgEntityUi'
 import { STATUS_META } from '../../pages/org/orgEntityUi'
 import '../../design/deliverable-review.css'
@@ -125,7 +125,6 @@ export function RecordCard({
           <div className="rc-card__track">
             {percent === null ? null : <i style={{ width: `${percent}%`, background: progressColor(percent) }} />}
           </div>
-          {progress.note ? <p className="rc-card__note">{progress.note}</p> : null}
         </div>
       ) : null}
       {rows?.length ? (
@@ -138,87 +137,51 @@ export function RecordCard({
           ))}
         </dl>
       ) : null}
-      {linkLabel && onOpen ? (
-        <button type="button" className="rc-card__link" onClick={onOpen}>
-          {linkLabel}
-        </button>
+      {progress?.note || (linkLabel && onOpen) ? (
+        <footer className="rc-card__footer">
+          {progress?.note ? <p className="rc-card__note">{progress.note}</p> : null}
+          {linkLabel && onOpen ? (
+            <button type="button" className="rc-card__link" onClick={onOpen}>
+              {linkLabel}
+            </button>
+          ) : null}
+        </footer>
       ) : null}
     </article>
   )
 }
 
-export type StatusFilterOption<K extends string> = { key: K; label: string; count: number; dot?: string }
+const CHIP_ORDER: StatusClass[] = ['track', 'delay', 'blocked', 'done']
 
-/** The "تصفية" button and its status menu, with the applied choice summarized beside the button. */
-export function StatusFilterMenu<K extends string>({
-  title,
-  options,
+/** Status filter shown as chips with a live count for each status. */
+export function StatusChips({
+  statuses,
   value,
-  allKey,
-  shown,
-  total,
-  noun,
   onChange,
 }: {
-  title: string
-  options: Array<StatusFilterOption<K>>
-  value: K
-  allKey: K
-  shown: number
-  total: number
-  noun: string
-  onChange: (key: K) => void
+  statuses: StatusClass[]
+  value: StatusClass | 'all'
+  onChange: (next: StatusClass | 'all') => void
 }) {
-  const [open, setOpen] = useState(false)
-  const root = useRef<HTMLDivElement>(null)
-  const active = options.find((option) => option.key === value)
-  const applied = value !== allKey
-
-  useEffect(() => {
-    if (!open) return
-    const close = (event: MouseEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [open])
-
+  const chips: Array<{ key: StatusClass | 'all'; label: string; count: number }> = [
+    { key: 'all', label: 'الكل', count: statuses.length },
+    ...CHIP_ORDER.map((key) => ({ key, label: STATUS_META[key], count: statuses.filter((status) => status === key).length })),
+  ]
   return (
-    <div className="rc-filter" ref={root}>
-      {applied ? (
-        <p className="rc-filter__summary">
-          عرض {shown} من {total} {noun}
-          <button type="button" onClick={() => onChange(allKey)}>
-            مسح التصفية
-          </button>
-        </p>
-      ) : null}
-      <button type="button" className={`rc-filter__button${applied ? ' is-applied' : ''}`} aria-expanded={open} onClick={() => setOpen((current) => !current)}>
-        <ListFilter size={17} />
-        {applied ? `تصفية · ${active?.label} (${active?.count})` : 'تصفية'}
-      </button>
-      {open ? (
-        <div className="rc-filter__menu" role="menu">
-          <span className="rc-filter__title">{title}</span>
-          {options.map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              role="menuitemradio"
-              aria-checked={option.key === value}
-              className={option.key === value ? 'is-active' : ''}
-              onClick={() => {
-                onChange(option.key)
-                setOpen(false)
-              }}
-            >
-              {option.key === value ? <Check size={14} className="rc-filter__check" /> : option.dot ? <i style={{ background: option.dot }} /> : <i />}
-              <span>{option.label}</span>
-              <small>{option.count}</small>
-            </button>
-          ))}
-        </div>
-      ) : null}
+    <div className="dr-chips" role="tablist" aria-label="تصفية حسب الحالة">
+      {chips.map((chip) => (
+        <button
+          key={chip.key}
+          type="button"
+          role="tab"
+          aria-selected={value === chip.key}
+          className={value === chip.key ? 'is-active' : ''}
+          onClick={() => onChange(chip.key)}
+        >
+          {chip.label}
+          <span>{chip.count}</span>
+        </button>
+      ))}
     </div>
   )
 }

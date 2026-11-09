@@ -72,18 +72,17 @@
   text-align: right;
 }
 .departments-content--screenshot-one {
-  padding: 0 26px 28px;
+  padding: 0 24px 28px;
 }
 .departments-list-header--screenshot-one {
   min-height: 0;
   box-sizing: border-box;
-  margin: 0 0 24px;
-  padding: 20px 0 14px;
+  margin: 0 0 29px;
+  padding: 24px 0 0;
   align-items: flex-start;
 }
 .departments-page__heading--screenshot-one {
   margin: 0;
-  padding-top: 9px;
 }
 .departments-page__heading--screenshot-one h1 {
   font-size: 22px;

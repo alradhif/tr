@@ -381,3 +381,19 @@
   color: #8e8f97;
   font-size: 11px;
 }
+
+/* Page spacing from the invoice tracking design. */
+.org-invoices .org-invoices__filters {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 15px;
+}
+
+.org-invoices .org-invoices__selects .sa-filter__trigger {
+  height: 38px;
+}
+
+.org-invoices .org-invoices__cards .jinv-card {
+  height: 116px;
+}

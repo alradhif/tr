@@ -100,7 +100,6 @@ export function OrgAddCompanyPage() {
     <div className="dashboard-page nc-page" dir="rtl">
       <SubpageHeader parent="الشركات" title="إضافة شركة جديدة" onBack={() => navigate('/org/companies')} />
       <div className="nc-inner">
-        <h1 className="nc-page-title">إضافة شركة جديدة</h1>
         {error ? (
           <FeedbackBanner tone="error" onClose={() => setError(null)}>
             {error}

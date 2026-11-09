@@ -748,7 +748,6 @@ export function ProjectForm({
       />
       <div className="create-project__body">
         <div className="create-project__hero">
-          <h1>{pageTitle}</h1>
           <p>{t('createProjectSubtitle')}</p>
         </div>
         <div className="create-project__steps create-project__steps--four">

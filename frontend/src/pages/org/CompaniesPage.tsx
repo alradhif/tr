@@ -9,12 +9,12 @@ import type { OrgRole } from '../../auth/orgAuth'
 import { getOrgToken } from '../../auth/orgAuth'
 import { canCreateDraft } from '../../auth/permissions'
 import { FeedbackBanner } from '../../components/ui/FeedbackBanner'
-import { progressColor, RecordCard, RecordCardGrid, StatusBadge, StatusFilterMenu, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
-import { aggregateStatus, averageProgress, contractCount, STATUS_DOT, STATUS_META, type StatusClass } from './orgEntityUi'
+import { progressColor, RecordCard, RecordCardGrid, StatusBadge, StatusChips, useViewMode, ViewToggle } from '../../components/ui/RecordCards'
+import { aggregateStatus, averageProgress, contractCount, type StatusClass } from './orgEntityUi'
 import '../../design/senior-companies.css'
 
 type ListNotice = 'success' | 'error' | 'deleted' | undefined
-type CompanyFilter = 'all' | StatusClass | 'inactive'
+type CompanyFilter = 'all' | StatusClass
 
 function companyProjects(projects: OrgProject[], companyId: string) {
   return projects.filter((project) => project.executingCompanyId === companyId)
@@ -73,9 +73,7 @@ export function OrgCompaniesPage() {
     })
   }, [companies, projects])
 
-  const matches = (row: (typeof rows)[number], key: CompanyFilter) =>
-    key === 'all' || (key === 'inactive' ? !row.company.isActive : row.company.isActive && row.status === key)
-  const visible = rows.filter((row) => matches(row, filter))
+  const visible = rows.filter((row) => filter === 'all' || row.status === filter)
   const openCompany = (id: string) => navigate(`/org/companies/${id}`)
 
   return (
@@ -101,11 +99,10 @@ export function OrgCompaniesPage() {
       ) : null}
 
       <div className="sc-content">
-        <div className="sc-list-header">
-          <div className="sc-page-heading">
-            <h2>الشركات</h2>
-          </div>
-          <div className="sc-toolbar">
+        <div className="rc-list-bar">
+          <StatusChips statuses={rows.map((row) => row.status)} value={filter} onChange={setFilter} />
+          <div className="rc-list-bar__actions">
+            <ViewToggle value={view} onChange={setView} />
             {canCreateDraft(role) ? (
               <button type="button" className="sc-btn-primary" onClick={() => navigate('/org/companies/new')}>
                 <Plus size={18} />
@@ -113,29 +110,6 @@ export function OrgCompaniesPage() {
               </button>
             ) : null}
           </div>
-        </div>
-
-        <div className="rc-view-bar">
-          <StatusFilterMenu
-            title="حالة الشركة"
-            allKey="all"
-            value={filter}
-            shown={visible.length}
-            total={rows.length}
-            noun="شركات"
-            onChange={setFilter}
-            options={[
-              { key: 'all', label: 'الكل', count: rows.length },
-              ...(['track', 'delay', 'blocked', 'done'] as const).map((key) => ({
-                key,
-                label: STATUS_META[key],
-                count: rows.filter((row) => matches(row, key)).length,
-                dot: STATUS_DOT[key],
-              })),
-              { key: 'inactive', label: 'غير نشطة', count: rows.filter((row) => matches(row, 'inactive')).length, dot: '#8e8f97' },
-            ]}
-          />
-          <ViewToggle value={view} onChange={setView} />
         </div>
 
         {view === 'cards' ? (

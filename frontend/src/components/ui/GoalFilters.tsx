@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MultiSelectFilter, SingleSelectFilter } from '../../super-admin-ui/components/ui/filters'
 import '../../design/senior-projects.css'
+import '../../design/record-cards.css'
 
 export type GoalFilterItem = {
   id: string

@@ -159,10 +159,6 @@ export function OrgGoalFormPage({ mode }: { mode: 'create' | 'edit' }) {
         onBack={() => navigate(mode === 'edit' && goalId ? `/org/goals/${goalId}` : '/org/goals')}
       />
       <div className="add-goal__scroll">
-        <div className="add-goal__heading">
-          <h1>{mode === 'edit' ? t('editGoal') : t('addGoalFull')}</h1>
-        </div>
-
         <section className="add-goal__upload">
           <button type="button" className="add-goal__upload-btn" onClick={() => document.getElementById('goal-file')?.click()}>
             <AssetIcon src={commonAssets.upload} size={20} />

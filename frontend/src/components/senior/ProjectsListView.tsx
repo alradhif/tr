@@ -118,24 +118,26 @@ export function ProjectsListView({
   const delayed = rows.filter((row) => row.status === 'delayed' || row.status === 'stalled').length
   const completed = rows.filter((row) => row.status === 'completed').length
   const showApproved = rows.some((row) => row.approvedOutputs !== undefined)
+  const createButton =
+    createLabel && onCreate ? (
+      <button type="button" className="sc-btn-primary" onClick={onCreate}>
+        <Plus size={18} />
+        <span>{createLabel}</span>
+      </button>
+    ) : null
 
   return (
-    <div className="dashboard-page sc-page sp-page" dir="rtl">
+    <div className={`dashboard-page sc-page sp-page${exec ? ' sp-page--exec' : ''}`} dir="rtl">
       <div className="sc-shell-title">
         <h1>المشاريع</h1>
       </div>
       {banner}
 
       <div className="sc-content">
-        <div className="sp-toolbar">
-          {createLabel && onCreate ? (
-            <button type="button" className="sc-btn-primary" onClick={onCreate}>
-              <Plus size={18} />
-              <span>{createLabel}</span>
-            </button>
-          ) : null}
-          {exec ? null : toolbarExtra}
-          {exec ? null : (
+        {exec ? null : (
+          <div className="sp-toolbar">
+            {createButton}
+            {toolbarExtra}
             <button
               type="button"
               className={`sc-btn-outline${filtersOpen || activeFilter !== 'all' ? ' sc-btn-outline--active' : ''}`}
@@ -144,8 +146,8 @@ export function ProjectsListView({
               <ListFilter size={17} />
               <span>تصفية</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {filtersOpen && !exec ? (
           <div className="sp-filters" role="tablist" aria-label="تصفية المشاريع">
@@ -180,7 +182,10 @@ export function ProjectsListView({
             {exec ? (
               <div className="rc-view-bar rc-view-bar--split sp-exec-bar">
                 {exec.filterBar}
-                <ViewToggle value={exec.view} onChange={exec.onViewChange} />
+                <div className="rc-list-bar__actions">
+                  <ViewToggle value={exec.view} onChange={exec.onViewChange} />
+                  {createButton}
+                </div>
               </div>
             ) : null}
 

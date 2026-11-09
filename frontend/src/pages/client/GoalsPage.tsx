@@ -123,10 +123,6 @@ export function ClientGoalsPage() {
 
   return (
     <OrgCatalogShell title={t('strategicGoals')}>
-      <CatalogButton icon={<Plus size={16} strokeWidth={2.5} />} onClick={() => navigate('/client/goals/new')}>
-        {t('addGoal')}
-      </CatalogButton>
-
       <StatGrid>
         <StatCard
           label={t('totalGoals')}
@@ -155,7 +151,12 @@ export function ClientGoalsPage() {
         />
       </StatGrid>
 
-      {bar}
+      <div className="goal-filter-row">
+        {bar}
+        <CatalogButton icon={<Plus size={16} strokeWidth={2.5} />} onClick={() => navigate('/client/goals/new')}>
+          {t('addGoal')}
+        </CatalogButton>
+      </div>
 
       <ListCardStack>
         {visible.map((row) => {

@@ -25,13 +25,6 @@ export function aggregateStatus(projects: Array<{ status?: string | null }>): St
   return statuses.length > 0 && statuses.every((status) => status === 'done') ? 'done' : 'track'
 }
 
-export const STATUS_DOT: Record<StatusClass, string> = {
-  track: '#22b573',
-  delay: '#f79009',
-  blocked: '#f04438',
-  done: '#22b573',
-}
-
 export function averageProgress(projects: OrgProject[]) {
   if (!projects.length) return 0
   const total = projects.reduce((sum, project) => sum + (Number(project.progressPct) || 0), 0)

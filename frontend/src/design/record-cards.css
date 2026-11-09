@@ -3,7 +3,7 @@
   display: inline-flex;
   flex: none;
   box-sizing: border-box;
-  height: 42px;
+  height: 40px;
   gap: 2px;
   padding: 3px;
   border-radius: 18px;
@@ -16,7 +16,7 @@
   gap: 6px;
   justify-content: center;
   width: 38px;
-  height: 36px;
+  height: 34px;
   padding: 0;
   border: 0;
   border-radius: 16px;
@@ -60,7 +60,7 @@
 .rc-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
   padding: 20px;
   border-radius: 20px;
@@ -109,6 +109,7 @@
 
 .rc-card__progress-head {
   display: flex;
+  height: 18px;
   align-items: center;
   justify-content: space-between;
   color: #8e8f97;
@@ -125,7 +126,7 @@
 .rc-card__track {
   overflow: hidden;
   height: 6px;
-  margin-top: 6px;
+  margin-top: 12px;
   border-radius: 6px;
   background: #ececee;
 }
@@ -136,11 +137,37 @@
   border-radius: 6px;
 }
 
+/* Note on the right and link on the left of the same row, as in the design. */
+.rc-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 18px;
+}
+
+.rc-card__footer .rc-card__link:only-child {
+  margin-inline-start: auto;
+}
+
 .rc-card__note {
-  margin: 8px 0 0;
+  margin: 0;
   color: #8e8f97;
   font-size: 12px;
   line-height: 18px;
+}
+
+/* Cards with detail rows are slightly tighter in the design. */
+.rc-card:has(.rc-card__rows) {
+  gap: 11px;
+}
+
+.rc-card:has(.rc-card__rows) .rc-card__head {
+  padding-bottom: 7px;
+}
+
+.rc-card:has(.rc-card__rows) .rc-card__track {
+  margin-top: 11px;
 }
 
 .rc-card__rows {
@@ -169,12 +196,11 @@
   color: #0c0c0d;
   font-size: 13px;
   font-weight: 700;
-  line-height: 20px;
+  line-height: 18px;
   text-align: left;
 }
 
 .rc-card__link {
-  align-self: flex-start;
   padding: 0;
   border: 0;
   background: transparent;
@@ -189,125 +215,32 @@
   text-decoration: underline;
 }
 
-/* Status menu behind the "تصفية" button */
-.rc-filter {
-  position: relative;
+/* Companies and departments: status chips on the right, view switch and add on the left. */
+.rc-list-bar {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 0 0;
+  margin: 0 0 16px;
+}
+
+.rc-list-bar__actions {
+  display: flex;
+  flex: none;
   align-items: center;
   gap: 10px;
 }
 
-.rc-filter__summary {
-  display: flex;
-  gap: 8px;
-  margin: 0;
-  color: #f04438;
-  font-size: 12px;
+.rc-list-bar__actions .sc-btn-primary,
+.rc-list-bar__actions .departments-primary {
+  width: 181px;
+  min-width: 181px;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 9px;
 }
 
-.rc-filter__summary button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.rc-filter__button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 42px;
-  min-width: 104px;
-  padding: 0 16px;
-  border: 1px solid #0c0c0d;
-  border-radius: 8px;
-  background: #fff;
-  color: #0c0c0d;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.rc-filter__button.is-applied {
-  border-color: #f04438;
-}
-
-.rc-filter__menu {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 6px);
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 280px;
-  padding: 10px;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 12px 32px rgba(15, 23, 41, 0.14);
-}
-
-.rc-filter__title {
-  padding: 4px 8px 6px;
-  color: #8e8f97;
-  font-size: 12px;
-}
-
-.rc-filter__menu button {
-  display: grid;
-  grid-template-columns: 16px 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #0c0c0d;
-  font: inherit;
-  font-size: 14px;
-  text-align: right;
-  cursor: pointer;
-}
-
-.rc-filter__menu button:hover,
-.rc-filter__menu button.is-active {
-  background: #f4f4f5;
-}
-
-.rc-filter__menu button.is-active {
-  font-weight: 700;
-}
-
-.rc-filter__menu i {
-  width: 7px;
-  height: 7px;
-  margin: auto;
-  border-radius: 50%;
-}
-
-.rc-filter__check {
-  padding: 2px;
-  border-radius: 50%;
-  background: #22b573;
-  color: #fff;
-}
-
-.rc-filter__menu small {
-  min-width: 22px;
-  padding: 1px 6px;
-  border-radius: 8px;
-  background: #f4f4f5;
-  color: #6b6c72;
-  font-size: 12px;
-  text-align: center;
-}
-
-.departments-page__heading--screenshot-one h2,
 .rc-section-title {
   margin: 0;
   color: #0c0c0d;
@@ -342,7 +275,47 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .rc-filter__menu {
-    width: min(280px, calc(100vw - 32px));
+  .rc-list-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
+
+  .rc-list-bar__actions {
+    justify-content: flex-end;
+  }
+
+}
+
+.rc-view-bar.sp-exec-bar {
+  margin: 24px 0;
+}
+
+.sp-exec-bar .sa-filter__trigger,
+.org-projects-filters .sa-filter__trigger {
+  height: 40px;
+}
+
+/* With the add button in the filter row, the statistics start the page. */
+.sp-page--exec .sc-content {
+  padding-top: 24px;
+}
+
+.sp-exec-bar .rc-list-bar__actions .sc-btn-primary {
+  width: auto;
+  min-width: 181px;
+  height: 40px;
+  min-height: 40px;
+}
+
+.goal-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.goal-filter-row .catalog-btn {
+  min-width: 181px;
+  height: 40px;
 }

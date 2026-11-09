@@ -183,10 +183,36 @@ export function OrgInvoicesPage() {
       <div className="jinv-body">
         <div className="org-invoices__toolbar">
           <div>
-            <h2 className="org-invoices__heading">{words.title}</h2>
             <p className="org-invoices__lead">{words.lead}</p>
           </div>
           {canCreateDraft(role) ? <FinanceCreateButton label="إضافة دفعة" onClick={() => setAdding(true)} /> : null}
+        </div>
+
+        <div className="jinv-cards org-invoices__cards">
+          <div className="jinv-card">
+            <span className="jinv-card__label">{words.settled}</span>
+            <div>
+              <span className="jinv-card__value">{formatAmount(sum(visible) - sum(open))}</span>
+              <span className="jinv-card__unit">ر.س</span>
+            </div>
+            <small>من إجمالي {formatAmount(sum(visible))} ر.س</small>
+          </div>
+          <div className="jinv-card">
+            <span className="jinv-card__label">{words.remaining}</span>
+            <div>
+              <span className="jinv-card__value">{formatAmount(sum(open))}</span>
+              <span className="jinv-card__unit">ر.س</span>
+            </div>
+            <small>{open.length} دفعات لم يتم سدادها</small>
+          </div>
+          <div className="jinv-card org-invoices__card--late">
+            <span className="jinv-card__label">المتأخر</span>
+            <div>
+              <span className="jinv-card__value">{formatAmount(sum(late))}</span>
+              <span className="jinv-card__unit">ر.س</span>
+            </div>
+            <small>{late.length} دفعات تجاوزت تاريخ الاستحقاق</small>
+          </div>
         </div>
 
         <div className="org-invoices__filters">
@@ -241,33 +267,6 @@ export function OrgInvoicesPage() {
               options={unique(payments.map(companyName))}
               onApply={setCompanies}
             />
-          </div>
-        </div>
-
-        <div className="jinv-cards org-invoices__cards">
-          <div className="jinv-card">
-            <span className="jinv-card__label">{words.settled}</span>
-            <div>
-              <span className="jinv-card__value">{formatAmount(sum(visible) - sum(open))}</span>
-              <span className="jinv-card__unit">ر.س</span>
-            </div>
-            <small>من إجمالي {formatAmount(sum(visible))} ر.س</small>
-          </div>
-          <div className="jinv-card">
-            <span className="jinv-card__label">{words.remaining}</span>
-            <div>
-              <span className="jinv-card__value">{formatAmount(sum(open))}</span>
-              <span className="jinv-card__unit">ر.س</span>
-            </div>
-            <small>{open.length} دفعات لم يتم سدادها</small>
-          </div>
-          <div className="jinv-card org-invoices__card--late">
-            <span className="jinv-card__label">المتأخر</span>
-            <div>
-              <span className="jinv-card__value">{formatAmount(sum(late))}</span>
-              <span className="jinv-card__unit">ر.س</span>
-            </div>
-            <small>{late.length} دفعات تجاوزت تاريخ الاستحقاق</small>
           </div>
         </div>
 

@@ -229,7 +229,6 @@ export function SubscriptionsPage() {
 
       <div className="tenants-body" dir="rtl">
         <div className="subscriptions-title-row">
-          <h1 className="subscriptions-title">الاشتراكات والباقات</h1>
           <button type="button" className="tenants-add-btn" onClick={() => setView('add')}>
             <Plus size={16} strokeWidth={2.5} />
             إضافة باقة
