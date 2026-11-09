@@ -47,7 +47,7 @@ function validate(data: TenantFormData): FormErrors {
   const e: FormErrors = {};
 
   if (!data.tenantType) {
-    e.tenantType = 'نوع المستأجر مطلوب';
+    e.tenantType = 'نوع المستخدم مطلوب';
   }
 
   if (!data.entityName.trim()) {
@@ -114,7 +114,7 @@ function validate(data: TenantFormData): FormErrors {
 const ENTITY_TYPE_OPTIONS = ['حكومية', 'خاصة', 'غير ربحية'];
 
 const TENANT_TYPE_OPTIONS: Array<{ value: '' | 'ORG' | 'CLIENT' | 'JODAYN'; label: string }> = [
-  { value: '', label: 'اختر نوع المستأجر' },
+  { value: '', label: 'اختر نوع المستخدم' },
   { value: 'ORG', label: 'Organization' },
   { value: 'CLIENT', label: 'Client' },
   { value: 'JODAYN', label: 'Jodayn' },
@@ -334,15 +334,15 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
 
   return (
     <div className="dashboard-page">
-      <PageHeader title="إدارة المستأجرين" subtitle="جميع الجهات المسجلة على منصة track+" />
+      <PageHeader title="إدارة المستخدمين" subtitle="جميع الجهات المسجلة على منصة track+" />
 
       <div className="tenant-form-body" dir="rtl">
-        <h1 className="tenant-form-page-title">إضافة مستأجر جديد</h1>
+        <h1 className="tenant-form-page-title">إضافة مستخدم جديد</h1>
         <TenantStepper step={1} />
 
         {}
         <div className="tenant-form-card">
-          <div className="tenant-form-card__header">معلومات المستأجر الأساسية</div>
+          <div className="tenant-form-card__header">معلومات المستخدم الأساسية</div>
 
           <FormField
             label="اسم الجهة *"
@@ -360,7 +360,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
           </FormField>
 
           <FormField
-            label="نوع المستأجر"
+            label="نوع المستخدم"
             error={errors.tenantType}
             touched={isTouched('tenantType')}
           >
@@ -509,7 +509,7 @@ export function AddTenantPage({ onCancel, onNext, initialData }: AddTenantPagePr
 
           <div className="tenant-form-info" role="note">
             <strong>الحدود تُعبّأ من الباقة</strong>
-            يمكن تعديل حد المستخدمين والتخزين لهذا المستأجر فقط دون تغيير الباقة نفسها.
+            يمكن تعديل حد المستخدمين والتخزين لهذا المستخدم فقط دون تغيير الباقة نفسها.
           </div>
 
           <FormField label="نوع الباقة *">

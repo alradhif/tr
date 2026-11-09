@@ -28,7 +28,7 @@ interface SuperadminNavItem {
 
 const SUPERADMIN_NAV_ITEMS: SuperadminNavItem[] = [
   { id: 'dashboard', label: 'لوحة التحكم', icon: DashboardIcon },
-  { id: 'tenants', label: 'إدارة المستأجرين', icon: TenantsIcon },
+  { id: 'tenants', label: 'إدارة المستخدمين', icon: TenantsIcon },
   { id: 'subscriptions', label: 'الاشتراكات والباقات', icon: SubscriptionsIcon },
   { id: 'audit-log', label: 'سجل التدقيق', icon: AuditLogIcon },
 ];

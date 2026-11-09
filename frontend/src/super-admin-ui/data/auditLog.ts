@@ -29,14 +29,14 @@ export const auditLogEntries: AuditLogEntry[] = [
   },
   {
     id: '2',
-    title: 'حذف حساب المستأجر «جامعة x»',
+    title: 'حذف حساب المستخدم «جامعة x»',
     meta: 'org_accounts · أحمد محمد · سوبر أدمن',
     time: 'منذ 3 ساعات',
     severity: 'warning',
   },
   {
     id: '3',
-    title: 'إنشاء مستأجر جديد «جودين»',
+    title: 'إنشاء مستخدم جديد «جودين»',
     meta: 'org_accounts · أحمد محمد · سوبر أدمن',
     time: 'منذ ساعة',
     severity: 'info',

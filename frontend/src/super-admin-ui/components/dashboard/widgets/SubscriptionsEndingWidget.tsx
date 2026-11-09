@@ -13,7 +13,7 @@ export function SubscriptionsEndingWidget() {
       <WidgetBodyGate isEmpty={value == null}>
         <div className="widget-stat-block widget-stat-inline">
           <span className="widget-stat-value">{value}</span>
-          <span className="widget-stat-label">مستأجر</span>
+          <span className="widget-stat-label">مستخدم</span>
         </div>
       </WidgetBodyGate>
     </Card>

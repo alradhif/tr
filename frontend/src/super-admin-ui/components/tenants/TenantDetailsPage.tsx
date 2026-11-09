@@ -89,7 +89,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
     try {
       setDetails(await getTenantDetails(token, ref.kind, ref.id));
     } catch (err) {
-      setNotice({ ok: false, title: err instanceof Error ? err.message : 'تعذر تحميل تفاصيل المستأجر' });
+      setNotice({ ok: false, title: err instanceof Error ? err.message : 'تعذر تحميل تفاصيل المستخدم' });
     }
   }, [ref.kind, ref.id]);
 
@@ -147,11 +147,11 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
       <div className="dashboard-page">
         <PageHeader
           title="غير موجود"
-          breadcrumbs={[{ label: 'إدارة المستأجرين', onClick: onBack }]}
+          breadcrumbs={[{ label: 'إدارة المستخدمين', onClick: onBack }]}
         />
         <div className="td-page" dir="rtl">
           <div className="td-body" style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#71717a' }}>لم يتم العثور على المستأجر</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#71717a' }}>لم يتم العثور على المستخدم</p>
             <button type="button" className="td-btn td-btn--outline" style={{ marginTop: 12 }} onClick={onBack}>
               العودة للقائمة
             </button>
@@ -201,7 +201,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
       await refreshTenants();
       onDeleted();
     } catch (err) {
-      setNotice({ ok: false, title: err instanceof Error ? err.message : 'تعذر حذف المستأجر' });
+      setNotice({ ok: false, title: err instanceof Error ? err.message : 'تعذر حذف المستخدم' });
       setBusy(false);
     }
   }
@@ -224,7 +224,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
     <div className="dashboard-page">
       <PageHeader
         title={tenant.name}
-        breadcrumbs={[{ label: 'إدارة المستأجرين', onClick: onBack }]}
+        breadcrumbs={[{ label: 'إدارة المستخدمين', onClick: onBack }]}
       />
       <div className="td-page" dir="rtl">
 
@@ -454,7 +454,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
                 <div className="td-admin-action">
                   <div className="td-admin-action__text">
                     <p className="td-admin-action__title td-admin-action__title--danger">
-                      حذف المستأجر نهائياً
+                      حذف المستخدم نهائياً
                     </p>
                     <p className="td-admin-action__desc">
                       يحذف الجهة وجميع بياناتها بشكل دائم ولا يمكن التراجع عن هذه العملية.
@@ -501,7 +501,7 @@ export function TenantDetailsPage({ tenantId, onBack, onDeleted }: TenantDetails
       ) : null}
       {dialog?.kind === 'delete' ? (
         <SaDialog
-          title="حذف المستأجر نهائيًا؟"
+          title="حذف المستخدم نهائيًا؟"
           body={`سيُحذف «${tenant.name}» وجميع مشاريعه وبيانات مستخدميه بشكل دائم، ولا يمكن التراجع.`}
           tone="danger"
           confirmLabel="حذف نهائي"

@@ -8,7 +8,7 @@ export function ActiveTenantsWidget() {
   return (
     <Card className="widget-kpi-compact widget-active-tenants">
       <div className="widget-icon-header">
-        <p className="widget-title widget-kpi-compact__title">المستأجرون النشطون</p>
+        <p className="widget-title widget-kpi-compact__title">المستخدمون النشطون</p>
       </div>
       <WidgetBodyGate isEmpty={value == null}>
         <div className="widget-stat-block widget-stat-inline">

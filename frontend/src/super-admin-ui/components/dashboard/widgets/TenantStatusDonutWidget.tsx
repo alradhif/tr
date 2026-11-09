@@ -10,7 +10,7 @@ export function TenantStatusDonutWidget() {
   return (
     <Card className="widget-tenant-status-donut">
       <div className="widget-icon-header">
-        <p className="widget-title widget-tenant-status-donut__title">إجمالي المستأجرين</p>
+        <p className="widget-title widget-tenant-status-donut__title">إجمالي المستخدمين</p>
       </div>
       <WidgetBodyGate isEmpty={isEmpty}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'auto' }}>

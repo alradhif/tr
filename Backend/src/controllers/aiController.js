@@ -105,8 +105,8 @@ async function portalSnapshot(user) {
   ])
   return {
     summary: [
-      `المستأجرون: ${orgs + clients} (جهات ${orgs}، عملاء ${clients})`,
-      `المستأجرون النشطون: ${activeOrgs + activeClients}`,
+      `المستخدمون: ${orgs + clients} (جهات ${orgs}، عملاء ${clients})`,
+      `المستخدمون النشطون: ${activeOrgs + activeClients}`,
       `محاولات دخول فاشلة آخر 7 أيام: ${failedLogins}`,
     ],
     details: [],

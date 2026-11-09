@@ -10,7 +10,7 @@ export function TenantsByPlanDonutWidget() {
   return (
     <Card className="widget-tenant-plan-donut">
       <div className="widget-icon-header">
-        <p className="widget-title">توزيع المستأجرين حسب الباقة</p>
+        <p className="widget-title">توزيع المستخدمين حسب الباقة</p>
       </div>
       <WidgetBodyGate isEmpty={isEmpty}>
         <div className="widget-tenant-plan-donut__body">

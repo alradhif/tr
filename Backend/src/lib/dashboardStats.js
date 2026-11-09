@@ -682,8 +682,8 @@ async function buildJodaynDashboard() {
 
 const AUDIT_ACTION = { CREATE: 'إنشاء', UPDATE: 'تعديل', DELETE: 'حذف' }
 const AUDIT_SUBJECT = {
-  org_accounts: 'مستأجر',
-  client_accounts: 'مستأجر',
+  org_accounts: 'مستخدم',
+  client_accounts: 'مستخدم',
   org_users: 'مستخدم',
   client_users: 'مستخدم',
   jodayn_users: 'مستخدم',

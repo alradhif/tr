@@ -113,7 +113,7 @@ exports.createTenant = async (req, res) => {
     const tenantType = String(body.tenantType || '').toUpperCase()
     const name = String(body.name || '').trim()
     if (!['ORG', 'CLIENT', 'JODAYN'].includes(tenantType)) {
-      return res.status(400).json({ message: 'نوع المستأجر مطلوب' })
+      return res.status(400).json({ message: 'نوع المستخدم مطلوب' })
     }
     if (!name) return res.status(400).json({ message: 'اسم الجهة مطلوب' })
     const managerName = String(body.managerName || '').trim()
@@ -140,7 +140,7 @@ exports.createTenant = async (req, res) => {
       if (!sector) return res.status(400).json({ message: 'القطاع غير موجود' })
     } else {
       const first = await prisma.sector.findFirst({ orderBy: { name: 'asc' } })
-      if (!first) return res.status(400).json({ message: 'أنشئ قطاعاً أولاً قبل إضافة مستأجر' })
+      if (!first) return res.status(400).json({ message: 'أنشئ قطاعاً أولاً قبل إضافة مستخدم' })
       sectorId = first.id
     }
 

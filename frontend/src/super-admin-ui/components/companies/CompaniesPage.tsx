@@ -22,7 +22,7 @@ export function CompaniesPage() {
           project: {
             name: first.name,
             code: first.id.slice(0, 8).toUpperCase(),
-            department: first.region || first.entityType || 'مستأجر',
+            department: first.region || first.entityType || 'مستخدم',
             projectManager: first.adminName || '—',
             sponsor: 'Super Admin',
             statusLabel: first.isActive ? 'نشط' : 'معلق',

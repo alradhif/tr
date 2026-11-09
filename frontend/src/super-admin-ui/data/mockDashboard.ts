@@ -205,7 +205,7 @@ export interface LatestActionItem {
 }
 
 export const latestActions: LatestActionItem[] = [
-  { id: '1', title: 'إنشاء مستأجر جودين' },
+  { id: '1', title: 'إنشاء مستخدم جودين' },
   { id: '2', title: 'ترقية باقة شركة تطوير' },
   { id: '3', title: 'حذف مستخدم من الشركة السعودية' },
 ];

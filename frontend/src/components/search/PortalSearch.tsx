@@ -12,7 +12,7 @@ const KIND_LABEL: Record<string, string> = {
   client: 'عميل',
   invoice: 'فاتورة',
   sector: 'قطاع',
-  tenant: 'مستأجر',
+  tenant: 'مستخدم',
   user: 'مستخدم',
 }
 

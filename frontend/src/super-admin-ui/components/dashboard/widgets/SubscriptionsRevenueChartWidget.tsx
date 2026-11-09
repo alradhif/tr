@@ -20,7 +20,7 @@ export function SubscriptionsRevenueChartWidget() {
     <Card className="widget-risks-chart">
       <div className="widget-risks-chart__header">
         <div className="widget-icon-header">
-          <p className="widget-title">المستأجرون حسب الحالة شهريًا</p>
+          <p className="widget-title">المستخدمون حسب الحالة شهريًا</p>
         </div>
         <div className="sa-status-chart__legend">
           {SERIES.map((series) => (

@@ -157,7 +157,7 @@ export function SubscriptionsPage() {
         selectedPackage.tenants > 0 ? (
           <SaDialog
             title={`لا يمكن حذف باقة ${selectedPackage.name} الآن`}
-            body={`الباقة مستخدمة لدى ${selectedPackage.tenants} مستأجر. انقل هؤلاء المستأجرين إلى باقة أخرى أولًا.`}
+            body={`الباقة مستخدمة لدى ${selectedPackage.tenants} مستخدم. انقل هؤلاء المستخدمين إلى باقة أخرى أولًا.`}
             confirmLabel="حسنًا"
             cancelLabel="إغلاق"
             onClose={() => setConfirmDelete(false)}
@@ -249,9 +249,9 @@ export function SubscriptionsPage() {
               <span className="tenants-table__cell">السعر</span>
               <span className="tenants-table__cell">المدة</span>
               <span className="tenants-table__cell">مساحة التخزين</span>
-              <span className="tenants-table__cell">عدد المستخدمين</span>
+              <span className="tenants-table__cell">حد المستخدمين</span>
               <span className="tenants-table__cell">الحالة</span>
-              <span className="tenants-table__cell">عدد المستأجرين</span>
+              <span className="tenants-table__cell">عدد المستخدمين</span>
               <span className="tenants-table__cell tenants-table__cell--nav" aria-hidden />
             </div>
 

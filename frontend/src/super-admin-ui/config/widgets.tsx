@@ -69,7 +69,7 @@ export interface WidgetDefinition {
 export const WIDGET_REGISTRY: Record<WidgetId, WidgetDefinition> = {
   'active-tenants': {
     id: 'active-tenants',
-    title: 'المستأجرون النشطون',
+    title: 'المستخدمون النشطون',
     minW: 3,
     minH: 2,
     component: ActiveTenantsWidget,
@@ -90,7 +90,7 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetDefinition> = {
   },
   'tenant-status-donut': {
     id: 'tenant-status-donut',
-    title: 'إجمالي المستأجرين',
+    title: 'إجمالي المستخدمين',
     minW: 3,
     minH: 2,
     component: TenantStatusDonutWidget,
@@ -104,7 +104,7 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetDefinition> = {
   },
   'tenant-plan-donut': {
     id: 'tenant-plan-donut',
-    title: 'توزيع المستأجرين حسب الباقة',
+    title: 'توزيع المستخدمين حسب الباقة',
     minW: 4,
     minH: 4,
     component: TenantsByPlanDonutWidget,
@@ -126,7 +126,7 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetDefinition> = {
   },
   'latest-tenants': {
     id: 'latest-tenants',
-    title: 'أحدث المستأجرين',
+    title: 'أحدث المستخدمين',
     minW: 4,
     minH: 3,
     component: LatestTenantsWidget,

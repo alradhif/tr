@@ -224,7 +224,7 @@ export function AddPackagePage({ mode = 'add', initialData, onCancel, onSave }: 
                   checked={isActive}
                   onChange={() => setIsActive((value) => !value)}
                 />
-                <span>الباقة مفعلة ومتاحة للمستأجرين الجدد</span>
+                <span>الباقة مفعلة ومتاحة للمستخدمين الجدد</span>
               </label>
             </div>
           </div>

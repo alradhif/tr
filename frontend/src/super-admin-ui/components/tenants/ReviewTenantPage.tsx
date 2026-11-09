@@ -89,18 +89,18 @@ export function ReviewTenantPage({
     <div className="dashboard-page">
       <PageHeader
         title="مراجعة وتأكيد"
-        breadcrumbs={[{ label: 'إدارة المستأجرين', onClick: onCancel }]}
+        breadcrumbs={[{ label: 'إدارة المستخدمين', onClick: onCancel }]}
       />
 
       {}
       <div className="tenant-form-body" dir="rtl">
-        <h1 className="tenant-form-page-title">إضافة مستأجر جديد</h1>
+        <h1 className="tenant-form-page-title">إضافة مستخدم جديد</h1>
         <TenantStepper step={2} />
         <h2 className="rv-section-title">مراجعة وتأكيد معلومات الجهة</h2>
 
         {}
         <div className="tenant-form-card">
-          <div className="tenant-form-card__header">معلومات المستأجر الأساسية</div>
+          <div className="tenant-form-card__header">معلومات المستخدم الأساسية</div>
 
           <div className="rv-grid-2x2">
             <ReviewField
@@ -108,7 +108,7 @@ export function ReviewTenantPage({
               value={tenantInfo.name}
             />
             <ReviewField
-              label="نوع المستأجر"
+              label="نوع المستخدم"
               value={tenantTypeLabel(formData.tenantType)}
             />
             <ReviewField
@@ -209,7 +209,7 @@ export function ReviewTenantPage({
             className="tenant-form-btn rv-btn--confirm"
             onClick={onConfirm}
           >
-            تأكيد وإنشاء المستأجر
+            تأكيد وإنشاء المستخدم
           </button>
 
           {}

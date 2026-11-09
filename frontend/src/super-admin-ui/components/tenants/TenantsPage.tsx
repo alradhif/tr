@@ -173,10 +173,10 @@ export function TenantsPage() {
   };
 
   const statCards: Array<StatCardProps & { id: string }> = [
-    { id: 'total', iconSrc: dashboardDataAssets.totalTenants, label: 'إجمالي المستأجرين', value: summary.total, unit: plural(summary.total, 'مستأجرًا', 'مستأجرين') },
-    { id: 'active', iconSrc: dashboardDataAssets.active, label: 'نشط', value: summary.active, unit: plural(summary.active, 'مستأجرًا', 'مستأجرين') },
+    { id: 'total', iconSrc: dashboardDataAssets.totalTenants, label: 'إجمالي المستخدمين', value: summary.total, unit: plural(summary.total, 'مستخدمًا', 'مستخدمين') },
+    { id: 'active', iconSrc: dashboardDataAssets.active, label: 'نشط', value: summary.active, unit: plural(summary.active, 'مستخدمًا', 'مستخدمين') },
     { id: 'trial', iconSrc: dashboardDataAssets.trial, label: 'تجربة مجانية', value: summary.trial, unit: plural(summary.trial, 'تجربة', 'تجارب') },
-    { id: 'suspended', iconSrc: dashboardDataAssets.suspended, label: 'معلّق', value: summary.suspended, unit: 'مستأجر' },
+    { id: 'suspended', iconSrc: dashboardDataAssets.suspended, label: 'معلّق', value: summary.suspended, unit: 'مستخدم' },
   ];
 
   const statusChips: Array<{ id: StatusFilter; label: string; count: number }> = [
@@ -228,7 +228,7 @@ export function TenantsPage() {
       return;
     }
     if (!isTenantType(draft.tenantType)) {
-      setConfirmError('نوع المستأجر مطلوب: Organization أو Client أو Jodayn');
+      setConfirmError('نوع المستخدم مطلوب: Organization أو Client أو Jodayn');
       return;
     }
 
@@ -244,7 +244,7 @@ export function TenantsPage() {
       if (draft.tenantType === 'ORG' || draft.tenantType === 'CLIENT') {
         sectorId = sectors[0]?.id;
         if (!sectorId) {
-          setConfirmError('أنشئ قطاعاً أولاً من بوابة جودين قبل إضافة مستأجر');
+          setConfirmError('أنشئ قطاعاً أولاً من بوابة جودين قبل إضافة مستخدم');
           return;
         }
       }
@@ -304,7 +304,7 @@ export function TenantsPage() {
       setDraft(BLANK_DRAFT);
       setView('list');
     } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : 'تعذر إنشاء المستأجر');
+      setConfirmError(err instanceof Error ? err.message : 'تعذر إنشاء المستخدم');
     } finally {
       setConfirming(false);
     }
@@ -382,29 +382,29 @@ export function TenantsPage() {
   return (
     <div className="dashboard-page">
       <PageHeader
-        title="إدارة المستأجرين"
+        title="إدارة المستخدمين"
         subtitle="جميع الجهات المسجلة على منصة track+"
       />
 
       <div className="tenants-body" dir="rtl">
         <button type="button" className="tenants-add-btn" onClick={() => setView('add')}>
           <Plus size={16} strokeWidth={2.5} />
-          إضافة مستأجر جديد
+          إضافة مستخدم جديد
         </button>
 
         {loadFailed && tenants.length === 0 ? (
           <PageState
             tone="error"
-            title="تعذّر تحميل قائمة المستأجرين"
+            title="تعذّر تحميل قائمة المستخدمين"
             body="حدث خطأ في الاتصال بالخادم. أعد المحاولة بعد قليل."
             actionLabel="إعادة المحاولة"
             onAction={() => void refreshTenants()}
           />
         ) : !loading && tenants.length === 0 ? (
           <PageState
-            title="لا يوجد مستأجرون بعد"
+            title="لا يوجد مستخدمون بعد"
             body="أضف أول جهة لتبدأ إدارة الاشتراكات والمستخدمين والباقات."
-            actionLabel="إضافة مستأجر جديد"
+            actionLabel="إضافة مستخدم جديد"
             onAction={() => setView('add')}
           />
         ) : (
@@ -458,7 +458,7 @@ export function TenantsPage() {
                 }}
               />
               <span className="tenants-result-count">
-                عرض {pageTenants.length} من {tenants.length} {plural(tenants.length, 'مستأجرًا', 'مستأجرين')}
+                عرض {pageTenants.length} من {tenants.length} {plural(tenants.length, 'مستخدمًا', 'مستخدمين')}
               </span>
             </div>
 
@@ -469,8 +469,8 @@ export function TenantsPage() {
                 title="لا توجد نتائج مطابقة"
                 body={
                   query
-                    ? `لم نجد مستأجرًا يطابق «${search.trim()}» مع الفلاتر الحالية. جرّب اسمًا آخر أو امسح البحث.`
-                    : 'لم نجد مستأجرًا يطابق الفلاتر الحالية.'
+                    ? `لم نجد مستخدمًا يطابق «${search.trim()}» مع الفلاتر الحالية. جرّب اسمًا آخر أو امسح البحث.`
+                    : 'لم نجد مستخدمًا يطابق الفلاتر الحالية.'
                 }
                 actionLabel="مسح البحث والفلاتر"
                 onAction={clearFilters}

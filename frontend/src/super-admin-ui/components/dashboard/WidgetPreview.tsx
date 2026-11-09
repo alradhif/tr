@@ -233,7 +233,7 @@ function TotalRevenuePreview() {
 
 function TenantStatusDonutPreview({ live }: { live: LiveDashboardData | null }) {
   const tenantStatusBreakdown = live?.tenantStatusBreakdown ?? [];
-  if (tenantStatusBreakdown.length === 0) return <Dash label="المستأجرون" />;
+  if (tenantStatusBreakdown.length === 0) return <Dash label="المستخدمون" />;
   return (
     <div className="wlp-donut-row">
       <LegendRows
@@ -309,7 +309,7 @@ function LatestActionsPreview({ live }: { live: LiveDashboardData | null }) {
 
 function LatestTenantsPreview({ live }: { live: LiveDashboardData | null }) {
   const item = live?.latestTenants?.[0];
-  if (!item) return <Dash label="مستأجر" />;
+  if (!item) return <Dash label="مستخدم" />;
   return (
     <div className="wlp-list-item">
       <p className="wlp-list-item__title">{item.name}</p>

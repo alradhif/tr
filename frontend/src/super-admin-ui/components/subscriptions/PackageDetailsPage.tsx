@@ -114,7 +114,7 @@ export function PackageDetailsPage({ pkg, onBack, onEdit, onDelete }: PackageDet
           <div className="package-data-grid package-data-grid--full">
             <DataCell icon={<Tag size={16} />} label="السعر" value={pkg.price} />
             <DataCell icon={<Target size={16} />} label="المدة" value={pkg.duration} />
-            <DataCell icon={<Users size={16} />} label="عدد المستأجرين" value={pkg.tenants} />
+            <DataCell icon={<Users size={16} />} label="عدد المستخدمين" value={pkg.tenants} />
           </div>
 
           {}

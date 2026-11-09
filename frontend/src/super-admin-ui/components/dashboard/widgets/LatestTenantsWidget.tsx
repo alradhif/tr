@@ -25,7 +25,7 @@ export function LatestTenantsWidget() {
     <Card>
       <div className="widget-header">
         <div className="widget-icon-header">
-          <h3 className="widget-header__title">أحدث المستأجرين</h3>
+          <h3 className="widget-header__title">أحدث المستخدمين</h3>
         </div>
         <button
           type="button"
