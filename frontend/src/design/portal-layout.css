@@ -268,7 +268,7 @@
   border-bottom: 1px solid #e7e8eb;
 
   
-  min-height: 88px;
+  min-height: 75px;
 }
 
 .page-header__title-block {
@@ -293,12 +293,6 @@
   font-weight: 600;
   color: #71717a;
   line-height: 1.4;
-}
-
-.page-header__subtitle--placeholder {
-  visibility: hidden;
-  user-select: none;
-  pointer-events: none;
 }
 
 .page-header__breadcrumb {
@@ -394,8 +388,8 @@
 .senior-page-header {
   box-sizing: border-box;
   width: 100%;
-  height: 88px;
-  min-height: 88px;
+  height: 75px;
+  min-height: 75px;
   flex-shrink: 0;
   display: flex;
   align-items: center;

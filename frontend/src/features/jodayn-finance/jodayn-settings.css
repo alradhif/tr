@@ -3,10 +3,6 @@
   border-top: 3px solid #3f4144;
 }
 
-.jodayn-shell .senior-settings .page-header__subtitle--placeholder {
-  display: none;
-}
-
 .jodayn-shell .senior-settings .tenants-body.senior-settings__content {
   padding: 0;
   gap: 20px;

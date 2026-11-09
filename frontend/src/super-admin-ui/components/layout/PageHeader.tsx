@@ -65,12 +65,6 @@ export function PageHeader({ title, subtitle, breadcrumbs, action }: PageHeaderP
             {subtitle && (
               <p className="page-header__subtitle">{subtitle}</p>
             )}
-            {}
-            {!subtitle && (
-              <p className="page-header__subtitle page-header__subtitle--placeholder" aria-hidden>
-                &nbsp;
-              </p>
-            )}
           </>
         )}
       </div>
