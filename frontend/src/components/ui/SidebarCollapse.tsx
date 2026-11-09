@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { Tooltip } from 'antd'
-import { PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { PanelRightClose } from 'lucide-react'
 import '../../design/sidebar-collapse.css'
 
 const STORAGE_KEY = 'trackplus.sidebar.collapsed'
@@ -53,12 +53,13 @@ export function useSidebarCollapsed() {
   return { collapsed, toggle }
 }
 
+/** Covers the logo area, so clicking the logo opens and closes the sidebar. */
 export function SidebarToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const label = collapsed ? 'فتح القائمة الجانبية' : 'طي القائمة الجانبية'
   return (
     <Tooltip title={label} placement="left" mouseEnterDelay={0.3}>
       <button type="button" className="sidebar-toggle" aria-label={label} aria-expanded={!collapsed} onClick={onToggle}>
-        {collapsed ? <PanelRightOpen key="open" size={18} strokeWidth={2} /> : <PanelRightClose key="close" size={18} strokeWidth={2} />}
+        {collapsed ? null : <PanelRightClose size={18} strokeWidth={2} aria-hidden />}
       </button>
     </Tooltip>
   )

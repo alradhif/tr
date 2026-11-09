@@ -10,29 +10,33 @@
   transition: width var(--sidebar-motion);
 }
 
-/* Header: toggle, logo and logo mark */
+/* Header: the whole logo area is the toggle */
 .sidebar-toggle {
   position: absolute;
-  top: 23px;
-  left: 10px;
+  top: 0;
+  left: 0;
   z-index: 1;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
+  justify-content: flex-end;
+  width: 100%;
+  height: 75px;
+  padding: 0 18px;
   border: 0;
-  border-radius: 8px;
   background: transparent;
   color: #8e8f97;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.sidebar-toggle:hover {
-  background: #ebebec;
-  color: #18181b;
+/* Shows on the open sidebar's header only when pointing at it. */
+.sidebar-toggle svg {
+  opacity: 0;
+  transition: opacity var(--sidebar-fade);
+}
+
+.sidebar-toggle:hover svg,
+.sidebar-toggle:focus-visible svg {
+  opacity: 1;
 }
 
 .sidebar-toggle:focus-visible,
@@ -72,33 +76,9 @@
   opacity: 1;
 }
 
-/* On the rail the whole header is the toggle; hovering shows what it does. */
-.sidebar.is-collapsed .sidebar-toggle {
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 75px;
-  border-radius: 0;
-  color: #3f3f46;
-}
-
-.sidebar.is-collapsed .sidebar-toggle:hover {
-  background: transparent;
-}
-
-.sidebar.is-collapsed .sidebar-toggle svg {
-  opacity: 0;
-  transition: opacity var(--sidebar-fade);
-}
-
-.sidebar.is-collapsed .sidebar-toggle:hover svg,
-.sidebar.is-collapsed .sidebar-toggle:focus-visible svg {
-  opacity: 1;
-}
-
-.sidebar.is-collapsed .sidebar-toggle:hover ~ .sidebar__logo .sidebar__brand-mark,
-.sidebar.is-collapsed .sidebar-toggle:focus-visible ~ .sidebar__logo .sidebar__brand-mark {
-  opacity: 0;
+.sidebar:not(.is-collapsed) .sidebar-toggle:hover ~ .sidebar__logo .sidebar__brand-full,
+.sidebar.is-collapsed .sidebar-toggle:hover ~ .sidebar__logo .sidebar__brand-mark {
+  opacity: 0.75;
 }
 
 /* Search: the same field, narrowed to a square around its icon */
