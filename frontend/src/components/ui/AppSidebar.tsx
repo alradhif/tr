@@ -8,6 +8,8 @@ import { NotificationsButton } from '../notifications/NotificationsButton'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { TrackLogo } from '../TrackLogo'
+import { brandAssets } from '@/assets'
+import { SidebarTip, SidebarToggle, useSidebarCollapsed } from './SidebarCollapse'
 import '../../super-admin-ui/components/layout/sidebar-dropdown.css'
 import './app-sidebar-design.css'
 
@@ -90,6 +92,8 @@ export function AppSidebar({
   const [showSignOutModal, setShowSignOutModal] = useState(false)
   const moreButtonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLDivElement>(null)
+  const { collapsed, toggle } = useSidebarCollapsed()
 
   useEffect(() => {
     if (!dropdownOpen) return
@@ -105,9 +109,10 @@ export function AppSidebar({
   const renderItem = (item: AppNavItem) => {
     const active = location.pathname.startsWith(item.key)
     return (
+      <SidebarTip key={item.key} collapsed={collapsed} label={item.label}>
       <button
-        key={item.key}
         type="button"
+        aria-current={active ? 'page' : undefined}
         className={`sidebar__nav-item ${active ? 'sidebar__nav-item--active' : ''} app-sidebar__item ${active ? 'app-sidebar__item--active' : ''}`}
         onClick={() => navigate(item.key)}
       >
@@ -123,10 +128,17 @@ export function AppSidebar({
           </>
         )}
       </button>
+      </SidebarTip>
     )
   }
 
+  const expandToSearch = () => {
+    toggle()
+    window.setTimeout(() => searchRef.current?.querySelector('input')?.focus(), 60)
+  }
+
   const settingsButton = (
+    <SidebarTip collapsed={collapsed} label={t('settings')}>
     <button
       type="button"
       className={`sidebar__nav-item ${settingsActive ? 'sidebar__nav-item--active' : ''} app-sidebar__item ${settingsActive ? 'app-sidebar__item--active' : ''}`}
@@ -146,6 +158,7 @@ export function AppSidebar({
         </>
       )}
     </button>
+    </SidebarTip>
   )
 
   const moreControl = onSignOut ? (
@@ -188,11 +201,20 @@ export function AppSidebar({
   ) : null
 
   return (
-    <aside className={catalog ? 'sidebar app-sidebar app-sidebar--catalog' : 'app-sidebar'} dir="rtl">
-      <div className="sidebar__logo app-sidebar__logo">{brand ?? <TrackLogo size="sm" />}</div>
+    <aside className={catalog ? `sidebar app-sidebar app-sidebar--catalog${collapsed ? ' is-collapsed' : ''}` : 'app-sidebar'} dir="rtl">
+      {catalog ? <SidebarToggle collapsed={collapsed} onToggle={toggle} /> : null}
+      <div className="sidebar__logo app-sidebar__logo">
+        {collapsed ? <img src={brandAssets.logoMark} alt="TrackPlus" className="sidebar__logo-mark" /> : (brand ?? <TrackLogo size="sm" />)}
+      </div>
       {catalog ? null : <div className="app-sidebar__divider" />}
-      <div className={`sidebar__search app-sidebar__search${catalog ? ' app-sidebar__search--catalog' : ''}`}>
-        {catalog ? (
+      <div ref={searchRef} className={`sidebar__search app-sidebar__search${catalog ? ' app-sidebar__search--catalog' : ''}`}>
+        {collapsed ? (
+          <SidebarTip collapsed label={t('search')}>
+            <button type="button" className="sidebar-rail-search" aria-label={t('search')} onClick={expandToSearch}>
+              <Search size={18} strokeWidth={2.5} aria-hidden />
+            </button>
+          </SidebarTip>
+        ) : catalog ? (
           <>
             <Search size={18} strokeWidth={2.5} className="sidebar__search-icon app-sidebar__search-icon" aria-hidden />
             <PortalSearch
@@ -212,6 +234,7 @@ export function AppSidebar({
       <div className="sidebar__footer app-sidebar__footer">
         <NotificationsButton
           catalog={catalog}
+          collapsed={collapsed}
           className="sidebar__nav-item app-sidebar__item notifications-nav-item"
         />
         {settingsButton}

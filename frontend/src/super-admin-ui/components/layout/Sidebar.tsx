@@ -1,4 +1,5 @@
 import { type ReactElement, useEffect, useRef, useState } from 'react';
+import { SidebarTip, SidebarToggle, useSidebarCollapsed } from '../../../components/ui/SidebarCollapse';
 import { createPortal } from 'react-dom';
 import { LogOut, MoreVertical, Search } from 'lucide-react';
 import type { UserRole } from '../../types/auth';
@@ -113,6 +114,8 @@ function SignOutModal({ onConfirm, onCancel }: SignOutModalProps) {
 }
 
 export function Sidebar({ role, activePage, onNavigate, onSignOut }: SidebarProps) {
+  const { collapsed, toggle } = useSidebarCollapsed();
+  const searchRef = useRef<HTMLDivElement>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -157,19 +160,39 @@ export function Sidebar({ role, activePage, onNavigate, onSignOut }: SidebarProp
     onSignOut?.();
   };
 
+  const expandToSearch = () => {
+    toggle();
+    window.setTimeout(() => searchRef.current?.querySelector('input')?.focus(), 60);
+  };
+
   return (
     <>
-      <aside className="sidebar" dir="rtl">
+      <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}`} dir="rtl">
+        <SidebarToggle collapsed={collapsed} onToggle={toggle} />
         <div className="sidebar__logo">
-          <img src={brandAssets.logoFull} alt="TrackPlus" className="sidebar__logo-full" />
+          {collapsed ? (
+            <img src={brandAssets.logoMark} alt="TrackPlus" className="sidebar__logo-mark" />
+          ) : (
+            <img src={brandAssets.logoFull} alt="TrackPlus" className="sidebar__logo-full" />
+          )}
         </div>
 
-        <div className="sidebar__search">
-          <Search size={18} strokeWidth={2.5} className="sidebar__search-icon" />
-          <PortalSearch
-            className="sidebar__search-box"
-            renderInput={(props) => <input type="search" placeholder="البحث" aria-label="بحث" {...props} />}
-          />
+        <div className="sidebar__search" ref={searchRef}>
+          {collapsed ? (
+            <SidebarTip collapsed label="البحث">
+              <button type="button" className="sidebar-rail-search" aria-label="البحث" onClick={expandToSearch}>
+                <Search size={18} strokeWidth={2.5} aria-hidden />
+              </button>
+            </SidebarTip>
+          ) : (
+            <>
+              <Search size={18} strokeWidth={2.5} className="sidebar__search-icon" />
+              <PortalSearch
+                className="sidebar__search-box"
+                renderInput={(props) => <input type="search" placeholder="البحث" aria-label="بحث" {...props} />}
+              />
+            </>
+          )}
         </div>
 
         <nav className="sidebar__nav">
@@ -177,8 +200,9 @@ export function Sidebar({ role, activePage, onNavigate, onSignOut }: SidebarProp
             const Icon = item.icon;
             const isRoutable = role === 'superadmin' || ADMIN_ROUTABLE_PAGES.includes(item.id);
             return (
+              <SidebarTip key={item.id} collapsed={collapsed} label={item.label}>
               <a
-                key={item.id}
+                aria-current={item.id === activePage ? 'page' : undefined}
                 href={`/super-admin/${item.id === 'dashboard' ? '' : item.id}`}
                 className={`sidebar__nav-item ${
                   item.id === activePage ? 'sidebar__nav-item--active' : ''
@@ -193,11 +217,13 @@ export function Sidebar({ role, activePage, onNavigate, onSignOut }: SidebarProp
                 <Icon />
                 <span>{item.label}</span>
               </a>
+              </SidebarTip>
             );
           })}
         </nav>
 
         <div className="sidebar__footer">
+          <SidebarTip collapsed={collapsed} label="الإعدادات">
           <a
             href="/super-admin/settings"
             className={`sidebar__nav-item ${activePage === 'settings' ? 'sidebar__nav-item--active' : ''}`}
@@ -209,6 +235,7 @@ export function Sidebar({ role, activePage, onNavigate, onSignOut }: SidebarProp
             <SidebarSettingsIcon />
             <span>الإعدادات</span>
           </a>
+          </SidebarTip>
 
           <div className="sidebar__profile">
             {}

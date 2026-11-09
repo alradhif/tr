@@ -9,6 +9,7 @@ import {
   tokenForPath,
   type AppNotification,
 } from '../../api/me'
+import { SidebarTip } from '../ui/SidebarCollapse'
 import './notifications.css'
 
 const POLL_MS = 60_000
@@ -24,7 +25,7 @@ function timeAgo(value: string) {
 }
 
 /** Sidebar entry with the unread count; opens the signed-in user's notifications from the server. */
-export function NotificationsButton({ className, catalog }: { className: string; catalog?: boolean }) {
+export function NotificationsButton({ className, catalog, collapsed = false }: { className: string; catalog?: boolean; collapsed?: boolean }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -85,6 +86,7 @@ export function NotificationsButton({ className, catalog }: { className: string;
 
   return (
     <>
+      <SidebarTip collapsed={collapsed} label={unread > 0 ? `الإشعارات (${unread})` : 'الإشعارات'}>
       <button type="button" className={className} onClick={() => setOpen((value) => !value)} aria-expanded={open}>
         {catalog ? (
           <>
@@ -104,6 +106,7 @@ export function NotificationsButton({ className, catalog }: { className: string;
           </>
         )}
       </button>
+      </SidebarTip>
       {/* Rendered on body: the sticky sidebar is its own stacking context and would put the panel under the page content. */}
       {open ? createPortal(
         <div className="notifications-panel" ref={panelRef} dir="rtl" role="dialog" aria-label="الإشعارات">
