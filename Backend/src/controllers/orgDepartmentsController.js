@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { pickUpdatable } = require('../lib/safeUpdate')
 
 // ============ DEPARTMENTS ============
 
@@ -93,7 +94,7 @@ exports.updateDepartment = async (req, res) => {
     if (!existing) return res.status(404).json({ message: 'Department not found' })
     if (existing.orgId !== orgId) return res.status(403).json({ message: 'Access denied' })
 
-    const data = { ...req.body }
+    const data = pickUpdatable('Department', req.body)
     delete data.orgId
     delete data.id
 
@@ -217,7 +218,7 @@ exports.updateEmployee = async (req, res) => {
       return res.status(404).json({ message: 'Employee not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('DepartmentEmployee', req.body)
     delete data.departmentId
     delete data.id
 

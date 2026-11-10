@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { pickUpdatable } = require('../lib/safeUpdate')
 const { riskContactError } = require('../lib/riskContact')
 const { normalizeDeliverableInput, recomputeProjectProgress } = require('../lib/projectWorkflow')
 const { notifyChangeRequestCreated } = require('../lib/changeRequests')
@@ -131,7 +132,7 @@ exports.updatePhase = async (req, res) => {
       return res.status(404).json({ message: 'Phase not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientProjectPhase', req.body)
     if (data.startDate) data.startDate = new Date(data.startDate)
     if (data.endDate) data.endDate = new Date(data.endDate)
     delete data.projectId
@@ -241,7 +242,7 @@ exports.updateTeamMember = async (req, res) => {
       return res.status(404).json({ message: 'Team member not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientProjectTeamMember', req.body)
     delete data.projectId
 
     const member = await prisma.clientProjectTeamMember.update({ where: { id }, data })
@@ -362,7 +363,7 @@ exports.updateContract = async (req, res) => {
       return res.status(404).json({ message: 'Contract not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientContract', req.body)
     if (data.startDate) data.startDate = new Date(data.startDate)
     if (data.endDate) data.endDate = new Date(data.endDate)
     delete data.projectId
@@ -493,7 +494,7 @@ exports.updateRisk = async (req, res) => {
     const contactError = riskContactError(req.body)
     if (contactError) return res.status(400).json({ message: contactError })
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientRisk', req.body)
     delete data.projectId
 
     const risk = await prisma.clientRisk.update({ where: { id }, data })
@@ -636,7 +637,7 @@ exports.updateRiskAction = async (req, res) => {
       return res.status(404).json({ message: 'Risk action not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientRiskAction', req.body)
     delete data.riskId
 
     const action = await prisma.clientRiskAction.update({ where: { id }, data })
@@ -781,8 +782,9 @@ exports.updateDeliverable = async (req, res) => {
       return res.status(404).json({ message: 'Deliverable not found' })
     }
 
-    const data = normalizeDeliverableInput({ ...req.body })
-    delete data.projectId
+    const data = pickUpdatable('ClientDeliverable', normalizeDeliverableInput({ ...req.body }))
+    // The responsible person may change, once checked to belong to the same client below.
+    if (req.body.responsibleId) data.responsibleId = req.body.responsibleId
 
     if (data.responsibleId) {
       const user = await prisma.clientUser.findUnique({ where: { id: data.responsibleId } })
@@ -1119,7 +1121,7 @@ exports.updateChangeRequest = async (req, res) => {
       return res.status(404).json({ message: 'Change request not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientChangeRequest', req.body, ['status'])
     if (data.submittedDate) data.submittedDate = new Date(data.submittedDate)
     delete data.projectId
     delete data.requestedBy
@@ -1437,7 +1439,7 @@ exports.updateScenario = async (req, res) => {
       return res.status(404).json({ message: 'Scenario analysis not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientScenarioAnalysis', req.body)
     if (data.originalDate) data.originalDate = new Date(data.originalDate)
     if (data.newDate) data.newDate = new Date(data.newDate)
     delete data.clientProjectId

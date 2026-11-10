@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { pickUpdatable } = require('../lib/safeUpdate')
 
 // ── helpers ──────────────────────────────────────────────
 async function getOwnedDocument(documentId, clientId) {
@@ -100,7 +101,7 @@ exports.updateDocument = async (req, res) => {
     const owned = await getOwnedDocument(id, clientId)
     if (owned.error) return res.status(owned.error.status).json({ message: owned.error.message })
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientStrategyDocument', req.body)
     delete data.clientId
     delete data.uploadedBy
 
@@ -238,7 +239,7 @@ exports.updateGoal = async (req, res) => {
     const owned = await getOwnedGoal(id, clientId)
     if (owned.error) return res.status(owned.error.status).json({ message: owned.error.message })
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientStrategicGoal', req.body)
     if (data.startDate) data.startDate = new Date(data.startDate)
     if (data.endDate) data.endDate = new Date(data.endDate)
     delete data.clientId
@@ -332,7 +333,7 @@ exports.updateStage = async (req, res) => {
       return res.status(404).json({ message: 'Stage not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientStrategicGoalStage', req.body)
     if (data.startDate) data.startDate = new Date(data.startDate)
     if (data.endDate) data.endDate = new Date(data.endDate)
     delete data.goalId
@@ -443,7 +444,7 @@ exports.updateGoalProjectLink = async (req, res) => {
       return res.status(404).json({ message: 'Goal-project link not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientGoalProjectLink', req.body)
     delete data.goalId
     delete data.projectId
 
@@ -554,7 +555,7 @@ exports.updateKpiSnapshot = async (req, res) => {
       return res.status(404).json({ message: 'KPI snapshot not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ClientKpiSnapshot', req.body)
     if (data.year !== undefined) data.year = Number(data.year)
     delete data.goalId
 

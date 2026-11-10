@@ -50,7 +50,8 @@ function frontendUrl() {
 }
 
 function exposeSecretsInResponse() {
-  return process.env.DEMO_MODE === 'true' || process.env.NODE_ENV !== 'production'
+  // Only the isolated demo shows sign-in codes and invite links on screen.
+  return process.env.DEMO_MODE === 'true'
 }
 
 async function createAccountInvite({ userId, actorType, invitedBy }) {

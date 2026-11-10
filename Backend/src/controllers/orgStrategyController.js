@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { pickUpdatable } = require('../lib/safeUpdate')
 
 // ============ STRATEGY DOCUMENTS ============
 
@@ -84,7 +85,7 @@ exports.updateDocument = async (req, res) => {
     if (!existing) return res.status(404).json({ message: 'Document not found' })
     if (existing.orgId !== orgId) return res.status(403).json({ message: 'Access denied' })
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgStrategyDocument', req.body)
     delete data.orgId
     delete data.uploadedBy
     delete data.id
@@ -358,7 +359,7 @@ exports.updateGoal = async (req, res) => {
     if (!existing) return res.status(404).json({ message: 'Goal not found' })
     if (existing.orgId !== orgId) return res.status(403).json({ message: 'Access denied' })
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgStrategicGoal', req.body)
     if (data.startDate) data.startDate = new Date(data.startDate)
     if (data.endDate) data.endDate = new Date(data.endDate)
     delete data.orgId
@@ -455,7 +456,7 @@ exports.updateStage = async (req, res) => {
       return res.status(404).json({ message: 'Stage not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgStrategicGoalStage', req.body)
     if (data.startDate) data.startDate = new Date(data.startDate)
     if (data.endDate) data.endDate = new Date(data.endDate)
     delete data.goalId
@@ -570,7 +571,7 @@ exports.updateGoalLink = async (req, res) => {
       return res.status(404).json({ message: 'Link not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgGoalProjectLink', req.body)
     delete data.goalId
     delete data.projectId
     delete data.id
@@ -684,7 +685,7 @@ exports.updateKpiSnapshot = async (req, res) => {
       return res.status(404).json({ message: 'KPI snapshot not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgKpiSnapshot', req.body)
     delete data.goalId
     delete data.id
 

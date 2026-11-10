@@ -1,4 +1,5 @@
 const multer = require('multer')
+const { pickUpdatable } = require('../lib/safeUpdate')
 const prisma = require('../lib/prisma')
 
 const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp']
@@ -94,7 +95,7 @@ exports.updateCompany = async (req, res) => {
     if (!existing) return res.status(404).json({ message: 'Company not found' })
     if (existing.orgId !== orgId) return res.status(403).json({ message: 'Access denied' })
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ExecutingCompany', req.body)
     delete data.orgId
     delete data.id
     // A logo is set through uploadLogo only; here it can only be removed.
@@ -222,7 +223,7 @@ exports.updateTeamMember = async (req, res) => {
       return res.status(404).json({ message: 'Team member not found' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('ExecutingCompanyTeam', req.body)
     delete data.companyId
     delete data.id
 

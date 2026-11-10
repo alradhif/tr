@@ -31,7 +31,8 @@ const { ensureFreshDemo } = require('./services/demoService')
 
 // ============ APP SETUP ============
 const app = express()
-app.set('trust proxy', true)
+// Number of proxies in front of the app (1 behind a load balancer); `true` would let anyone fake their IP
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS ?? 1))
 // Comma-separated list; the hosted build is served from the same origin and needs no entry
 const frontendUrls = (process.env.FRONTEND_URL || 'http://localhost:5173')
   .split(',')
@@ -44,6 +45,7 @@ app.use(
   })
 )
 app.use(express.json())
+app.use('/api', require('./middleware/hideServerErrors'))
 
 // ============ HEALTH CHECK ============
 // Registered before the demo freshness check so probes never trigger a reset
@@ -58,11 +60,6 @@ app.use('/api', async (_req, res, next) => {
   } catch (err) {
     res.status(503).json({ message: 'جاري تحديث البيانات التجريبية، يرجى المحاولة بعد لحظات' })
   }
-})
-
-// ============ TEST ROUTES ============
-app.get('/api/test/jodayn', auth, roles('JODAYN_UPPER_MGMT'), (req, res) => {
-  res.json({ message: 'Welcome Jodayn Upper Management!', user: req.user })
 })
 
 // ============ API ROUTES ============

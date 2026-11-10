@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { pickUpdatable } = require('../lib/safeUpdate')
 const { riskContactError } = require('../lib/riskContact')
 const { normalizeDeliverableInput, recomputeProjectProgress } = require('../lib/projectWorkflow')
 const { notifyChangeRequestCreated } = require('../lib/changeRequests')
@@ -86,7 +87,7 @@ exports.updatePhase = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgProjectPhase', req.body)
     if (data.startDate) data.startDate = new Date(data.startDate)
     if (data.endDate) data.endDate = new Date(data.endDate)
     delete data.projectId
@@ -176,7 +177,7 @@ exports.updateTeamMember = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgProjectTeamMember', req.body)
     delete data.projectId
     delete data.id
 
@@ -273,7 +274,7 @@ exports.updateContract = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgContract', req.body)
     if (data.startDate) data.startDate = new Date(data.startDate)
     if (data.endDate) data.endDate = new Date(data.endDate)
     delete data.projectId
@@ -382,7 +383,7 @@ exports.updateRisk = async (req, res) => {
     const contactError = riskContactError(req.body)
     if (contactError) return res.status(400).json({ message: contactError })
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgRisk', req.body)
     delete data.projectId
     delete data.id
 
@@ -503,7 +504,7 @@ exports.updateRiskAction = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgRiskAction', req.body)
     delete data.riskId
     delete data.id
 
@@ -610,7 +611,7 @@ exports.updateDeliverable = async (req, res) => {
       return res.status(409).json({ message: 'لا يمكن تعديل مخرج معتمد إلا بطلب تغيير' })
     }
 
-    const data = normalizeDeliverableInput({ ...req.body })
+    const data = pickUpdatable('OrgDeliverable', normalizeDeliverableInput({ ...req.body }))
     delete data.projectId
     delete data.id
 
@@ -1095,7 +1096,7 @@ exports.updateChangeRequest = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgChangeRequest', req.body, ['status'])
     if (data.submittedDate) data.submittedDate = new Date(data.submittedDate)
     delete data.projectId
     delete data.requestedBy
@@ -1343,7 +1344,7 @@ exports.updateScenario = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' })
     }
 
-    const data = { ...req.body }
+    const data = pickUpdatable('OrgScenarioAnalysis', req.body)
     if (data.originalDate) data.originalDate = new Date(data.originalDate)
     if (data.newDate) data.newDate = new Date(data.newDate)
     delete data.orgProjectId

@@ -33,7 +33,10 @@ async function seedDatabase() {
   await assertConnectedToDemoDatabase(prisma)
 
   const hashed = await bcrypt.hash('Demo1234', 10)
-  const adminHashed = await bcrypt.hash('admin123456', 10)
+  // The Super Admin password comes from the environment; the local fallback is refused in production.
+  const adminPassword = process.env.SEED_SUPER_ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? null : 'admin123456')
+  if (!adminPassword) throw new Error('SEED_SUPER_ADMIN_PASSWORD must be set before seeding in production')
+  const adminHashed = await bcrypt.hash(adminPassword, 10)
 
   // ── Super Admin ──────────────────────────────────────────────
   const admin = await prisma.superAdmin.upsert({
