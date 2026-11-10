@@ -32,7 +32,7 @@ export function WidgetLibraryPanel({
         <p className="widget-library__empty">جميع العناصر مضافة إلى لوحة التحكم</p>
       ) : (
         <>
-          <p className="widget-library__hint">اضغط على العنصر لإضافتها إلى لوحة التحكم</p>
+          <p className="widget-library__hint">اضغط على العنصر لإضافته إلى لوحة التحكم</p>
           <div className="widget-library__list">
             {removedWidgetIds.map((id) => (
               <button
