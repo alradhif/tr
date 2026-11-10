@@ -46,7 +46,7 @@ export function WidgetWrapper({
           type="button"
           className="widget-wrapper__remove"
           onClick={onRemove}
-          aria-label="إزالة الودجت"
+          aria-label="إزالة العنصر"
         >
           <img src={commonAssets.closeCircle} alt="" width={20} height={20} className="asset-icon" />
         </button>

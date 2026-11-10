@@ -18,21 +18,21 @@ export function WidgetLibraryPanel({
   return createPortal(
     <aside className="widget-library" dir="rtl">
       <div className="widget-library__header">
-        <h2 className="widget-library__title">مكتبة الودجات</h2>
+        <h2 className="widget-library__title">مكتبة العناصر</h2>
         <button
           type="button"
           className="widget-library__close"
           onClick={onClose}
-          aria-label="إغلاق مكتبة الودجات"
+          aria-label="إغلاق مكتبة العناصر"
         >
           <X size={18} />
         </button>
       </div>
       {removedWidgetIds.length === 0 ? (
-        <p className="widget-library__empty">جميع الودجات مضافة إلى لوحة التحكم</p>
+        <p className="widget-library__empty">جميع العناصر مضافة إلى لوحة التحكم</p>
       ) : (
         <>
-          <p className="widget-library__hint">اضغط على الودجة لإضافتها إلى لوحة التحكم</p>
+          <p className="widget-library__hint">اضغط على العنصر لإضافتها إلى لوحة التحكم</p>
           <div className="widget-library__list">
             {removedWidgetIds.map((id) => (
               <button
@@ -46,7 +46,7 @@ export function WidgetLibraryPanel({
                   <WidgetPreview id={id} />
                 </div>
                 <div className="widget-library__item-footer">
-                  <span>إضافة الودجة</span>
+                  <span>إضافة العنصر</span>
                   <Plus size={16} />
                 </div>
               </button>
