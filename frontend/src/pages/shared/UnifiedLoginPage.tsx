@@ -26,13 +26,17 @@ export function UnifiedLoginPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const activatedEmail = params.get('activated') ? params.get('email') : null
+  // The invitation email links here with the invited address, so only the password is left to type.
+  const invitedEmail = params.get('invite') ? params.get('email') : null
   const notice = activatedEmail
     ? { tone: 'success', text: 'تم تفعيل حسابك. سجّل الدخول بكلمة المرور الجديدة' }
-    : params.get('expired')
+    : invitedEmail
+      ? { tone: 'success', text: 'أهلًا بك في Track+. أدخل كلمة المرور المؤقتة المرسلة إلى بريدك، وستختار كلمة مرور جديدة بعدها' }
+      : params.get('expired')
       ? { tone: 'warning', text: 'انتهت الجلسة. الرجاء تسجيل الدخول مرة أخرى' }
       : null
   const [step, setStep] = useState<'login' | 'forgot'>('login')
-  const [email, setEmail] = useState(() => activatedEmail || localStorage.getItem('trackplus.rememberEmail') || '')
+  const [email, setEmail] = useState(() => activatedEmail || invitedEmail || localStorage.getItem('trackplus.rememberEmail') || '')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('trackplus.rememberEmail')))
