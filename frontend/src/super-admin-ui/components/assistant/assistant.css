@@ -126,7 +126,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Greeting, message box and suggestions sit at the bottom, where the hand reaches first. */
+  justify-content: flex-end;
 }
 
 .assistant-welcome__group {
@@ -405,4 +406,350 @@
     left: 16px;
     bottom: 16px;
   }
+}
+
+/* Follow-up questions under the latest answer */
+.assistant-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.assistant-followups button {
+  padding: 6px 12px;
+  border: 1px solid #e9d5ff;
+  border-radius: 999px;
+  background: #faf5ff;
+  color: #7e22ce;
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.assistant-followups button:hover {
+  border-color: #c084fc;
+  background: #f3e8ff;
+}
+
+
+/* Card answers use the full width of the conversation. */
+.assistant-msg--assistant .assistant-answer:has(.ab-answer) {
+  align-self: stretch;
+  max-width: 100%;
+}
+
+/* ── Answer cards ───────────────────────────────────────────────────────── */
+.ab-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ab-answer__title,
+.ab-records h4,
+.ab-bars h4 {
+  margin: 0;
+  color: #18181b;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.ab-badge {
+  flex: none;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.ab-badge--success { background: #ecfdf3; color: #067647; }
+.ab-badge--warning { background: #fffaeb; color: #b54708; }
+.ab-badge--danger { background: #fef3f2; color: #b42318; }
+.ab-badge--info { background: #eff8ff; color: #175cd3; }
+.ab-badge--neutral { background: #f4f4f5; color: #52525b; }
+
+.ab-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ab-progress__track {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #ececee;
+}
+
+.ab-progress__track i {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+}
+
+.ab-progress span {
+  min-width: 34px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.ab-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f5ecff, #ffffff);
+  border: 1px solid #efe2fc;
+}
+
+.ab-hero__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ab-hero__head div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ab-hero__head strong {
+  color: #18181b;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.ab-hero__head span:not(.ab-badge),
+.ab-hero__label {
+  color: #8e8f97;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ab-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ab-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #f0f0f2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ab-stat span {
+  color: #8e8f97;
+  font-size: 11.5px;
+  line-height: 17px;
+}
+
+.ab-stat strong {
+  color: #18181b;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+.ab-stat small {
+  color: #8e8f97;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.ab-stat--success strong { color: #067647; }
+.ab-stat--warning strong { color: #b54708; }
+.ab-stat--danger strong { color: #b42318; }
+.ab-stat--info strong { color: #175cd3; }
+
+.ab-facts {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px 12px;
+  border: 1px solid #f0f0f2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ab-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+.ab-facts div:last-child {
+  border-bottom: 0;
+}
+
+.ab-facts dt {
+  flex: none;
+  color: #8e8f97;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ab-facts dd {
+  margin: 0;
+  color: #18181b;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: left;
+}
+
+.ab-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #f0f0f2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ab-bar {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 8px;
+}
+
+.ab-bar span {
+  overflow: hidden;
+  color: #52525b;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ab-bar b {
+  color: #18181b;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.ab-bar__track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f4f4f5;
+}
+
+.ab-bar__track i {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 8px;
+}
+
+.ab-fill--success { background: #17b26a; }
+.ab-fill--warning { background: #f79009; }
+.ab-fill--danger { background: #f04438; }
+.ab-fill--info { background: #2e90fa; }
+.ab-fill--neutral { background: #a1a1aa; }
+
+.ab-records {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ab-records ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ab-record {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #f0f0f2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ab-record__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ab-record__title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ab-record__title strong {
+  color: #18181b;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.ab-record__title span {
+  color: #8e8f97;
+  font-size: 11.5px;
+  line-height: 17px;
+}
+
+.ab-record__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #8e8f97;
+  font-size: 11.5px;
+}
+
+.ab-record__foot b {
+  color: #18181b;
+  font-size: 13px;
+}
+
+.ab-record__contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding-top: 8px;
+  border-top: 1px dashed #ececee;
+  color: #52525b;
+  font-size: 11.5px;
+}
+
+.ab-record__contact a {
+  color: #7e22ce;
+  text-decoration: none;
+}
+
+.ab-more {
+  margin: 0;
+  color: #8e8f97;
+  font-size: 12px;
 }

@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const bcrypt = require('bcryptjs')
 const prisma = require('../lib/prisma')
 const { saveOrgProjectDetails, saveClientProjectDetails } = require('../lib/projectExtras')
+const { EXTRA_PROJECTS, enrichDemoData } = require('./demoEnrichment')
 
 function findOrCreateFactory() {
   return async function findOrCreate(model, where, create) {
@@ -27,6 +28,9 @@ function outputsFromStages(stages) {
 function prismaStatus(uiStatus) {
   if (uiStatus === 'completed') return { status: 'COMPLETED', approvalStatus: 'APPROVED' }
   if (uiStatus === 'delayed') return { status: 'ON_HOLD', approvalStatus: 'APPROVED' }
+  if (uiStatus === 'cancelled') return { status: 'CANCELLED', approvalStatus: 'APPROVED' }
+  // Submitted by data entry and waiting for upper management.
+  if (uiStatus === 'pending') return { status: 'ACTIVE', approvalStatus: 'PENDING' }
   return { status: 'ACTIVE', approvalStatus: 'APPROVED' }
 }
 
@@ -333,6 +337,8 @@ const ORG_PROJECTS = [
   },
 ]
 
+ORG_PROJECTS.push(...EXTRA_PROJECTS)
+
 const COMPANIES = [
   { name: 'شركة جودين', description: 'وصف تفصيلي للشركة' },
   { name: 'شركة نافذ للتقنية', description: 'وصف تفصيلي للشركة' },
@@ -348,7 +354,7 @@ const COMPANIES = [
 
 const MOCK_RISKS = [
   { name: 'انقطاع الخدمة أثناء الإطلاق', description: 'بنية تحتية • المرحلة 3', probability: 'HIGH', impact: 'HIGH', status: 'ACTIVE', responsibleName: 'سارة خالد' },
-  { name: 'ثغرات أمنية في الـ API', description: 'أمن سيبراني • المرحلة 2', probability: 'HIGH', impact: 'HIGH', status: 'MITIGATING', responsibleName: 'أحمد خالد' },
+  { name: 'ثغرات أمنية في الـ API', description: 'أمن سيبراني • المرحلة 2', probability: 'HIGH', impact: 'CRITICAL', status: 'MITIGATING', responsibleName: 'أحمد خالد' },
   { name: 'تجاوز الميزانية في مرحلة التطوير', description: 'مالي • المرحلة 2', probability: 'MEDIUM', impact: 'MEDIUM', status: 'ACTIVE', responsibleName: 'نواف محمد' },
   { name: 'تأخر اعتماد متطلبات المرحلة 2', description: 'إداري • المرحلة 2', probability: 'LOW', impact: 'LOW', status: 'CLOSED', responsibleName: 'سارة خالد' },
   { name: 'تعارض إصدارات المكتبات التقنية', description: 'تقني • المرحلة 2', probability: 'HIGH', impact: 'HIGH', status: 'MITIGATING', responsibleName: 'رهف احمد' },
@@ -547,7 +553,7 @@ async function seedProjectPayments(def, project, orgId, invoiceBase) {
     const existing = await prisma.orgProjectPayment.findFirst({ where: { projectId: project.id, title } })
     if (existing) continue
     const isSettled = index < settled
-    const overdue = !isSettled && index === settled && def.uiStatus !== 'onTrack'
+    const overdue = !isSettled && index === settled && ['delayed', 'struggling'].includes(def.uiStatus)
     const dueDate = new Date(
       isSettled ? now - (settled - index) * 45 * DAY : overdue ? now - 12 * DAY : now + (index - settled + 1) * 30 * DAY,
     )
@@ -725,6 +731,8 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
           endDate: new Date(def.endDate),
           budget: Number(def.totalBudget) || 0,
           progressPct: def.progress,
+          submittedById: flags.approvalStatus === 'PENDING' ? orgEntry.id : null,
+          submittedAt: flags.approvalStatus === 'PENDING' ? new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) : null,
           orgId: orgAccount.id,
           managerId: def.uiStatus === 'completed' ? orgUpper.id : orgEntry.id,
           departmentId: dept.id,
@@ -978,6 +986,8 @@ async function seedMockBaseline({ admin, sector, orgAccount, clientAccount, orgU
       }
     }
   }
+
+  await enrichDemoData({ orgAccount, clientAccount, orgUpper, orgEntry, clientUpper })
 
   console.log('Mock baseline seeded:', {
     orgProjects: ORG_PROJECTS.length,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { CircleAlert, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '../../components/ui'
 import { DashboardGrid, useDashboardState } from '../../super-admin-ui/components/dashboard/DashboardGrid'
@@ -77,6 +78,7 @@ export function PortalDashboard({
 
   const [live, setLive] = useState<LiveDashboardData | null>(null)
   const [loadState, setLoadState] = useState<DashboardLoadState>('loading')
+  const [errorDismissed, setErrorDismissed] = useState(false)
 
   useEffect(() => {
     setLayout(portalLayout)
@@ -85,6 +87,7 @@ export function PortalDashboard({
   const loadLive = useCallback(async () => {
     const endpoint = dashboardEndpoint(portal)
     setLoadState('loading')
+    setErrorDismissed(false)
     try {
       if (portal === 'org') {
         const token = getOrgToken()
@@ -178,6 +181,17 @@ export function PortalDashboard({
           subtitle={subtitle}
           action={editButton}
         />
+        {loadState === 'error' && !errorDismissed ? (
+          <div className="dashboard-error-banner" role="alert">
+            <span className="dashboard-error-banner__icon">
+              <CircleAlert size={20} />
+            </span>
+            <p>حدث خطأ ما ، يرجى المحاولة مرة أخرى</p>
+            <button type="button" onClick={() => setErrorDismissed(true)} aria-label="إغلاق التنبيه">
+              <X size={20} />
+            </button>
+          </div>
+        ) : null}
         {banner}
         {grid}
       </div>

@@ -4,12 +4,13 @@ import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Copy, X } from 'lucide-react';
 import { ApiError } from '../../../api/client';
-import { askAssistant, tokenForPath } from '../../../api/me';
+import { askAssistant, tokenForPath, type AssistantBlock, type AssistantFocus } from '../../../api/me';
 import { commonAssets, dashboardAssets } from '@/assets';
 import { getClientUser } from '../../../auth/clientAuth';
 import { getJodaynUser } from '../../../auth/jodaynAuth';
 import { getOrgUser } from '../../../auth/orgAuth';
 import { getSuperAdminUser } from '../../../auth/superAdminAuth';
+import { AssistantAnswer } from './AssistantBlocks';
 import './assistant.css';
 
 interface Suggestion {
@@ -23,6 +24,8 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: ReactNode;
   copyText?: string;
+  /** Follow-up questions offered under the answer. */
+  followUps?: string[];
 }
 
 const suggestions: Suggestion[] = [
@@ -31,12 +34,15 @@ const suggestions: Suggestion[] = [
   { id: 's3', label: 'لخص حالة المشاريع النشطة', prompt: 'لخص حالة المشاريع النشطة' },
 ];
 
-function answerNode(text: string): ReactNode {
-  return <p style={{ whiteSpace: 'pre-wrap' }}>{text}</p>;
-}
-
-function sessionDisplayName() {
-  const user = getSuperAdminUser() || getOrgUser() || getClientUser() || getJodaynUser()
+/** The name of whoever is signed in to the portal being viewed, not another open session. */
+function sessionDisplayName(pathname: string) {
+  const user = pathname.startsWith('/org')
+    ? getOrgUser()
+    : pathname.startsWith('/client')
+      ? getClientUser()
+      : pathname.startsWith('/jodayn')
+        ? getJodaynUser()
+        : getSuperAdminUser()
   return user?.name?.trim() || ''
 }
 
@@ -53,9 +59,10 @@ export function AIAssistantPanel() {
   const [draft, setDraft] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [focus, setFocus] = useState<AssistantFocus | null>(null);
   const location = useLocation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const firstName = sessionDisplayName().split(' ')[0];
+  const firstName = sessionDisplayName(location.pathname).split(' ')[0];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -75,6 +82,7 @@ export function AIAssistantPanel() {
     setMessages([]);
     setDraft('');
     setAttachment(null);
+    setFocus(null);
   }
 
   function sendPrompt(prompt: string) {
@@ -91,9 +99,18 @@ export function AIAssistantPanel() {
     setMessages((prev) => [...prev, { id: nextId(), role: 'user', content: <span style={{ whiteSpace: 'pre-wrap' }}>{label}</span> }]);
     setIsTyping(true);
 
-    const reply = (answer: string) => {
+    const reply = (answer: string, extra?: { title?: string; blocks?: AssistantBlock[]; followUps?: string[] }) => {
       setIsTyping(false);
-      setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', content: answerNode(answer), copyText: answer }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nextId(),
+          role: 'assistant',
+          content: <AssistantAnswer title={extra?.title} text={answer} blocks={extra?.blocks} />,
+          copyText: answer,
+          followUps: extra?.followUps,
+        },
+      ]);
     };
 
     const token = tokenForPath(location.pathname);
@@ -101,8 +118,11 @@ export function AIAssistantPanel() {
       reply('انتهت الجلسة، سجّل الدخول مرة أخرى لاستخدام المساعد.');
       return;
     }
-    askAssistant(token, text, file)
-      .then((result) => reply(result.reply))
+    askAssistant(token, text, file, focus)
+      .then((result) => {
+        if (result.focus !== undefined) setFocus(result.focus);
+        reply(result.reply, { title: result.title, blocks: result.blocks, followUps: result.suggestions?.filter((item) => item !== text) });
+      })
       .catch((err) => reply(err instanceof ApiError ? err.message : 'تعذر الوصول إلى المساعد حالياً.'));
   }
 
@@ -136,7 +156,7 @@ export function AIAssistantPanel() {
 
           <div className="assistant-conversation">
             <div className="assistant-conversation__messages">
-              {messages.map((message) =>
+              {messages.map((message, index) =>
                 message.role === 'user' ? (
                   <div key={message.id} className="assistant-msg assistant-msg--user">
                     <div className="assistant-bubble">{message.content}</div>
@@ -152,6 +172,15 @@ export function AIAssistantPanel() {
                     >
                       <Copy size={15} />
                     </button>
+                    {index === messages.length - 1 && !isTyping && message.followUps?.length ? (
+                      <div className="assistant-followups">
+                        {message.followUps.map((followUp) => (
+                          <button key={followUp} type="button" onClick={() => sendPrompt(followUp)}>
+                            {followUp}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ),
               )}

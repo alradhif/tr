@@ -13,6 +13,7 @@ import {
   SidebarSettingsIcon,
   SubscriptionsIcon,
   TenantsIcon,
+  UsersNavIcon,
 } from './SidebarIcons';
 import './layout.css';
 import './sidebar-dropdown.css';
@@ -30,6 +31,7 @@ interface SuperadminNavItem {
 const SUPERADMIN_NAV_ITEMS: SuperadminNavItem[] = [
   { id: 'dashboard', label: 'لوحة التحكم', icon: DashboardIcon },
   { id: 'tenants', label: 'إدارة المستخدمين', icon: TenantsIcon },
+  { id: 'users', label: 'المستخدمون', icon: UsersNavIcon },
   { id: 'subscriptions', label: 'الاشتراكات والباقات', icon: SubscriptionsIcon },
   { id: 'audit-log', label: 'سجل التدقيق', icon: AuditLogIcon },
 ];

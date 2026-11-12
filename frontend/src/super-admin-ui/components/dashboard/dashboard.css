@@ -624,16 +624,24 @@
   gap: 2px;
 }
 
-/* The design's plan card holds all five plans in its 232px height. */
+/* The design's plan card holds all five plans in its 232px height: a compact legend
+   beside a full donut, keeping their proportions on wide screens too. */
+.widget-tenant-plan-donut__body {
+  justify-content: space-between;
+}
+
 .widget-tenant-plan-donut__legend {
+  flex: 0 1 320px;
   gap: 4px;
 }
 
 .widget-tenant-plan-donut__legend .legend-item {
   padding: 5px 12px;
+  font-size: 12px;
 }
 
 .widget-tenant-plan-donut__chart {
-  width: 130px;
-  height: 130px;
+  width: 140px;
+  height: 140px;
+  margin-inline-end: 12px;
 }

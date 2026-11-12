@@ -1,5 +1,17 @@
 const multer = require('multer')
 const prisma = require('../lib/prisma')
+const { loadDataset } = require('../lib/assistant/dataset')
+const { answer } = require('../lib/assistant/engine')
+
+/** The record the previous answer was about; sent back by the chat for follow-up questions. */
+function parseFocus(value) {
+  try {
+    const focus = typeof value === 'string' ? JSON.parse(value) : value
+    return focus && typeof focus.id === 'string' && typeof focus.kind === 'string' ? { id: focus.id, kind: focus.kind } : null
+  } catch {
+    return null
+  }
+}
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -122,13 +134,14 @@ exports.assistant = async (req, res) => {
     const question = String(req.body?.message || '').trim() || (req.file ? 'لخص هذا الملف' : '')
     if (!question) return res.status(400).json({ message: 'اكتب سؤالك' })
     if (question.length > 2000) return res.status(400).json({ message: 'السؤال طويل جداً' })
-    const snapshot = await portalSnapshot(req.user)
     if (!aiConfigured()) {
-      return res.json({
-        configured: false,
-        reply: `${NOT_CONFIGURED}\n\nملخص من بيانات حسابك:\n${snapshot.summary.map((line) => `• ${line}`).join('\n')}`,
-      })
+      // Without an AI service the built-in engine answers from the portal's own data.
+      if (req.file) return res.json({ configured: false, reply: 'قراءة الملفات تحتاج تفعيل الذكاء الاصطناعي على الخادم. أقدر أجاوبك عن المشاريع والأهداف والفواتير والمخاطر من بيانات حسابك.' })
+      const data = await loadDataset(req.user)
+      const result = answer(question, data, parseFocus(req.body?.focus))
+      return res.json({ configured: false, engine: 'local', ...result })
     }
+    const snapshot = await portalSnapshot(req.user)
     const system = [
       'You are the TrackPlus project-management assistant. Answer in Arabic unless the user writes in another language.',
       'Use only the account data below and any attached document. If they do not contain the answer, say so. Keep answers short.',

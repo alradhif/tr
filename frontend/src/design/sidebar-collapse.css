@@ -111,6 +111,14 @@
 }
 
 /* Navigation: icons stay put, labels fade and are clipped by the narrowing row */
+/* Icons never shrink: on the narrow rail a long label would otherwise squeeze them to nothing. */
+.sidebar .sidebar__nav-item > svg,
+.sidebar .sidebar__nav-item > img,
+.sidebar .sidebar__nav-item > .sidebar__nav-icon,
+.sidebar .sidebar__nav-item > .app-sidebar__icon {
+  flex-shrink: 0;
+}
+
 .sidebar.sidebar .sidebar__nav-item {
   position: relative;
   overflow: hidden;

@@ -42,3 +42,47 @@
 .portal-dashboard .dashboard-grid {
   min-width: 0;
 }
+
+/* Shown under the page header when the dashboard data cannot be loaded (design frame 7:71889). */
+.dashboard-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 108px;
+  padding: 0 24px;
+  background: #feedec;
+}
+
+.dashboard-error-banner__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fee4e2;
+  color: #f04438;
+  flex-shrink: 0;
+}
+
+.dashboard-error-banner p {
+  flex: 1;
+  margin: 0;
+  color: #0c0c0d;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.dashboard-error-banner button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #0c0c0d;
+  cursor: pointer;
+}

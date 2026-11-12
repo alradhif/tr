@@ -478,9 +478,16 @@ async function main() {
   if (aiStatus.data.configured) {
     expect(assistant.status === 200 && assistant.data.configured === true && Boolean(assistant.data.reply), 'assistant answers from account data')
   } else {
+    const projectCount = (await request('/org/projects', {}, s.ORG_UPPER_MGMT.token)).data.projects?.length
     expect(
-      assistant.status === 200 && assistant.data.configured === false && assistant.data.reply.includes('ANTHROPIC_API_KEY') && assistant.data.reply.includes('عدد المشاريع'),
-      'assistant reports missing AI key and returns a real data summary',
+      assistant.status === 200 && assistant.data.engine === 'local' && assistant.data.reply.includes(`عدد المشاريع: ${projectCount}`),
+      'assistant answers from the database without an AI key',
+    )
+    const detail = await request('/ai/assistant', json('POST', { message: 'تفاصيل مشروع بوابة الخدمات الحكومية الموحدة' }), s.ORG_UPPER_MGMT.token)
+    const followUp = await request('/ai/assistant', json('POST', { message: 'وش مخاطره؟', focus: detail.data.focus }), s.ORG_UPPER_MGMT.token)
+    expect(
+      detail.data.reply?.startsWith('مشروع «بوابة الخدمات الحكومية الموحدة»') && followUp.data.reply?.includes('المخاطر المفتوحة في «بوابة الخدمات الحكومية الموحدة»'),
+      'assistant answers follow-up questions about the same project',
     )
     const form = new FormData()
     form.append('kind', 'project')

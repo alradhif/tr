@@ -221,6 +221,7 @@ export const SUPERADMIN_DEFAULT_ACTIVE_WIDGET_IDS: WidgetId[] = [
   'tenant-alerts',
   'latest-actions',
   'latest-tenants',
+  'project-status-donut',
 ];
 
 export const ADMIN_DEFAULT_ACTIVE_WIDGET_IDS: WidgetId[] = [
@@ -317,6 +318,7 @@ export const DEFAULT_LAYOUT: LayoutItem[] = [
   { i: 'tenant-alerts', x: 0, y: 409, w: 12, h: 265, minW: 6, minH: 225 },
   { i: 'latest-actions', x: 6, y: 674, w: 6, h: 261, minW: 4, minH: 225 },
   { i: 'latest-tenants', x: 0, y: 674, w: 6, h: 261, minW: 4, minH: 225 },
+  { i: 'project-status-donut', x: 0, y: 935, w: 6, h: 256, minW: 4, minH: 256 },
     
   
   

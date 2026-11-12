@@ -32,8 +32,8 @@ export function TenantsByPlanDonutWidget() {
                   data={tenantsByPlan}
                   cx="50%"
                   cy="50%"
-                  innerRadius={44}
-                  outerRadius={72}
+                  innerRadius={38}
+                  outerRadius={68}
                   paddingAngle={2}
                   dataKey="value"
                   stroke="none"

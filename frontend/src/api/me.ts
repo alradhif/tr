@@ -84,15 +84,37 @@ export function markAllNotificationsRead(token: string) {
   return apiRequest<{ success: boolean }>('/notifications/read-all', { method: 'PATCH', token })
 }
 
-export function askAssistant(token: string, message: string, file?: File | null) {
-  let body: BodyInit = JSON.stringify({ message })
+export type AssistantTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
+export type AssistantRecord = {
+  title: string
+  subtitle?: string
+  badge?: { label: string; tone?: AssistantTone }
+  progress?: number | null
+  value?: string
+  note?: string
+  contact?: { name: string; phone?: string | null; email?: string | null }
+}
+/** Cards the assistant draws for an answer, built by the server from the portal's data. */
+export type AssistantBlock =
+  | { type: 'hero'; title: string; subtitle?: string; badge?: { label: string; tone?: AssistantTone }; progress?: number | null; progressText?: string }
+  | { type: 'stats'; items: Array<{ label: string; value: string; hint?: string; tone?: AssistantTone }> }
+  | { type: 'facts'; items: Array<{ label: string; value: string; ltr?: boolean }> }
+  | { type: 'bars'; title?: string; items: Array<{ label: string; value: number; tone?: AssistantTone }> }
+  | { type: 'records'; title?: string; items: AssistantRecord[]; more?: number }
+
+/** The record an answer was about, sent back with the next question so follow-ups can refer to it. */
+export type AssistantFocus = { kind: string; id: string; name?: string }
+
+export function askAssistant(token: string, message: string, file?: File | null, focus?: AssistantFocus | null) {
+  let body: BodyInit = JSON.stringify({ message, focus: focus ?? undefined })
   if (file) {
     const form = new FormData()
     form.append('message', message)
+    if (focus) form.append('focus', JSON.stringify(focus))
     form.append('file', file)
     body = form
   }
-  return apiRequest<{ configured: boolean; reply: string }>('/ai/assistant', { method: 'POST', token, body })
+  return apiRequest<{ configured: boolean; reply: string; title?: string; blocks?: AssistantBlock[]; focus?: AssistantFocus | null; suggestions?: string[] }>('/ai/assistant', { method: 'POST', token, body })
 }
 
 export function extractFromDocument(token: string, kind: 'project' | 'goal' | 'scenario' | 'contract', file: File) {
