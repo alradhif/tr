@@ -131,7 +131,7 @@ function portalUserHandlers(type) {
           invitedBy: req.user.userId,
           invitedByType: req.user.type,
         })
-        res.json({ success: true, user, temporaryPassword, emailSent })
+        res.json({ success: true, user, emailSent, ...(emailSent ? {} : { temporaryPassword }) })
       } catch (err) {
         sendError(res, err)
       }
@@ -204,8 +204,8 @@ function portalUserHandlers(type) {
         res.json({
           success: true,
           user: { id: current.id, name: current.name, email: current.email },
-          temporaryPassword,
           emailSent,
+          ...(emailSent ? {} : { temporaryPassword }),
         })
       } catch (err) {
         sendError(res, err)

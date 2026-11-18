@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Check, Copy } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Check, CheckCircle2, Copy } from 'lucide-react'
 import '../../design/settings-users.css'
 
 type CredentialsModalProps = {
@@ -15,6 +15,13 @@ type CredentialsModalProps = {
 export function CredentialsModal({ name, email, temporaryPassword, reissued = false, emailSent = false, onClose }: CredentialsModalProps) {
   const [copied, setCopied] = useState<'email' | 'password' | null>(null)
 
+  // Once the invitation is in the user's inbox there is nothing to show or copy here.
+  useEffect(() => {
+    if (!emailSent) return
+    const timeoutId = window.setTimeout(onClose, 4000)
+    return () => window.clearTimeout(timeoutId)
+  }, [emailSent, onClose])
+
   async function copy(kind: 'email' | 'password', value: string) {
     try {
       await navigator.clipboard.writeText(value)
@@ -23,6 +30,17 @@ export function CredentialsModal({ name, email, temporaryPassword, reissued = fa
     } catch {
       setCopied(null)
     }
+  }
+
+  if (emailSent) {
+    return (
+      <div className="creds-sent-toast" role="status" dir="rtl" onClick={onClose}>
+        <CheckCircle2 size={18} aria-hidden />
+        <span>
+          تم إرسال بيانات الدخول إلى <bdi dir="ltr">{email}</bdi>
+        </span>
+      </div>
+    )
   }
 
   return (

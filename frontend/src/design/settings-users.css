@@ -11,10 +11,13 @@
   font-weight: 700;
 }
 
-.senior-settings__card--users {
+/* The users card grows with its list so the page scrolls; the doubled class outranks the
+   fixed 345px card height in senior-settings.css, which loads after this file. */
+.senior-settings__card.senior-settings__card--users {
   height: auto;
   min-height: 345px;
   overflow: visible;
+  flex-shrink: 0;
 }
 
 .senior-settings__users-toolbar {
@@ -477,5 +480,46 @@
 
   .senior-settings__users-table .td-users-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* One-line confirmation once the login details were emailed. */
+.creds-sent-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #183826;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(15, 23, 41, 0.18);
+  transform: translateX(-50%);
+  cursor: pointer;
+  animation: creds-sent-in 180ms ease-out;
+}
+
+.creds-sent-toast svg {
+  flex-shrink: 0;
+  color: #50b055;
+}
+
+.creds-sent-toast bdi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes creds-sent-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
   }
 }

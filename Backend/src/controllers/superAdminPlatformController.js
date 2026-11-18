@@ -131,7 +131,7 @@ exports.createTenant = async (req, res) => {
         invitedBy: req.user.userId,
         invitedByType: 'SUPER_ADMIN',
       })
-      return res.json({ success: true, tenantType, jodaynUser: { ...user, tenantType }, temporaryPassword, emailSent })
+      return res.json({ success: true, tenantType, jodaynUser: { ...user, tenantType }, emailSent, ...(emailSent ? {} : { temporaryPassword }) })
     }
 
     let sectorId = body.sectorId
@@ -214,8 +214,8 @@ exports.createTenant = async (req, res) => {
       tenantType,
       [tenantType === 'ORG' ? 'org' : 'client']: payload,
       manager: manager.user,
-      temporaryPassword: manager.temporaryPassword,
       emailSent: manager.emailSent,
+      ...(manager.emailSent ? {} : { temporaryPassword: manager.temporaryPassword }),
     })
   } catch (err) {
     fail(res, err)
@@ -509,8 +509,8 @@ exports.createPlatformUser = async (req, res) => {
     res.json({
       success: true,
       user: { ...user, portalType, accessLevel: accessLevel(user.role), [cfg.scopeKey || 'scope']: scopeId, ...userStatus(user) },
-      temporaryPassword,
       emailSent,
+      ...(emailSent ? {} : { temporaryPassword }),
     })
   } catch (err) {
     fail(res, err)
@@ -569,7 +569,7 @@ exports.resetPlatformUserCredentials = async (req, res) => {
       actorType: 'SUPER_ADMIN',
     })
     const emailSent = await sendInviteEmail({ name: current.name, email: current.email, temporaryPassword })
-    res.json({ success: true, user: { id: current.id, name: current.name, email: current.email }, temporaryPassword, emailSent })
+    res.json({ success: true, user: { id: current.id, name: current.name, email: current.email }, emailSent, ...(emailSent ? {} : { temporaryPassword }) })
   } catch (err) {
     fail(res, err)
   }
