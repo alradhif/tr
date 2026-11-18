@@ -11,6 +11,7 @@
     "seed": "node Backend/src/utils/seed.js",
     "demo:reset": "node Backend/src/utils/resetDemo.js",
     "demo:check": "node Backend/src/utils/runDemoApiChecks.js",
+    "demo:visits": "node Backend/src/utils/visitReport.js",
     "check:attachments": "node Backend/src/utils/runAttachmentChecks.js",
     "check:features": "node Backend/src/utils/runFeatureChecks.js",
     "studio": "prisma studio",

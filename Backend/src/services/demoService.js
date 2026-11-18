@@ -48,7 +48,7 @@ async function resetDemoDatabase() {
     SELECT tablename
     FROM pg_tables
     WHERE schemaname = 'public'
-      AND tablename NOT IN ('_prisma_migrations', 'demo_state')
+      AND tablename NOT IN ('_prisma_migrations', 'demo_state', 'demo_visits')
   `)
 
   if (tables.length) {

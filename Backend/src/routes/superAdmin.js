@@ -24,6 +24,14 @@ const isPlatformStaff = [
 
 router.get('/dashboard', ...isSuperAdmin, platform.getDashboard)
 router.get('/demo-requests', ...isSuperAdmin, require('../controllers/demoRequestController').list)
+router.get('/demo-visits', ...isSuperAdmin, async (req, res) => {
+  try {
+    const days = Math.min(365, Math.max(1, Number(req.query.days) || 30))
+    res.json(await require('../lib/visitLog').dailyVisitSummary(days))
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
 router.post('/tenants', ...isSuperAdmin, platform.createTenant)
 router.get('/accounts/:type/:id', ...isSuperAdmin, platform.getAccountDetails)
 router.patch('/accounts/:type/:id', ...isSuperAdmin, platform.updateAccount)

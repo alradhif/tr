@@ -17,6 +17,7 @@ const {
 } = require('../lib/accountAccess')
 const { listDemoAccounts, loginDemoAccount } = require('../services/demoService')
 const { isDemoEnvironment } = require('../lib/demoSafety')
+const { logVisit } = require('../lib/visitLog')
 
 const ACTOR_TYPE_MAP = {
   SUPER_ADMIN: 'SUPER_ADMIN',
@@ -139,6 +140,7 @@ exports.verifyLoginCode = async (req, res) => {
     if (!challengeId || !code) return res.status(400).json({ message: 'الرجاء إدخال الرمز المكوّن من 6 أرقام' })
     const result = await verifyLoginChallenge(challengeId, code)
     if (result.error) return sendOtpError(res, result.error)
+    await logVisit(req, { event: 'LOGIN', user: result.user, userType: result.actorType })
     res.json(issueSession(result.user, result.actorType))
   } catch (err) {
     res.status(500).json({ message: err.message })
@@ -298,6 +300,7 @@ exports.loginDemo = async (req, res) => {
     if (!role) return res.status(400).json({ message: 'role is required' })
     const session = await loginDemoAccount(role)
     if (!session) return res.status(404).json({ message: 'تعذر الدخول إلى الحساب التجريبي' })
+    await logVisit(req, { event: 'DEMO_LOGIN', role, user: session.user, userType: session.user.type })
     res.json(session)
   } catch (err) {
     res.status(err.status || 500).json({ message: err.message })

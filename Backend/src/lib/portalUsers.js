@@ -4,6 +4,7 @@ const prisma = require('./prisma')
 const { resolveInviteRole } = require('./passwords')
 const { writeAuditLog } = require('./audit')
 const { sendInviteEmail } = require('./mailer')
+const { logVisit } = require('./visitLog')
 
 const PORTALS = {
   ORG: { model: () => prisma.orgUser, scopeKey: 'orgId', table: 'org_users' },
@@ -90,6 +91,7 @@ async function createInvitedUser({ type, name, email, role, scopeId, invitedBy, 
     actorType: invitedByType || type,
   }).catch(() => {})
   const emailSent = await sendInviteEmail({ name: user.name, email: user.email, temporaryPassword })
+  await logVisit(null, { event: 'INVITED', user, userType: type })
   return { user, temporaryPassword, emailSent }
 }
 
