@@ -111,4 +111,6 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
+  // Create the usage log table up front, so it can be queried before anyone signs in.
+  require('./lib/visitLog').ensureVisitTable().catch((err) => console.error(`[visits] ${err.message}`))
 })
