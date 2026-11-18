@@ -95,14 +95,14 @@ function layout({ label, title, intro = '', body, preheader = '' }) {
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">${escapeHtml(preheader)}&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2f0">
 <tr><td class="tp-outer" align="center" style="padding:32px 12px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:6px;overflow:hidden">
+<table role="presentation" dir="rtl" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:6px;overflow:hidden">
 
 <tr><td bgcolor="${DARK}" style="height:8px;background:${DARK};font-size:0;line-height:0">&nbsp;</td></tr>
 
 <tr><td class="tp-pad" style="padding:28px 48px 0">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-<td width="50%" align="right" style="font-family:${FONT};font-size:12px;line-height:19px;color:${FAINT};vertical-align:middle;white-space:nowrap">${escapeHtml(today())}</td>
-<td width="50%" align="left" style="vertical-align:middle"><a href="${escapeHtml(site)}" style="text-decoration:none;display:inline-block">${logo()}</a></td>
+<table role="presentation" dir="ltr" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td width="50%" align="left" style="vertical-align:middle;text-align:left"><a href="${escapeHtml(site)}" style="text-decoration:none">${logo()}</a></td>
+<td width="50%" align="right" dir="rtl" style="font-family:${FONT};font-size:12px;line-height:19px;color:${FAINT};vertical-align:middle;text-align:right;white-space:nowrap">${escapeHtml(today())}</td>
 </tr></table>
 </td></tr>
 
@@ -115,11 +115,11 @@ ${brand(body)}
 </td></tr>
 
 <tr><td class="tp-pad" bgcolor="${DARK}" style="background:${DARK};padding:20px 48px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-<td width="60%" align="right" dir="rtl" style="font-family:${FONT};font-size:12px;line-height:19px;color:#a7b8ad;vertical-align:middle;white-space:nowrap">
+<table role="presentation" dir="ltr" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td width="40%" align="left" style="vertical-align:middle;text-align:left">${logo({ light: true, small: true })}</td>
+<td width="60%" align="right" dir="rtl" style="font-family:${FONT};font-size:12px;line-height:19px;color:#a7b8ad;vertical-align:middle;text-align:right;white-space:nowrap">
 ${supportEmail ? `<a href="mailto:${escapeHtml(supportEmail)}" style="color:#a7b8ad;text-decoration:none">الدعم</a> · ` : ''}<a href="${escapeHtml(site)}" style="color:#a7b8ad;text-decoration:none">زيارة الموقع</a>
 </td>
-<td width="40%" align="left" style="vertical-align:middle">${logo({ light: true, small: true })}</td>
 </tr></table>
 </td></tr>
 
