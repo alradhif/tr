@@ -132,11 +132,20 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now trackplus.service trackplus-reset.timer
 sudo systemctl restart trackplus.service
 
-log "nginx and HTTPS for $DOMAIN"
+# Keep serving every name the site already uses: the default one, the one in
+# trackplus.<ip>.sslip.io, the one in FRONTEND_URL and any in EXTRA_DOMAINS.
+BASE_DOMAIN="${PUBLIC_IP//./-}.sslip.io"
+ENV_DOMAIN="$(sed -nE 's#^FRONTEND_URL=https?://([^/]*).*#\1#p' "$ENV_FILE" | head -1)"
+SERVER_NAMES="$(printf '%s\n' "$DOMAIN" "$BASE_DOMAIN" "trackplus.$BASE_DOMAIN" "$ENV_DOMAIN" ${EXTRA_DOMAINS:-} | awk 'NF && !seen[$0]++' | tr '\n' ' ')"
+CERT_ARGS=""
+for name in $SERVER_NAMES; do CERT_ARGS="$CERT_ARGS -d $name"; done
+[ -n "$ENV_DOMAIN" ] && DOMAIN="$ENV_DOMAIN"
+
+log "nginx and HTTPS for $SERVER_NAMES"
 sudo tee /etc/nginx/sites-available/trackplus >/dev/null <<NGINX
 server {
     listen 80;
-    server_name $DOMAIN;
+    server_name $SERVER_NAMES;
     client_max_body_size 12m;
     location / {
         proxy_pass http://127.0.0.1:5001;
@@ -149,7 +158,7 @@ NGINX
 sudo ln -sf /etc/nginx/sites-available/trackplus /etc/nginx/sites-enabled/trackplus
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect || \
+sudo certbot --nginx $CERT_ARGS --expand --cert-name trackplus --non-interactive --agree-tos --register-unsafely-without-email --redirect || \
   echo "HTTPS certificate not issued yet; the site still works on http://$DOMAIN"
 
 for i in $(seq 1 30); do curl -fsS http://127.0.0.1:5001/healthz >/dev/null && break; sleep 2; done
