@@ -66,7 +66,7 @@ function today() {
 function logo({ light = false, small = false } = {}) {
   const mark = `${appUrl()}/email/mark.png`
   const word = light ? '#ffffff' : INK
-  return `<table role="presentation" dir="ltr" cellpadding="0" cellspacing="0"><tr>
+  return `<table role="presentation" dir="ltr" align="left" cellpadding="0" cellspacing="0"><tr>
 <td style="vertical-align:middle"><img src="${escapeHtml(mark)}" width="${small ? 24 : 30}" height="${small ? 23 : 29}" alt="Track+" style="display:block;border:0"></td>
 <td style="padding-left:7px;vertical-align:middle;font-family:${LATIN};line-height:1">
 <div style="font-size:${small ? 17 : 21}px;font-weight:800;color:${word};letter-spacing:-0.4px">track<span style="color:${PLUS}">+</span></div>
@@ -80,36 +80,46 @@ function layout({ label, title, intro = '', body, preheader = '' }) {
   const supportEmail = (support.match(/<([^>]+)>/) || [null, support])[1]
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${escapeHtml(title)}</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light only;supported-color-schemes:light}
+@media only screen and (max-width:520px){
+.tp-pad{padding-left:24px!important;padding-right:24px!important}
+.tp-outer{padding:16px 8px!important}
+.tp-h1{font-size:24px!important;line-height:36px!important}
+.tp-label{font-size:17px!important}
+.tp-body{padding-top:28px!important;padding-bottom:32px!important}
+}
+</style>
 </head>
 <body style="margin:0;padding:0;background:#f2f2f0;-webkit-text-size-adjust:100%">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">${escapeHtml(preheader)}&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2f0">
-<tr><td align="center" style="padding:32px 12px">
+<tr><td class="tp-outer" align="center" style="padding:32px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:6px;overflow:hidden">
 
 <tr><td bgcolor="${DARK}" style="height:8px;background:${DARK};font-size:0;line-height:0">&nbsp;</td></tr>
 
-<tr><td style="padding:28px 48px 0">
+<tr><td class="tp-pad" style="padding:28px 48px 0">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-<td align="right" style="font-family:${FONT};font-size:12px;line-height:19px;color:${FAINT};vertical-align:middle">${escapeHtml(today())}</td>
-<td align="left" style="vertical-align:middle"><a href="${escapeHtml(site)}" style="text-decoration:none">${logo()}</a></td>
+<td width="50%" align="right" style="font-family:${FONT};font-size:12px;line-height:19px;color:${FAINT};vertical-align:middle;white-space:nowrap">${escapeHtml(today())}</td>
+<td width="50%" align="left" style="vertical-align:middle"><a href="${escapeHtml(site)}" style="text-decoration:none;display:inline-block">${logo()}</a></td>
 </tr></table>
 </td></tr>
 
-<tr><td dir="rtl" style="padding:40px 48px 44px;font-family:${FONT};text-align:right;color:${INK}">
-<p style="margin:0 0 16px;font-size:20px;line-height:28px;font-weight:700;color:${GREEN}">${brand(escapeHtml(label))}</p>
-<h1 style="margin:0;font-size:30px;line-height:44px;font-weight:500;color:${INK};white-space:pre-line">${brand(escapeHtml(title))}</h1>
+<tr><td class="tp-pad tp-body" dir="rtl" style="padding:40px 48px 44px;font-family:${FONT};text-align:right;color:${INK}">
+<p class="tp-label" style="margin:0 0 16px;font-size:20px;line-height:28px;font-weight:700;color:${GREEN}">${brand(escapeHtml(label))}</p>
+<h1 class="tp-h1" style="margin:0;font-size:30px;line-height:44px;font-weight:500;color:${INK};white-space:pre-line">${brand(escapeHtml(title))}</h1>
 ${intro ? `<p style="margin:20px 0 0;font-size:15px;line-height:27px;color:${BODY}">${brand(escapeHtml(intro))}</p>` : ''}
 ${brand(body)}
 <p style="margin:28px 0 0;font-size:14px;line-height:22px;color:${BODY}">مع التحية،</p>
 </td></tr>
 
-<tr><td bgcolor="${DARK}" style="background:${DARK};padding:20px 48px">
+<tr><td class="tp-pad" bgcolor="${DARK}" style="background:${DARK};padding:20px 48px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-<td align="right" dir="rtl" style="font-family:${FONT};font-size:12px;line-height:19px;color:#a7b8ad;vertical-align:middle">
+<td width="60%" align="right" dir="rtl" style="font-family:${FONT};font-size:12px;line-height:19px;color:#a7b8ad;vertical-align:middle;white-space:nowrap">
 ${supportEmail ? `<a href="mailto:${escapeHtml(supportEmail)}" style="color:#a7b8ad;text-decoration:none">الدعم</a> · ` : ''}<a href="${escapeHtml(site)}" style="color:#a7b8ad;text-decoration:none">زيارة الموقع</a>
 </td>
-<td align="left" style="vertical-align:middle">${logo({ light: true, small: true })}</td>
+<td width="40%" align="left" style="vertical-align:middle">${logo({ light: true, small: true })}</td>
 </tr></table>
 </td></tr>
 
@@ -118,6 +128,12 @@ ${supportEmail ? `<a href="mailto:${escapeHtml(supportEmail)}" style="color:#a7b
 </td></tr>
 </table>
 </body></html>`
+}
+
+/** Shows an address or code as plain dark text, so mail apps do not restyle it as a blue link. */
+function plainValue(value) {
+  const safe = escapeHtml(value).replace(/@/g, '<span>@</span>').replace(/\./g, '<span>.</span>')
+  return `<span style="color:${INK};text-decoration:none">${safe}</span>`
 }
 
 function divider(top = 24) {
@@ -131,8 +147,8 @@ function details(rows) {
 ${rows
   .map(
     ([label, value], index) => `<tr>
-<td align="right" style="padding:14px 0;${index ? `border-top:1px solid ${ROW_LINE};` : ''}font-family:${FONT};font-size:14px;line-height:22px;color:${MUTED}">${escapeHtml(label)}</td>
-<td align="left" dir="ltr" style="padding:14px 0;${index ? `border-top:1px solid ${ROW_LINE};` : ''}font-family:${LATIN};font-size:15px;line-height:24px;font-weight:700;color:${INK}">${escapeHtml(value)}</td>
+<td width="38%" align="right" style="padding:14px 0 14px 8px;${index ? `border-top:1px solid ${ROW_LINE};` : ''}font-family:${FONT};font-size:14px;line-height:22px;color:${MUTED}">${escapeHtml(label)}</td>
+<td width="62%" align="left" dir="ltr" style="padding:14px 0;${index ? `border-top:1px solid ${ROW_LINE};` : ''}font-family:${LATIN};font-size:14px;line-height:22px;font-weight:700;color:${INK};word-break:normal;overflow-wrap:anywhere">${plainValue(value)}</td>
 </tr>`,
   )
   .join('')}
