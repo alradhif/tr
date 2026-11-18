@@ -107,8 +107,8 @@ function layout({ label, title, intro = '', body, preheader = '' }) {
 </td></tr>
 
 <tr><td class="tp-pad tp-body" dir="rtl" style="padding:40px 48px 44px;font-family:${FONT};text-align:right;color:${INK}">
-<p class="tp-label" style="margin:0 0 16px;font-size:20px;line-height:28px;font-weight:700;color:${GREEN}">${brand(escapeHtml(label))}</p>
-<h1 class="tp-h1" style="margin:0;font-size:30px;line-height:44px;font-weight:500;color:${INK};white-space:pre-line">${brand(escapeHtml(title))}</h1>
+<p class="tp-label" style="margin:0 0 16px;font-size:20px;line-height:28px;font-weight:400;color:${GREEN}">${brand(escapeHtml(label))}</p>
+<h1 class="tp-h1" style="margin:0;font-size:30px;line-height:44px;font-weight:400;color:${INK};white-space:pre-line">${brand(escapeHtml(title))}</h1>
 ${intro ? `<p style="margin:20px 0 0;font-size:15px;line-height:27px;color:${BODY}">${brand(escapeHtml(intro))}</p>` : ''}
 ${brand(body)}
 <p style="margin:28px 0 0;font-size:14px;line-height:22px;color:${BODY}">مع التحية،</p>
@@ -148,7 +148,7 @@ ${rows
   .map(
     ([label, value], index) => `<tr>
 <td width="38%" align="right" style="padding:14px 0 14px 8px;${index ? `border-top:1px solid ${ROW_LINE};` : ''}font-family:${FONT};font-size:14px;line-height:22px;color:${MUTED}">${escapeHtml(label)}</td>
-<td width="62%" align="left" dir="ltr" style="padding:14px 0;${index ? `border-top:1px solid ${ROW_LINE};` : ''}font-family:${LATIN};font-size:14px;line-height:22px;font-weight:700;color:${INK};word-break:normal;overflow-wrap:anywhere">${plainValue(value)}</td>
+<td width="62%" align="left" dir="ltr" style="padding:14px 0;${index ? `border-top:1px solid ${ROW_LINE};` : ''}font-family:${LATIN};font-size:14px;line-height:22px;font-weight:400;color:${INK};word-break:normal;overflow-wrap:anywhere">${plainValue(value)}</td>
 </tr>`,
   )
   .join('')}
@@ -160,7 +160,7 @@ ${divider(8)}`
 function button(url, label) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px"><tr>
 <td align="center" bgcolor="${DARK}" style="border-radius:999px;background:${DARK}">
-<a href="${escapeHtml(url)}" style="display:block;padding:16px 24px;font-family:${FONT};font-size:16px;line-height:22px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:999px">${escapeHtml(label)}</a>
+<a href="${escapeHtml(url)}" style="display:block;padding:16px 24px;font-family:${FONT};font-size:16px;line-height:22px;font-weight:400;color:#ffffff;text-decoration:none;border-radius:999px">${escapeHtml(label)}</a>
 </td></tr></table>`
 }
 
@@ -173,7 +173,7 @@ function codeBoxes(code) {
   const cells = String(code)
     .split('')
     .map(
-      (digit) => `<td style="padding:0 4px"><div style="width:48px;height:58px;border:1px solid ${LINE};border-radius:12px;background:#fafafa;font-family:${LATIN};font-size:28px;line-height:58px;font-weight:700;text-align:center;color:${INK}">${escapeHtml(digit)}</div></td>`,
+      (digit) => `<td style="padding:0 4px"><div style="width:48px;height:58px;border:1px solid ${LINE};border-radius:12px;background:#fafafa;font-family:${LATIN};font-size:28px;line-height:58px;font-weight:400;text-align:center;color:${INK}">${escapeHtml(digit)}</div></td>`,
     )
     .join('')
   return `${divider()}<table role="presentation" align="center" dir="ltr" cellpadding="0" cellspacing="0" style="margin:24px auto 0"><tr>${cells}</tr></table>`
