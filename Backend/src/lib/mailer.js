@@ -33,61 +33,138 @@ function escapeHtml(value) {
 }
 
 // ── Email template ────────────────────────────────────────────────────────────
-// Table-based with inline styles so it renders the same in Gmail, Outlook and phone apps.
+// Built from the approved Figma design ("Executive"): a white letter with a dark green
+// top bar, the Track+ logo and date, a short label and headline, a details table, one
+// full-width dark green button, and a dark green footer. Mail-client friendly: 600px
+// tables, inline styles, IBM Plex Sans Arabic with system fallbacks, a hidden preheader
+// and a plain-text version alongside.
 
-const FONT = "Tahoma,'Segoe UI',Arial,sans-serif"
+const FONT = "'IBM Plex Sans Arabic',Tahoma,'Segoe UI',Arial,sans-serif"
+const LATIN = "'Inter','Segoe UI',Arial,sans-serif"
+const DARK = '#183826'
+const GREEN = '#2e8b57'
+const PLUS = '#50b055'
+const INK = '#18181b'
+const BODY = '#52525b'
+const MUTED = '#6b7280'
+const FAINT = '#9ca3af'
+const LINE = '#e7e8eb'
+const ROW_LINE = '#eef0ee'
 
 /** Keeps "Track+" reading left to right inside Arabic text, so the + stays after the name. */
 const brand = (html) => html.replace(/Track\+/g, '<span dir="ltr" style="unicode-bidi:isolate">Track+</span>')
 
-function layout(title, body, { preheader = '' } = {}) {
-  const logo = `${appUrl()}/email/logo.png`
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title></head>
-<body style="margin:0;padding:0;background:#f2f4f3">
-<span style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(preheader)}</span>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f4f3;padding:32px 12px">
-<tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e7e8eb">
-<tr><td style="height:6px;background:linear-gradient(90deg,#21aa7c,#67bf64);background-color:#21aa7c;font-size:0;line-height:0">&nbsp;</td></tr>
-<tr><td align="center" style="padding:28px 32px 8px"><img src="${escapeHtml(logo)}" width="129" height="42" alt="Track+" style="display:block;border:0;width:129px;height:42px"></td></tr>
-<tr><td dir="rtl" style="padding:16px 32px 32px;font-family:${FONT};color:#0c0c0d;text-align:right;font-size:15px;line-height:26px">
-<h1 style="margin:0 0 16px;font-size:22px;line-height:32px;font-weight:700;color:#0c0c0d">${brand(escapeHtml(title))}</h1>
+function today() {
+  try {
+    return new Date().toLocaleDateString('ar-SA-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' })
+  } catch {
+    return new Date().toISOString().slice(0, 10)
+  }
+}
+
+/** The track+ By JODAYN logo: the coloured mark image with the wordmark as live text. */
+function logo({ light = false, small = false } = {}) {
+  const mark = `${appUrl()}/email/mark.png`
+  const word = light ? '#ffffff' : INK
+  return `<table role="presentation" dir="ltr" cellpadding="0" cellspacing="0"><tr>
+<td style="vertical-align:middle"><img src="${escapeHtml(mark)}" width="${small ? 24 : 30}" height="${small ? 23 : 29}" alt="Track+" style="display:block;border:0"></td>
+<td style="padding-left:7px;vertical-align:middle;font-family:${LATIN};line-height:1">
+<div style="font-size:${small ? 17 : 21}px;font-weight:800;color:${word};letter-spacing:-0.4px">track<span style="color:${PLUS}">+</span></div>
+<div style="margin-top:2px;font-size:${small ? 7 : 8}px;font-weight:700;color:${word};text-align:right">By JODAYN</div>
+</td></tr></table>`
+}
+
+function layout({ label, title, intro = '', body, preheader = '' }) {
+  const site = appUrl()
+  const support = process.env.MAIL_FROM || process.env.SMTP_USER || ''
+  const supportEmail = (support.match(/<([^>]+)>/) || [null, support])[1]
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${escapeHtml(title)}</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#f2f2f0;-webkit-text-size-adjust:100%">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">${escapeHtml(preheader)}&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2f0">
+<tr><td align="center" style="padding:32px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:6px;overflow:hidden">
+
+<tr><td bgcolor="${DARK}" style="height:8px;background:${DARK};font-size:0;line-height:0">&nbsp;</td></tr>
+
+<tr><td style="padding:28px 48px 0">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td align="right" style="font-family:${FONT};font-size:12px;line-height:19px;color:${FAINT};vertical-align:middle">${escapeHtml(today())}</td>
+<td align="left" style="vertical-align:middle"><a href="${escapeHtml(site)}" style="text-decoration:none">${logo()}</a></td>
+</tr></table>
+</td></tr>
+
+<tr><td dir="rtl" style="padding:40px 48px 44px;font-family:${FONT};text-align:right;color:${INK}">
+<p style="margin:0 0 16px;font-size:20px;line-height:28px;font-weight:700;color:${GREEN}">${brand(escapeHtml(label))}</p>
+<h1 style="margin:0;font-size:30px;line-height:44px;font-weight:500;color:${INK};white-space:pre-line">${brand(escapeHtml(title))}</h1>
+${intro ? `<p style="margin:20px 0 0;font-size:15px;line-height:27px;color:${BODY}">${brand(escapeHtml(intro))}</p>` : ''}
 ${brand(body)}
+<p style="margin:28px 0 0;font-size:14px;line-height:22px;color:${BODY}">مع التحية،</p>
 </td></tr>
-<tr><td dir="rtl" style="padding:18px 32px;background:#fafafa;border-top:1px solid #f0f0f2;font-family:${FONT};font-size:12px;line-height:20px;color:#8e8f97;text-align:center">
-هذه رسالة آلية من منصة ${brand('Track+')} لإدارة المشاريع، لا ترد عليها.<br>إذا لم تكن تتوقع هذه الرسالة يمكنك تجاهلها.
+
+<tr><td bgcolor="${DARK}" style="background:${DARK};padding:20px 48px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td align="right" dir="rtl" style="font-family:${FONT};font-size:12px;line-height:19px;color:#a7b8ad;vertical-align:middle">
+${supportEmail ? `<a href="mailto:${escapeHtml(supportEmail)}" style="color:#a7b8ad;text-decoration:none">الدعم</a> · ` : ''}<a href="${escapeHtml(site)}" style="color:#a7b8ad;text-decoration:none">زيارة الموقع</a>
+</td>
+<td align="left" style="vertical-align:middle">${logo({ light: true, small: true })}</td>
+</tr></table>
 </td></tr>
+
 </table>
+<p dir="rtl" style="margin:16px 0 0;font-family:${FONT};font-size:11px;line-height:18px;color:${FAINT};text-align:center">رسالة آلية من منصة ${brand('Track+')}، يرجى عدم الرد عليها. إذا لم تكن تتوقعها يمكنك تجاهلها.</p>
 </td></tr>
 </table>
 </body></html>`
 }
 
+function divider(top = 24) {
+  return `<div style="margin-top:${top}px;height:1px;background:${LINE};font-size:0;line-height:0">&nbsp;</div>`
+}
+
+/** Label on the right, value on the left, as in the design's details table. */
+function details(rows) {
+  return `${divider()}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px">
+${rows
+  .map(
+    ([label, value], index) => `<tr>
+<td align="right" style="padding:14px 0;${index ? `border-top:1px solid ${ROW_LINE};` : ''}font-family:${FONT};font-size:14px;line-height:22px;color:${MUTED}">${escapeHtml(label)}</td>
+<td align="left" dir="ltr" style="padding:14px 0;${index ? `border-top:1px solid ${ROW_LINE};` : ''}font-family:${LATIN};font-size:15px;line-height:24px;font-weight:700;color:${INK}">${escapeHtml(value)}</td>
+</tr>`,
+  )
+  .join('')}
+</table>
+${divider(8)}`
+}
+
+/** Full-width dark green pill, like the design's main button. */
 function button(url, label) {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0"><tr><td style="border-radius:10px;background:#21aa7c">
-<a href="${escapeHtml(url)}" style="display:inline-block;padding:13px 32px;font-family:${FONT};font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px">${escapeHtml(label)}</a>
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px"><tr>
+<td align="center" bgcolor="${DARK}" style="border-radius:999px;background:${DARK}">
+<a href="${escapeHtml(url)}" style="display:block;padding:16px 24px;font-family:${FONT};font-size:16px;line-height:22px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:999px">${escapeHtml(label)}</a>
 </td></tr></table>`
 }
 
-function details(rows) {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 0;background:#f6f8f7;border:1px solid #e3ece6;border-radius:12px">
-${rows
-  .map(
-    ([label, value], index) => `<tr><td style="padding:14px 18px;${index ? 'border-top:1px solid #e3ece6;' : ''}font-family:${FONT}">
-<div style="font-size:12px;line-height:18px;color:#8e8f97">${escapeHtml(label)}</div>
-<div dir="ltr" style="font-family:Menlo,Consolas,monospace;font-size:16px;line-height:24px;font-weight:700;color:#0c0c0d;text-align:right">${escapeHtml(value)}</div>
-</td></tr>`,
-  )
-  .join('')}
-</table>`
+function note(text) {
+  return `<p style="margin:16px 0 0;font-family:${FONT};font-size:13px;line-height:21px;color:${MUTED}">${escapeHtml(text)}</p>`
 }
 
-function notice(text) {
-  return `<p style="margin:0;padding:12px 16px;border-radius:10px;background:#fffaeb;border:1px solid #fde9ce;color:#93540b;font-size:13px;line-height:22px">${escapeHtml(text)}</p>`
+/** The sign-in code as large digits in a row of boxes. */
+function codeBoxes(code) {
+  const cells = String(code)
+    .split('')
+    .map(
+      (digit) => `<td style="padding:0 4px"><div style="width:48px;height:58px;border:1px solid ${LINE};border-radius:12px;background:#fafafa;font-family:${LATIN};font-size:28px;line-height:58px;font-weight:700;text-align:center;color:${INK}">${escapeHtml(digit)}</div></td>`,
+    )
+    .join('')
+  return `${divider()}<table role="presentation" align="center" dir="ltr" cellpadding="0" cellspacing="0" style="margin:24px auto 0"><tr>${cells}</tr></table>`
 }
 
 function fallbackLink(url) {
-  return `<p style="margin:16px 0 0;font-size:12px;line-height:20px;color:#8e8f97">إذا لم يعمل الزر، انسخ هذا الرابط في المتصفح:<br><a href="${escapeHtml(url)}" dir="ltr" style="color:#21aa7c;word-break:break-all">${escapeHtml(url)}</a></p>`
+  return `<p style="margin:12px 0 0;font-family:${FONT};font-size:12px;line-height:20px;color:${FAINT}">إذا لم يعمل الزر، انسخ هذا الرابط في المتصفح:<br><a href="${escapeHtml(url)}" dir="ltr" style="color:${GREEN};word-break:break-all">${escapeHtml(url)}</a></p>`
 }
 
 /**
@@ -118,19 +195,19 @@ function sendInviteEmail({ name, email, temporaryPassword }) {
     to: email,
     subject: 'دعوة للانضمام إلى Track+',
     text: `مرحباً ${name}،\n\nتمت دعوتك إلى Track+.\nالبريد الإلكتروني: ${email}\nكلمة المرور المؤقتة: ${temporaryPassword}\nرابط الدخول: ${url}\n\nيجب تغيير كلمة المرور المؤقتة عند أول تسجيل دخول.`,
-    html: layout(
-      'مرحباً بك في Track+',
-      `<p style="margin:0 0 8px">مرحباً ${escapeHtml(name)}،</p>
-<p style="margin:0 0 16px">تمت دعوتك للانضمام إلى منصة Track+ لمتابعة المشاريع والأهداف الاستراتيجية. هذه بيانات الدخول الخاصة بك:</p>
-${details([
+    html: layout({
+      label: 'دعوة للانضمام',
+      title: `مرحباً ${name}،\nحسابك جاهز للبدء.`,
+      intro: 'تمت دعوتك لمتابعة المشاريع والمخرجات والأهداف الاستراتيجية مع فريقك. استخدم البيانات التالية لتسجيل دخولك الأول.',
+      preheader: 'بيانات الدخول إلى Track+ وكلمة المرور المؤقتة',
+      body: `${details([
   ['البريد الإلكتروني', email],
   ['كلمة المرور المؤقتة', temporaryPassword],
 ])}
-${button(url, 'ابدأ وسجّل دخولك الآن')}
-${notice('ستُطلب منك كلمة مرور جديدة عند أول تسجيل دخول، ولن تعمل كلمة المرور المؤقتة بعد تغييرها.')}
+${button(url, 'سجّل دخولك الآن')}
+${note('ستُطلب منك كلمة مرور جديدة عند أول دخول، ولن تعمل كلمة المرور المؤقتة بعدها.')}
 ${fallbackLink(url)}`,
-      { preheader: 'بيانات الدخول إلى Track+ وكلمة المرور المؤقتة' },
-    ),
+    }),
   })
 }
 
@@ -139,13 +216,14 @@ function sendLoginCodeEmail({ email, code }) {
     to: email,
     subject: 'رمز الدخول إلى Track+',
     text: `رمز الدخول: ${code}\nالرمز صالح لمدة 5 دقائق.`,
-    html: layout(
-      'رمز الدخول إلى Track+',
-      `<p style="margin:0 0 16px">استخدم هذا الرمز لإكمال تسجيل الدخول:</p>
-<p dir="ltr" style="margin:0 0 16px;padding:18px;border-radius:12px;background:#f6f8f7;border:1px solid #e3ece6;text-align:center;font-family:Menlo,Consolas,monospace;font-size:32px;line-height:40px;font-weight:700;letter-spacing:8px;color:#0c0c0d">${escapeHtml(code)}</p>
-${notice('الرمز صالح لمدة 5 دقائق. لا تشاركه مع أي أحد.')}`,
-      { preheader: `رمز الدخول ${code}` },
-    ),
+    html: layout({
+      label: 'رمز الدخول',
+      title: 'رمز تسجيل الدخول\nإلى حسابك في Track+',
+      intro: 'استخدم هذا الرمز لإكمال تسجيل دخولك. الرمز صالح لمدة 5 دقائق.',
+      preheader: `رمز الدخول ${code}`,
+      body: `${codeBoxes(code)}
+${note('لن يطلب منك فريق Track+ هذا الرمز أبدًا، فلا تشاركه مع أي أحد. إذا لم تحاول تسجيل الدخول فتجاهل هذه الرسالة.')}`,
+    }),
   })
 }
 
@@ -155,14 +233,16 @@ function sendPasswordResetEmail({ email, token }) {
     to: email,
     subject: 'إعادة تعيين كلمة المرور في Track+',
     text: `لإعادة تعيين كلمة المرور افتح هذا الرابط خلال ساعة:\n${url}`,
-    html: layout(
-      'إعادة تعيين كلمة المرور',
-      `<p style="margin:0">وصلنا طلب لإعادة تعيين كلمة المرور لحسابك. اضغط الزر لاختيار كلمة مرور جديدة:</p>
-${button(url, 'إعادة تعيين كلمة المرور')}
-${notice('الرابط صالح لمدة ساعة واحدة. إذا لم تطلب ذلك فتجاهل هذه الرسالة وستبقى كلمة المرور كما هي.')}
+    html: layout({
+      label: 'أمان الحساب',
+      title: 'إعادة تعيين\nكلمة المرور',
+      intro: 'وصلنا طلب لتغيير كلمة المرور لحسابك في Track+. اضغط الزر لاختيار كلمة مرور جديدة. الرابط صالح لمدة ساعة واحدة.',
+      preheader: 'رابط إعادة تعيين كلمة المرور',
+      body: `${divider()}
+${button(url, 'اختر كلمة مرور جديدة')}
+${note('إذا لم تطلب ذلك فتجاهل هذه الرسالة، وستبقى كلمة المرور الحالية كما هي.')}
 ${fallbackLink(url)}`,
-      { preheader: 'رابط إعادة تعيين كلمة المرور' },
-    ),
+    }),
   })
 }
 
