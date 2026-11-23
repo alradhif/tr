@@ -111,7 +111,12 @@ function challengeCodeHash(challengeId, code) {
 /** Emails the login code to the account; returns whether it was sent. */
 async function deliverLoginCode(actorType, userId, code) {
   const user = await findAccountById(actorType, userId)
-  return user ? sendLoginCodeEmail({ email: user.email, code }) : false
+  if (!user) return false
+  // The seeded Super Admin address is not a real inbox, so its codes go to SUPER_ADMIN_CODE_EMAIL,
+  // or else to the mailbox the app sends from.
+  const adminInbox = (process.env.SUPER_ADMIN_CODE_EMAIL || process.env.SMTP_USER || '').trim()
+  const email = actorType === 'SUPER_ADMIN' && user.email === 'admin@trackplus.com' && adminInbox ? adminInbox : user.email
+  return sendLoginCodeEmail({ email, code })
 }
 
 function challengeResponse(challenge, code, emailed) {
